@@ -1,0 +1,13 @@
+cradle:
+  stack:
+    - path: "./src"
+      component: "chains:lib"
+
+    - path: "./app/Main.hs"
+      component: "chains:exe:chains-exe"
+
+    - path: "./app/Paths_chains.hs"
+      component: "chains:exe:chains-exe"
+
+    - path: "./test"
+      component: "chains:test:chains-test"
