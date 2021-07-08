@@ -1,6 +1,6 @@
 module Main where
 
-import Lib
+import Simulation
 
 main :: IO ()
-main = someFunc
+main = run

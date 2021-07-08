@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 593ef7bb891aeeb0c6825cc89623180841707353708d9f58bb7dd627bb6a4718
+-- hash: ad2e2e2378dd2fec01fb85d4229fc6e301a4ff1585a2d4443bb7c477006b168c
 
 name:           chains
 version:        0.1.0.0
@@ -27,7 +27,12 @@ source-repository head
 
 library
   exposed-modules:
-      Lib
+      Link
+      Model
+      Point
+      Simulation
+      Space
+      Vector
   other-modules:
       Paths_chains
   hs-source-dirs:
