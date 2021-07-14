@@ -3,8 +3,6 @@ module Vector
 , lengthSq
 , randomV
 , randomVIn
-, (|+)
-, (|-)
 , (|*)
 ) where
 
@@ -31,12 +29,6 @@ randomVIn thSeed maxLen = ((x, y), newSeed)
     len = sqrt r * maxLen
     x = len * cos theta
     y = len * sin theta
-
-(|-) :: Vector -> Vector -> Vector
-(|-) (x1, y1) (x2, y2) = (x1-x2, y1-y2)
-
-(|+) :: Vector -> Vector -> Vector
-(|+) (x1, y1) (x2, y2) = (x1+x2, y1+y2)
 
 (|*) :: Float -> Vector -> Vector
 (|*) scale (x, y) = (scale * x, scale * y)

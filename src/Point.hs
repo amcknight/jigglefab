@@ -1,12 +1,16 @@
 module Point
 ( Point
+, Position
+, Velocity
 , pos
 , vel
-, distSq
 , speedSq
+, move
 ) where
 
-import Vector ( lengthSq, Vector )
+import Vector
+import Vectors
+import Space (Duration)
 
 type Position = Vector
 type Velocity = Vector
@@ -18,8 +22,8 @@ pos (p, _) = p
 vel :: Point -> Velocity
 vel (_, v) = v
 
-distSq :: Point -> Float
-distSq = lengthSq . pos
-
 speedSq :: Point -> Float
 speedSq = lengthSq . vel
+
+move :: Duration -> Point -> Point
+move dt (p, v) = (p |+ (dt |* v) , v)

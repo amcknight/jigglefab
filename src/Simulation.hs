@@ -8,6 +8,7 @@ import System.Random ( getStdGen, Random(randomR), StdGen )
 import Data.Maybe (fromMaybe)
 import Vector
 import Space
+import Chem
 import Link
 import Model
 
@@ -84,7 +85,7 @@ innerPoint :: Color -> Picture
 innerPoint color = Color color $ circleSolid 1
 
 chemColors :: Chem -> (Color, Color)
-chemColors (Chem w h)
-  | w < h = (red, white)
-  | w > h = (green, white)
-  | otherwise = (greyN 0.5, white)
+chemColors chem = case desire chem of
+  EQ -> (greyN 0.5, white)
+  GT -> (red, white)
+  LT -> (green, white)

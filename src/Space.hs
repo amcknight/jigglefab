@@ -2,12 +2,17 @@ module Space
 ( Duration
 , Radius
 , Time
+, Side (In, Out)
+, Hit (Bounce, Pass)
 , minFuture
 ) where
 
 type Time = Float
 type Duration = Float
 type Radius = Float
+
+data Side = In | Out
+data Hit = Bounce | Pass
 
 minFuture :: (Time, Time) -> Maybe Time
 minFuture (t1, t2)

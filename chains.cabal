@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: ad2e2e2378dd2fec01fb85d4229fc6e301a4ff1585a2d4443bb7c477006b168c
+-- hash: bd0851022aebf06407fe0c3c8424aa6d3de1137270b58215eab698b11c4e43c0
 
 name:           chains
 version:        0.1.0.0
@@ -15,7 +15,6 @@ author:         Andrew McKnight
 maintainer:     thedonk@gmail.com
 copyright:      2021 Andrew McKnight
 license:        BSD3
-license-file:   LICENSE
 build-type:     Simple
 extra-source-files:
     README.md
@@ -27,12 +26,17 @@ source-repository head
 
 library
   exposed-modules:
+      Chem
+      Chems
       Link
+      Links
       Model
       Point
+      Points
       Simulation
       Space
       Vector
+      Vectors
   other-modules:
       Paths_chains
   hs-source-dirs:
