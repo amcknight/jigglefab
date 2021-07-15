@@ -88,4 +88,3 @@ sidedHitTime rht desiredSide rad ps = sht
       | lowSide == desiredSide = lowTime
       | highSide == desiredSide = highTime
       | otherwise = undefined
-
