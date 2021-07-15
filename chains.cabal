@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: bd0851022aebf06407fe0c3c8424aa6d3de1137270b58215eab698b11c4e43c0
+-- hash: 609bf2c1f984c4ad420b23e95bdb8ee5bf475bcc28b0908995da0e2a86b5ffe5
 
 name:           chains
 version:        0.1.0.0
@@ -28,9 +28,12 @@ library
   exposed-modules:
       Chem
       Chems
+      Env
       Link
       Links
       Model
+      Models
+      Pair
       Point
       Points
       Simulation

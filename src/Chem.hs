@@ -15,4 +15,3 @@ desire (Chem want have)
   | have == want = EQ
   | have < want = LT
   | otherwise = GT
-  
