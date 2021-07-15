@@ -4,6 +4,7 @@ module Space
 , Time
 , Side (In, Out)
 , Hit (Bounce, Pass)
+, updateSide
 , minFuture
 ) where
 
@@ -11,8 +12,14 @@ type Time = Float
 type Duration = Float
 type Radius = Float
 
-data Side = In | Out
-data Hit = Bounce | Pass
+data Side = In | Out deriving (Show, Eq)
+data Hit = Bounce | Pass deriving Show
+
+updateSide :: Side -> Hit -> Side
+updateSide In  Bounce = In
+updateSide In  Pass   = Out
+updateSide Out Bounce = Out
+updateSide Out Pass   = In
 
 minFuture :: (Time, Time) -> Maybe Time
 minFuture (t1, t2)

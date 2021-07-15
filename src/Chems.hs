@@ -13,9 +13,21 @@ data Reactants = Reactants Side Chems
 data Products = Products Hit Chems
 
 react :: Reactants -> Products
-react (Reactants Out (Chem w1 h1, Chem w2 h2))
-  | w1 > h1 && w2 > h2 = Products Bounce (Chem w1 (h1+1), Chem w2 (h2+1))
-  | otherwise          = Products Pass (Chem w1 h1, Chem w2 h2)
-react (Reactants In (Chem w1 h1, Chem w2 h2))
-  | w1 < h1 || w2 < h2 = Products Pass (Chem w1 (h1-1), Chem w2 (h2-1))
-  | otherwise          = Products Bounce (Chem w1 h1, Chem w2 h2)
+react (Reactants Out cs)
+  | wantsMore cs = Products Pass $ tie cs
+  | otherwise    = Products Bounce cs
+react (Reactants In cs)
+  | wantsLess cs = Products Pass $ untie cs
+  | otherwise    = Products Bounce cs
+
+wantsMore :: Chems -> Bool 
+wantsMore (Chem w1 h1, Chem w2 h2) = w1 > h1 && w2 > h2
+
+wantsLess :: Chems -> Bool 
+wantsLess (Chem w1 h1, Chem w2 h2) = w1 < h1 || w2 < h2
+
+tie :: Chems -> Chems
+tie (Chem w1 h1, Chem w2 h2) = (Chem w1 (h1+1), Chem w2 (h2+1))
+
+untie :: Chems -> Chems
+untie (Chem w1 h1, Chem w2 h2) = (Chem w1 (h1-1), Chem w2 (h2-1))

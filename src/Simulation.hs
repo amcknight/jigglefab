@@ -19,16 +19,12 @@ run = do
     FullScreen
     black
     60
-    (initialModel seed 300)
+    threeLinkModel -- (initialModel seed 300)
     draw
     update
 
 initialModel :: StdGen -> Int -> Model
 initialModel seed n = Model 20 $ randomLinks seed 1000 n
-
--- gridLinks :: StdGen -> Int -> [Link] 
--- gridLinks _ 0 = []
--- gridLinks seed n = Link ((x, y), (vx, vy)) (Chem 1 0)
 
 randomLinks :: StdGen -> Float -> Int -> [Link]
 randomLinks _ _ 0 = []
