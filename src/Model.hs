@@ -53,25 +53,16 @@ nextHit rad m = least $ hits rad m
   where
     least :: [Hit] -> Maybe Hit
     least [] = Nothing
-    least [id] = Just id
     least (id:ids) = Just $ foldr leastOf id ids
     leastOf :: Hit -> Hit -> Hit
     leastOf (d1, ls1, m1) (d2, ls2, m2) = if d1 < d2 then (d1, ls1, m1) else (d2, ls2, m2)
 
 hits :: Radius -> Model -> [Hit]
-hits rad = fmap removeJust . filter existing . allHits rad
+hits rad m = exists $ time <$> pairsUp m
   where
-    existing :: (Maybe Duration, Links, Model) -> Bool
-    existing (Nothing, _, _) = False
-    existing _ = True
-    removeJust :: (Maybe Duration, Links, Model) -> Hit
-    removeJust (Nothing, _, _) = undefined -- Should never happen because of "existing"
-    removeJust (Just dt, ls, m) = (dt, ls, m)
-
-allHits :: Radius -> Model -> [(Maybe Duration, Links, Model)]
-allHits rad m = times
-  where
-    pairs = pairsUp m
-    times = fmap time pairs
     time :: (Links, Model) -> (Maybe Duration, Links, Model)
     time (ls, m) = ((hitTime rad . points) ls, ls, m)
+    exists :: [(Maybe Duration, Links, Model)] -> [Hit]
+    exists [] = []
+    exists ((Nothing, _, _):xs) = exists xs
+    exists ((Just dt, ls, m):xs) = (dt, ls, m) : exists xs

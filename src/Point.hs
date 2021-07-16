@@ -4,7 +4,6 @@ module Point
 , Velocity
 , pos
 , vel
-, speedSq
 , movePoint
 ) where
 
@@ -21,9 +20,6 @@ pos (p, _) = p
 
 vel :: Point -> Velocity
 vel (_, v) = v
-
-speedSq :: Point -> Float
-speedSq = lengthSq . vel
 
 movePoint :: Duration -> Point -> Point
 movePoint dt (p, v) = (p |+ (dt |* v) , v)
