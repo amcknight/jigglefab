@@ -6,9 +6,11 @@ module Points
 , side
 , hitTime
 , sidedHitTime
+, movePoints
 ) where
 
 import Space
+import Pair
 import Vector
 import Vectors
 import Point
@@ -17,10 +19,13 @@ import Graphics.Gloss.Geometry.Line (closestPointOnLine)
 type Points = (Point, Point)
 
 poss :: Points -> (Position, Position)
-poss (p1, p2) = (pos p1, pos p2)
+poss = bimap pos
 
 vels :: Points -> (Velocity, Velocity)
-vels (p1, p2) = (vel p1, vel p2)
+vels = bimap vel
+
+movePoints :: Duration -> Points -> Points
+movePoints dt = bimap (movePoint dt)
 
 distSq :: Points -> Float
 distSq (p1, p2) = lengthSq $ pos p1 |- pos p2
@@ -76,13 +81,12 @@ earliestHitTime rad ps = max xt yt
 sidedHitTime :: Duration -> Side -> Radius -> Points -> Duration
 sidedHitTime rht desiredSide rad ps = sht
   where
-    (p1, p2) = ps
     minDt = 0.00000001
     lowTime = rht - minDt
     highTime = rht + minDt
-    lowSide = side rad (move lowTime p1, move lowTime p2)
-    roughSide = side rad (move rht p1, move rht p2)
-    highSide = side rad (move highTime p1, move highTime p2)
+    lowSide = side rad $ bimap (movePoint lowTime) ps
+    roughSide = side rad $ bimap (movePoint rht) ps
+    highSide = side rad $ bimap (movePoint highTime) ps
     sht
       | roughSide == desiredSide = rht
       | lowSide == desiredSide = lowTime

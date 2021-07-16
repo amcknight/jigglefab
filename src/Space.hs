@@ -3,7 +3,7 @@ module Space
 , Radius
 , Time
 , Side (In, Out)
-, Hit (Bounce, Pass)
+, Contact (Bounce, Pass)
 , updateSide
 , minFuture
 ) where
@@ -13,9 +13,9 @@ type Duration = Float
 type Radius = Float
 
 data Side = In | Out deriving (Show, Eq)
-data Hit = Bounce | Pass deriving Show
+data Contact = Bounce | Pass deriving Show
 
-updateSide :: Side -> Hit -> Side
+updateSide :: Side -> Contact -> Side
 updateSide In  Bounce = In
 updateSide In  Pass   = Out
 updateSide Out Bounce = Out

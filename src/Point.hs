@@ -5,7 +5,7 @@ module Point
 , pos
 , vel
 , speedSq
-, move
+, movePoint
 ) where
 
 import Vector
@@ -25,5 +25,5 @@ vel (_, v) = v
 speedSq :: Point -> Float
 speedSq = lengthSq . vel
 
-move :: Duration -> Point -> Point
-move dt (p, v) = (p |+ (dt |* v) , v)
+movePoint :: Duration -> Point -> Point
+movePoint dt (p, v) = (p |+ (dt |* v) , v)

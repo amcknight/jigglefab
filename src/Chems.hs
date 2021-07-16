@@ -3,6 +3,7 @@ module Chems
 , react
 , Reactants (Reactants)
 , Products (Products)
+, contact
 ) where
 
 import Chem
@@ -10,7 +11,10 @@ import Space
 
 type Chems = (Chem, Chem)
 data Reactants = Reactants Side Chems
-data Products = Products Hit Chems
+data Products = Products Contact Chems
+
+contact :: Products -> Contact
+contact (Products contact _) = contact
 
 react :: Reactants -> Products
 react (Reactants Out cs)
