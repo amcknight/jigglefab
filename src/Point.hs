@@ -9,7 +9,7 @@ module Point
 
 import Vector
 import Vectors
-import Space (Duration)
+import Time
 
 type Position = Vector
 type Velocity = Vector

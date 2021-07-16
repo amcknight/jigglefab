@@ -1,15 +1,20 @@
 module Points
 ( Points
+, Interval
 , distSq
+, minus
 , furtherThan
 , bounce
 , side
 , hitTime
 , sidedHitTime
 , movePoints
+, interval
+, tightenInterval
 ) where
 
 import Space
+import Time
 import Pair
 import Vector
 import Vectors
@@ -18,8 +23,8 @@ import Graphics.Gloss.Geometry.Line (closestPointOnLine)
 
 type Points = (Point, Point)
 
-minus :: Point -> Point -> Point
-minus (p1, v1) (p2, v2) = (p1 |- p2, v1 |- v2)
+minus :: Points -> Point
+minus ((p1, v1),(p2, v2)) = (p1 |- p2, v1 |- v2)
 
 movePoints :: Duration -> Points -> Points
 movePoints dt = bimap (movePoint dt)
@@ -61,7 +66,7 @@ hitTime rad ps = case root of
 
     s = pos diff |. vel diff
     speedSq = lengthSq $ vel diff
-    diff = uncurry minus ps
+    diff = minus ps
 
 sidedHitTime :: Duration -> Side -> Radius -> Points -> Duration
 sidedHitTime rht desiredSide rad ps = sht
@@ -88,3 +93,33 @@ earliestHitTime rad ps = max xt yt
     (v1, v2) = bimap vel ps
     (dx, dy)   = p2 |- p1
     (dvx, dvy) = v1 |- v2 -- Is this right?...
+
+interval :: Time -> Radius -> Points -> Maybe Interval
+interval t rad p = if wh then Just (initialInterval rad s refP) else Nothing
+  where
+    wh = case s of
+      In -> True 
+      Out -> willHit t (rad^2) refP
+    refP = minus p
+    s = side rad p
+
+-- Assumes Out side
+willHit :: Time -> Float -> Point -> Bool 
+willHit t radSq p = ct > t && lengthSq (pos (movePoint ct p)) < radSq
+  where ct = closestTime p
+
+closestTime :: Point -> Time
+closestTime ((x,y),(v,w)) = negate $ (x*v + y*w) / (v^2 + w^2) 
+
+-- Assumes we know they will collide
+initialInterval :: Radius -> Side -> Point -> Interval
+initialInterval rad In p = (0, uncurry min (bimap (2*rad/) (vel p)))
+initialInterval rad Out p = (0, closestTime p)
+
+tightenInterval :: Time -> Float -> Side -> Point -> Interval -> Interval
+tightenInterval t radSq s p (lowT, highT) = if s == newS then (midT, highT) else (lowT, midT)
+  where
+    midT = (lowT + highT) / 2
+    nowP = movePoint t p
+    midDistSq = lengthSq (pos (movePoint midT p))
+    newS = if radSq > midDistSq then In else Out

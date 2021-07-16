@@ -3,7 +3,6 @@ module Env
 , radius
 , model
 ) where
-
 import Space
 import Model
 

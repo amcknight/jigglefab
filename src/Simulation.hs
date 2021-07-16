@@ -1,6 +1,7 @@
 module Simulation
 ( run
 , twoBallEnv
+, twoBallEnvInner
 , threeBallEnv
 ) where
 
@@ -22,7 +23,7 @@ run = do
     FullScreen
     black
     60
-    threeBallEnv -- (model (initialModel seed 300))
+    twoBallEnvInner -- (model (initialModel seed 300))
     draw
     update
 
@@ -47,10 +48,16 @@ randomLinearModel seed n = Link ((x, 0), v) (Chem valence 0) : randomLinearModel
 
 
 twoBallEnv :: Env
-twoBallEnv = Env 250
+twoBallEnv = Env 250 (buildModel
   [ Link ((0, 0), (30, 10))      (Chem 1 0)
   , Link ((1000, 30), (-50, 10)) (Chem 1 0)
+  ])
+twoBallEnvInner :: Env
+twoBallEnvInner = Env 250
+  [ Link ((0, 0), (30, 10))      (Chem 1 1)
+  , Link ((10, 30), (-50, 10)) (Chem 1 1)
   ]
+
 threeBallEnv :: Env
 threeBallEnv = Env 250
   [ Link ((0, -100), (60, 20))     (Chem 1 0)

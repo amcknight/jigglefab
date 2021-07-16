@@ -18,7 +18,7 @@ type Model = [Link]
 step :: Duration -> Radius -> Model -> Model
 step dt rad m = case nextHit rad m of
   Nothing -> moveModel dt m
-  Just (ht, ls, subM) ->
+  Just (Hit ht ls subM) ->
     if dt < ht then moveModel dt m
     else step (dt - ht) rad $ stepWithContact ht rad ls subM
 

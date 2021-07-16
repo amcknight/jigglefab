@@ -7,7 +7,7 @@ module Link
 
 import Point
 import Chem
-import Space
+import Time
 
 data Link = Link Point Chem deriving Show
 
