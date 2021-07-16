@@ -6,14 +6,19 @@ module Model
 ) where
 
 import Data.Maybe (fromMaybe)
+import Space
+import Time
+import Pair
 import Points
 import Chems
 import Link
 import Links
-import Space
-import Pair
 
 type Model = [Link]
+data Hit = Hit Duration Links Model
+
+dur :: Hit -> Duration
+dur (Hit dt _ _) = dt
 
 step :: Duration -> Radius -> Model -> Model
 step dt rad m = case nextHit rad m of
@@ -46,8 +51,6 @@ prereact rad ls ht = (prods, sht)
 moveModel :: Duration -> Model -> Model
 moveModel dt = fmap (moveLink dt)
 
-type Hit = (Duration, Links, Model)
-
 nextHit :: Radius -> Model -> Maybe Hit
 nextHit rad m = least $ hits rad m
   where
@@ -55,7 +58,7 @@ nextHit rad m = least $ hits rad m
     least [] = Nothing
     least (id:ids) = Just $ foldr leastOf id ids
     leastOf :: Hit -> Hit -> Hit
-    leastOf (d1, ls1, m1) (d2, ls2, m2) = if d1 < d2 then (d1, ls1, m1) else (d2, ls2, m2)
+    leastOf h1 h2 = if dur h1 < dur h2 then h1 else h2
 
 hits :: Radius -> Model -> [Hit]
 hits rad m = exists $ time <$> pairsUp m
@@ -65,4 +68,4 @@ hits rad m = exists $ time <$> pairsUp m
     exists :: [(Maybe Duration, Links, Model)] -> [Hit]
     exists [] = []
     exists ((Nothing, _, _):xs) = exists xs
-    exists ((Just dt, ls, m):xs) = (dt, ls, m) : exists xs
+    exists ((Just dt, ls, m):xs) = Hit dt ls m : exists xs

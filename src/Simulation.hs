@@ -11,6 +11,7 @@ import System.Random ( getStdGen, Random(randomR), StdGen )
 import Data.Maybe (fromMaybe)
 import Vector
 import Space
+import Time
 import Chem
 import Link
 import Model
@@ -48,10 +49,10 @@ randomLinearModel seed n = Link ((x, 0), v) (Chem valence 0) : randomLinearModel
 
 
 twoBallEnv :: Env
-twoBallEnv = Env 250 (buildModel
+twoBallEnv = Env 250 
   [ Link ((0, 0), (30, 10))      (Chem 1 0)
   , Link ((1000, 30), (-50, 10)) (Chem 1 0)
-  ])
+  ]
 twoBallEnvInner :: Env
 twoBallEnvInner = Env 250
   [ Link ((0, 0), (30, 10))      (Chem 1 1)

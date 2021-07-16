@@ -116,10 +116,9 @@ initialInterval :: Radius -> Side -> Point -> Interval
 initialInterval rad In p = (0, uncurry min (bimap (2*rad/) (vel p)))
 initialInterval rad Out p = (0, closestTime p)
 
-tightenInterval :: Time -> Float -> Side -> Point -> Interval -> Interval
-tightenInterval t radSq s p (lowT, highT) = if s == newS then (midT, highT) else (lowT, midT)
+tightenInterval :: Float -> Side -> Point -> Interval -> Interval
+tightenInterval radSq s p (lowT, highT) = if s == newS then (midT, highT) else (lowT, midT)
   where
     midT = (lowT + highT) / 2
-    nowP = movePoint t p
     midDistSq = lengthSq (pos (movePoint midT p))
     newS = if radSq > midDistSq then In else Out

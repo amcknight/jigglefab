@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 609bf2c1f984c4ad420b23e95bdb8ee5bf475bcc28b0908995da0e2a86b5ffe5
+-- hash: c355c9ec0c338ca5bb90cde51c0bc58941a073be83bb2b611eab573b7c221191
 
 name:           chains
 version:        0.1.0.0
@@ -34,10 +34,12 @@ library
       Model
       Models
       Pair
+      PHit
       Point
       Points
       Simulation
       Space
+      Time
       Vector
       Vectors
   other-modules:
@@ -49,6 +51,7 @@ library
     , containers
     , gloss
     , random
+    , heap
   default-language: Haskell2010
 
 executable chains-exe
@@ -61,6 +64,7 @@ executable chains-exe
   build-depends:
       base >=4.7 && <5
     , chains
+    , heap
   default-language: Haskell2010
 
 test-suite chains-test

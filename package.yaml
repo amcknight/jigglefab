@@ -39,6 +39,7 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - chains
+    - heap
 
 tests:
   chains-test:
