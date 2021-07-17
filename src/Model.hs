@@ -8,7 +8,8 @@ module Model
 ) where
 
 import Data.Maybe (fromMaybe)
-import Data.Array
+import qualified Data.Array as A
+import qualified Data.Map as M
 import Data.List (sort)
 import Space
 import Time
@@ -19,57 +20,78 @@ import Link
 import Links
 import Hit
 
-type LinkArray = Array Int Link
-type IOArray = Array (Int, Int) Side
-data Model = Model IOArray LinkArray
+type LinkArray = A.Array Int Link
+type SideMap = M.Map (Int, Int) Side
+data Model = Model
+  { rad :: Radius
+  , sides :: SideMap
+  , links :: LinkArray
+  }
 
-links :: Model -> LinkArray
-links (Model _ ls) = ls
-
-buildModel :: [Link] -> Model
-buildModel ls = Model ioArray lsArray
+-- Assumes all initial Chem's have: "has" == 0
+buildModel :: Radius -> [Link] -> Model
+buildModel r ls = tieAll $ Model r sideMap lsArray
   where
-    ioArray = array ((1,1),(len,len)) $ initialSide <$> pairs (indices lsArray)
-    initialSide ip = (ip, Out) -- Hardcoding all of them to Out, for now
-    lsArray = listArray (1, len) ls
+    sideMap = M.fromList $ findSides <$> pairs (A.indices lsArray)
+    lsArray = A.listArray (1, len) ls
     len = length ls
 
+    findSides :: IP -> (IP, Side)
+    findSides ip = (ip, side r $ points $ bimap (lsArray A.!) ip)
+
+    tieAll :: Model -> Model
+    tieAll m = ties (inner (M.assocs (sides m))) m
+
+    inner :: [(IP, Side)] -> [IP]
+    inner [] = []
+    inner ((ip, Out):ss) = inner ss
+    inner ((ip, In):ss) = ip : inner ss
+
+    ties :: [IP] -> Model -> Model
+    ties [] m = m
+    ties (ip:ips) m = ties ips $ tie1 ip m
+
+    tie1 :: IP -> Model -> Model
+    tie1 ip m = replacePair m In ip $ buildLinks (points ls) (tie (chems ls))
+      where
+        ls = linksByI m ip
+
 linksByI :: Model -> IP -> Links
-linksByI (Model _ ls) = bimap (ls !)
+linksByI m = bimap (links m A.!)
 
 sideByI :: Model -> IP -> Side
-sideByI (Model ss _) = (ss !)
+sideByI m = (sides m M.!)
 
 replacePair :: Model -> Side -> IP -> Links -> Model
-replacePair (Model ss ls) s (i1, i2) (l1, l2) = Model (ss // [((i1, i2), s)]) (ls // [(i1, l1), (i2, l2)])
+replacePair (Model r ss ls) s (i1, i2) (l1, l2) = Model r (M.insert (i1, i2) s ss) (ls A.// [(i1, l1), (i2, l2)])
 
-step :: Duration -> Radius -> Model -> Model
-step dt rad m = case nextHit rad m of
+step :: Duration -> Model -> Model
+step dt m = case nextHit m of
   Nothing -> moveModel dt m
   Just (Hit ht s ip) ->
     if dt < ht then moveModel dt m
-    else step (dt - ht) rad $ bounceModel s ip $ moveModel ht m
+    else step (dt - ht) $ bounceModel s ip $ moveModel ht m
 
-nextHit :: Radius -> Model -> Maybe Hit
-nextHit rad m = nextValidHit m $ hits rad m
+nextHit :: Model -> Maybe Hit
+nextHit m = nextValidHit m $ hits m
   where
     nextValidHit :: Model -> [Hit] -> Maybe Hit
     nextValidHit _ [] = Nothing 
     nextValidHit m ((Hit dt s ip):hs) = if sideByI m ip == s then Just (Hit dt s ip) else nextValidHit m hs
 
-hits :: Radius -> Model -> [Hit]
-hits rad m = sort $ concatMap (toHits . times m) ips
+hits :: Model -> [Hit]
+hits m = sort $ concatMap (toHits . times m) ips
   where
-    ips = pairs (indices (links m))
+    ips = pairs (A.indices (links m))
     times :: Model -> IP -> ([(Side, Duration)], IP)
-    times m ip = (hitTimes rad (points (linksByI m ip)), ip)
+    times m ip = (hitTimes (rad m) (points (linksByI m ip)), ip)
     toHits :: ([(Side, Duration)], IP) -> [Hit]
     toHits (hs, ip) = fmap (toHit ip) hs
     toHit :: IP -> (Side, Duration) -> Hit
     toHit ip (s, dt) = Hit dt s ip
 
 moveModel :: Duration -> Model -> Model
-moveModel dt (Model ss ls) = Model ss $ fmap (moveLink dt) ls
+moveModel dt (Model r ss ls) = Model r ss $ fmap (moveLink dt) ls
 
 bounceModel :: Side -> IP -> Model -> Model
 bounceModel s ip m = replacePair m newS ip $ buildLinks newPs newCs

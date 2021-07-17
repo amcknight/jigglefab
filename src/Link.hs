@@ -9,13 +9,10 @@ import Point
 import Chem
 import Time
 
-data Link = Link Point Chem deriving Show
-
-point :: Link -> Point
-point (Link p _) = p
-
-chem :: Link -> Chem
-chem (Link _ c) = c
+data Link = Link
+  { point :: Point
+  , chem :: Chem
+  } deriving Show
 
 moveLink :: Duration -> Link -> Link
 moveLink dt (Link p c) = Link (movePoint dt p) c

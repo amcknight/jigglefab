@@ -1,12 +1,15 @@
 module Chems
 ( Chems
 , react
+, tie
+, untie
 , Reactants
 , Products
 ) where
 
 import Chem
 import Space
+import Pair
 
 type Chems = (Chem, Chem)
 type SidedChems = (Side, Chems)
@@ -28,7 +31,7 @@ wantsLess :: Chems -> Bool
 wantsLess (Chem w1 h1, Chem w2 h2) = w1 < h1 || w2 < h2
 
 tie :: Chems -> Chems
-tie (Chem w1 h1, Chem w2 h2) = (Chem w1 (h1+1), Chem w2 (h2+1))
+tie = bimap hasUp
 
 untie :: Chems -> Chems
-untie (Chem w1 h1, Chem w2 h2) = (Chem w1 (h1-1), Chem w2 (h2-1))
+untie = bimap hasDown

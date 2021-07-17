@@ -28,7 +28,7 @@ library
   exposed-modules:
       Chem
       Chems
-      Env
+      Hit
       Link
       Links
       Model
