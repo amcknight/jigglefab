@@ -1,10 +1,12 @@
 module Model
-( Model (Model)
+( Model (Model, rad, sides, links)
 , buildModel
+, sideByI, linksByI
 , step
 , nextHit
 , moveModel
 , hits
+, innerIps
 ) where
 
 import Data.Maybe (fromMaybe)
@@ -40,12 +42,7 @@ buildModel r ls = tieAll $ Model r sideMap lsArray
     findSides ip = (ip, side r $ points $ bimap (lsArray A.!) ip)
 
     tieAll :: Model -> Model
-    tieAll m = ties (inner (M.assocs (sides m))) m
-
-    inner :: [(IP, Side)] -> [IP]
-    inner [] = []
-    inner ((ip, Out):ss) = inner ss
-    inner ((ip, In):ss) = ip : inner ss
+    tieAll m = ties (innerIps m) m
 
     ties :: [IP] -> Model -> Model
     ties [] m = m
@@ -55,6 +52,14 @@ buildModel r ls = tieAll $ Model r sideMap lsArray
     tie1 ip m = replacePair m In ip $ buildLinks (points ls) (tie (chems ls))
       where
         ls = linksByI m ip
+
+innerIps :: Model -> [IP]
+innerIps m = innerIps' $ M.assocs $ sides m
+  where
+    innerIps' :: [(IP, Side)] -> [IP]
+    innerIps' [] = []
+    innerIps' ((ip, Out):ss) = innerIps' ss
+    innerIps' ((ip, In):ss) = ip : innerIps' ss
 
 linksByI :: Model -> IP -> Links
 linksByI m = bimap (links m A.!)

@@ -9,12 +9,16 @@ import Graphics.Gloss hiding (Vector)
 import Graphics.Gloss.Data.ViewPort (ViewPort)
 import System.Random ( getStdGen, Random(randomR), StdGen )
 import Data.Maybe (fromMaybe)
-import Data.Array
+import Data.Array (elems)
+import Data.Map (keys)
 import Vector
 import Space
 import Time
 import Chem
+import Point
 import Link
+import Links
+import Pair
 import Model
 
 run :: IO ()
@@ -68,9 +72,10 @@ threeBallModel = buildModel 250
   ]
 
 draw :: Model -> Picture
-draw (Model rad _ ls) = Pictures $ bodies ++ centres
+draw m = Pictures $ bodies ++ centres ++ bonds
   where
-    (bodies, centres) = unzip $ fmap (drawLink rad) (elems ls)
+    (bodies, centres) = unzip $ fmap (drawLink (rad m)) (elems (links m))
+    bonds = fmap (drawBond m) (innerIps m)
 
 update :: ViewPort -> Duration -> Model -> Model
 update vp = step
@@ -79,6 +84,11 @@ drawLink :: Radius -> Link -> (Picture, Picture)
 drawLink rad (Link ((x, y), _) chem) = (translate x y (body bodyColor rad), translate x y (innerPoint centerColor))
   where
     (bodyColor, centerColor) = chemColors chem
+
+drawBond :: Model -> IP -> Picture
+drawBond m ip = Color white $ line [p1, p2]
+  where
+    (p1, p2) = bimap pos (points (linksByI m ip))
 
 body :: Color -> Radius -> Picture
 body color rad = Color color $ circleSolid rad
