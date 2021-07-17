@@ -1,9 +1,13 @@
 {-# LANGUAGE TupleSections #-}
 
 module Pair
-( bimap
+( IP
+, bimap
 , pairsUp
+, pairs
 ) where
+
+type IP = (Int, Int)
 
 bimap :: (a -> b) -> (a, a) -> (b, b)
 bimap f (x, y) = (f x, f y)
@@ -21,3 +25,6 @@ pairsUp xs = pairsUp' xs []
     pairUp x [] _ = []
     pairUp x [y] es = [((x, y), es)]
     pairUp x (y:ys) es = ((x, y), es++ys) : pairUp x ys (es++[y])
+
+pairs :: Ord a => [a] -> [(a, a)]
+pairs ls = [(x,y) | x <- ls, y <- ls, x < y]

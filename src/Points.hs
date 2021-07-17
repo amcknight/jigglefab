@@ -6,15 +6,14 @@ module Points
 , furtherThan
 , bounce
 , side
-, hitTime
-, sidedHitTime
+, hitTimes
 , movePoints
 , interval
 , tightenInterval
 ) where
 
 import Space
-import Time
+import Time ( Interval, Duration, Time, minFuture )
 import Pair
 import Vector
 import Vectors
@@ -48,15 +47,23 @@ bounce (p1, p2) = (p3, p4)
     to1 = closestPointOnLine (0,0) (pos p2 |- pos p1) (vel p2)
     to2 = closestPointOnLine (0,0) (pos p1 |- pos p2) (vel p1)
 
-hitTime :: Radius -> Points -> Maybe Duration
-hitTime rad ps = case root of
-  Nothing -> Nothing 
-  Just r -> minFuture $ possTimes r
+hitTimes :: Radius -> Points -> [(Side, Duration)]
+hitTimes rad ps = case root of
+  Nothing -> [] 
+  Just r -> times $ possTimes r
   where
+    times :: (Time, Time) -> [(Side, Duration)]
+    times (t1, t2)
+      | highT < 0 = []
+      | lowT < 0 = [(In, highT)]
+      | otherwise = [(Out, lowT), (In, highT)] 
+      where
+        (lowT, highT) = if t1 < t2 then (t1, t2) else (t2, t1)
+
     root :: Maybe Float
     root = safeRoot $ speedSq * (rad^2 - lengthSq (pos diff)) + s^2
     
-    possTimes :: Float -> (Duration, Duration)
+    possTimes :: Float -> (Time, Time)
     possTimes r = ((r - s)/speedSq, (-r - s)/speedSq)
 
     safeRoot :: Float -> Maybe Float
@@ -67,21 +74,6 @@ hitTime rad ps = case root of
     s = pos diff |. vel diff
     speedSq = lengthSq $ vel diff
     diff = minus ps
-
-sidedHitTime :: Duration -> Side -> Radius -> Points -> Duration
-sidedHitTime rht desiredSide rad ps = sht
-  where
-    minDt = 0.00000001 --ugly
-    lowTime = rht - minDt
-    highTime = rht + minDt
-    lowSide = side rad $ bimap (movePoint lowTime) ps
-    roughSide = side rad $ bimap (movePoint rht) ps
-    highSide = side rad $ bimap (movePoint highTime) ps
-    sht
-      | roughSide == desiredSide = rht
-      | lowSide == desiredSide = lowTime
-      | highSide == desiredSide = highTime
-      | otherwise = undefined --ugly
 
 -- Unused
 earliestHitTime :: Radius -> Points -> Duration

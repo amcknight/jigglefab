@@ -1,13 +1,18 @@
 module Space
 ( Radius
 , Side (In, Out)
-, Contact (Bounce, Pass)
-, updateSide
+, flipSide
+-- , Contact (Bounce, Pass)
+-- , updateSide
 ) where
 
 type Radius = Float
 
 data Side = In | Out deriving (Show, Eq)
+flipSide :: Side -> Side
+flipSide In = Out
+flipSide Out = In
+
 data Contact = Bounce | Pass deriving Show
 
 updateSide :: Side -> Contact -> Side

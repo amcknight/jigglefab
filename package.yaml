@@ -40,6 +40,7 @@ executables:
     dependencies:
     - chains
     - heap
+    - array
 
 tests:
   chains-test:

@@ -52,6 +52,7 @@ library
     , gloss
     , random
     , heap
+    , array
   default-language: Haskell2010
 
 executable chains-exe
