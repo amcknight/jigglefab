@@ -17,13 +17,7 @@ import Points
 import Chems
 import Link
 import Links
-
-data Hit = Hit Duration Side IP deriving (Eq, Show)
-instance Ord Hit where
-  compare (Hit dt1 _ _) (Hit dt2 _ _) = compare dt1 dt2
-
-dur :: Hit -> Duration
-dur (Hit dt _ _) = dt
+import Hit
 
 type LinkArray = Array Int Link
 type IOArray = Array (Int, Int) Side
@@ -40,17 +34,14 @@ buildModel ls = Model ioArray lsArray
     lsArray = listArray (1, len) ls
     len = length ls
 
-moveModel :: Duration -> Model -> Model
-moveModel dt (Model ss ls) = Model ss $ fmap (moveLink dt) ls
-
 linksByI :: Model -> IP -> Links
 linksByI (Model _ ls) = bimap (ls !)
 
 sideByI :: Model -> IP -> Side
 sideByI (Model ss _) = (ss !)
 
-replaceLinks :: Model -> Side -> IP -> Links -> Model
-replaceLinks (Model ss ls) s (i1, i2) (l1, l2) = Model (ss // [((i1, i2), s)]) (ls // [(i1, l1), (i2, l2)])
+replacePair :: Model -> Side -> IP -> Links -> Model
+replacePair (Model ss ls) s (i1, i2) (l1, l2) = Model (ss // [((i1, i2), s)]) (ls // [(i1, l1), (i2, l2)])
 
 step :: Duration -> Radius -> Model -> Model
 step dt rad m = case nextHit rad m of
@@ -77,8 +68,11 @@ hits rad m = sort $ concatMap (toHits . times m) ips
     toHit :: IP -> (Side, Duration) -> Hit
     toHit ip (s, dt) = Hit dt s ip
 
+moveModel :: Duration -> Model -> Model
+moveModel dt (Model ss ls) = Model ss $ fmap (moveLink dt) ls
+
 bounceModel :: Side -> IP -> Model -> Model
-bounceModel s ip m = replaceLinks m newS ip $ buildLinks newPs newCs
+bounceModel s ip m = replacePair m newS ip $ buildLinks newPs newCs
   where
     ls = linksByI m ip
     ps = points ls
