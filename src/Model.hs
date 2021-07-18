@@ -103,12 +103,11 @@ nextHit m = nextValidHit m $ hits m
 updateHits :: Model -> IP -> [Hit] -> [Hit]
 updateHits m ip hs = L.sort $ keep ++ newHits
   where
-    (_, keep) = L.partition (effected ip) hs
-    -- Assumes hs was sorted so can use fmap head and group to get unique pairs in O(N)
+    keep = filter (uneffected ip) hs
     newHits = hitsFromIps m $ pairsOf (A.indices (links m)) ip
 
-    effected :: IP -> Hit -> Bool
-    effected ip = overlaps ip . ixPair
+    uneffected :: IP -> Hit -> Bool
+    uneffected ip h = not $ (overlaps ip . ixPair) h
 
 hitsFromIps :: Model -> [IP] -> [Hit]
 hitsFromIps m = concatMap (toHits . times m)
