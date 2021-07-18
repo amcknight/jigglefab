@@ -3,6 +3,7 @@ module Point
 , Position
 , Velocity
 , pos
+, posAt
 , vel
 , movePoint
 ) where
@@ -17,6 +18,9 @@ type Point = (Position, Velocity)
 
 pos :: Point -> Position
 pos (p, _) = p
+
+posAt :: Time -> Point -> Position
+posAt t = pos . movePoint t
 
 vel :: Point -> Velocity
 vel (_, v) = v

@@ -83,21 +83,22 @@ fourBallModel = buildModel 250
 draw :: Model -> Picture
 draw m = Pictures $ bodies ++ centres ++ bonds
   where
-    (bodies, centres) = unzip $ fmap (drawLink (rad m)) (elems (links m))
+    (bodies, centres) = unzip $ fmap (drawLink (rad m) (time m)) (elems (links m))
     bonds = fmap (drawBond m) (innerIps m)
 
 update :: ViewPort -> Duration -> Model -> Model
 update vp = step
 
-drawLink :: Radius -> Link -> (Picture, Picture)
-drawLink rad (Link ((x, y), _) chem) = bimap (translate x y) (body bodyColor rad, innerPoint centerColor)
+drawLink :: Radius -> Time -> Link -> (Picture, Picture)
+drawLink rad t (Link point chem) = bimap (translate x y) (body bodyColor rad, innerPoint centerColor)
   where
+    (x, y) = posAt t point
     (bodyColor, centerColor) = chemColors chem
 
 drawBond :: Model -> IP -> Picture
 drawBond m ip = Color white $ line [p1, p2]
   where
-    (p1, p2) = bimap pos $ points $ linksByI m ip
+    (p1, p2) = bimap (posAt (time m)) $ points $ linksByI m ip
 
 body :: Color -> Radius -> Picture
 body color rad = Color color $ circleSolid rad

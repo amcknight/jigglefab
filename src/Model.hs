@@ -1,5 +1,5 @@
 module Model
-( Model (Model, rad, sides, links)
+( Model (Model, rad, time, sides, links)
 , buildModel
 , sideByI, linksByI
 , step
@@ -27,6 +27,7 @@ type LinkArray = A.Array Int Link
 type SideMap = M.Map (Int, Int) Side
 data Model = Model
   { rad :: Radius
+  , time :: Time
   , hits :: [Hit]
   , sides :: SideMap
   , links :: LinkArray
@@ -34,7 +35,7 @@ data Model = Model
 
 -- Assumes all initial Chem's have: "has" == 0
 buildModel :: Radius -> [Link] -> Model
-buildModel r ls = tieAll $ populateHits $ Model r [] sideMap lsArray
+buildModel r ls = tieAll $ populateHits $ Model r 0 [] sideMap lsArray
   where
     sideMap = M.fromList $ findSides <$> pairs (A.indices lsArray)
     lsArray = A.listArray (1, len) ls
@@ -44,8 +45,8 @@ buildModel r ls = tieAll $ populateHits $ Model r [] sideMap lsArray
     findSides ip = (ip, side r $ points $ bimap (lsArray A.!) ip)
     
     populateHits :: Model -> Model
-    populateHits m = Model r (allHits m) ss ls
-      where (Model r _ ss ls) = m
+    populateHits m = Model r t (allHits m) ss ls
+      where (Model r t _ ss ls) = m
 
     allHits :: Model -> [Hit]
     allHits m = L.sort $ hitsFromIps m $ pairs $ A.indices $ links m
@@ -77,11 +78,11 @@ sideByI :: Model -> IP -> Side
 sideByI m = (sides m M.!)
 
 replacePair :: Model -> IP -> Side -> Links -> Model
-replacePair m ip s ls = Model r (updateHits newM ip oldHs) newSS newLs
+replacePair m ip s ls = Model r t (updateHits newM ip oldHs) newSS newLs
   where
-    newM = Model r oldHs (M.insert ip s oldSS) (oldLs A.// [(i1, l1), (i2, l2)])
-    (Model _ _ newSS newLs) = newM
-    (Model r oldHs oldSS oldLs) = m
+    newM = Model r t oldHs (M.insert ip s oldSS) (oldLs A.// [(i1, l1), (i2, l2)])
+    (Model _ _ _ newSS newLs) = newM
+    (Model r t oldHs oldSS oldLs) = m
     (i1, i2) = ip
     (l1, l2) = ls
 
@@ -89,8 +90,11 @@ step :: Duration -> Model -> Model
 step dt m = case nextHit m of
   Nothing -> moveModel dt m
   Just (Hit ht s ip) ->
-    if dt < ht then moveModel dt m
-    else step (dt - ht) $ bounceModel s ip $ moveModel ht m
+    if endT < ht then moveModel dt m
+    else step (endT - ht) $ bounceModel s ip $ moveModel (ht - startT) m
+  where
+    startT = time m
+    endT = startT + dt
 
 nextHit :: Model -> Maybe Hit
 nextHit m = nextValidHit m $ hits m
@@ -107,20 +111,20 @@ updateHits m ip hs = L.sort $ keep ++ newHits
     newHits = hitsFromIps m $ pairsOf (A.indices (links m)) ip
 
     uneffected :: IP -> Hit -> Bool
-    uneffected ip h = not $ (overlaps ip . ixPair) h
+    uneffected ip h = not $(overlaps ip . ixPair) h
 
 hitsFromIps :: Model -> [IP] -> [Hit]
 hitsFromIps m = concatMap (toHits . times m)
   where
     times :: Model -> IP -> ([(Side, Duration)], IP)
-    times m ip = (hitTimes (rad m) (points (linksByI m ip)), ip)
+    times m ip = (hitTimes (rad m) (time m) (points (linksByI m ip)), ip)
     toHits :: ([(Side, Duration)], IP) -> [Hit]
     toHits (hs, ip) = fmap (toHit ip) hs
     toHit :: IP -> (Side, Duration) -> Hit
     toHit ip (s, dt) = Hit dt s ip
   
 moveModel :: Duration -> Model -> Model
-moveModel dt (Model r hs ss ls) = Model r (mapMaybe (moveHit dt) hs) ss (fmap (moveLink dt) ls)
+moveModel dt (Model r t hs ss ls) = Model r (t+dt) hs ss ls
 
 bounceModel :: Side -> IP -> Model -> Model
 bounceModel s ip m = replacePair m ip newS $ buildLinks newPs newCs
@@ -128,4 +132,4 @@ bounceModel s ip m = replacePair m ip newS $ buildLinks newPs newCs
     ls = linksByI m ip
     ps = points ls
     (newS, newCs) = react (s, chems ls)
-    newPs = if s == newS then bounce ps else ps
+    newPs = if s == newS then bounceAt (time m) ps else ps

@@ -5,6 +5,7 @@ module Points
 , minus
 , furtherThan
 , bounce
+, bounceAt
 , side
 , hitTimes
 , movePoints
@@ -39,23 +40,31 @@ furtherThan d ps
 side :: Radius -> Points -> Side 
 side rad ps = if furtherThan rad ps then Out else In
 
-bounce :: Points -> Points
-bounce (p1, p2) = (p3, p4)
+bounce :: Time -> Points -> Points
+bounce t (p1, p2) = (p3, p4)
   where
     p3 = (pos p1, vel p1 |+ to1 |- to2)
     p4 = (pos p2, vel p2 |+ to2 |- to1)
     to1 = closestPointOnLine (0,0) (pos p2 |- pos p1) (vel p2)
     to2 = closestPointOnLine (0,0) (pos p1 |- pos p2) (vel p1)
 
-hitTimes :: Radius -> Points -> [(Side, Duration)]
-hitTimes rad ps = case root of
-  Nothing -> [] 
-  Just r -> times $ possTimes r
+bounceAt :: Time -> Points -> Points
+bounceAt t (p1, p2) = movePoints (-t) (p3, p4)
   where
-    times :: (Time, Time) -> [(Side, Duration)]
-    times (t1, t2)
-      | highT < 0 = []
-      | lowT < 0 = [(In, highT)]
+    p3 = (posAt t p1, vel p1 |+ to1 |- to2)
+    p4 = (posAt t p2, vel p2 |+ to2 |- to1)
+    to1 = closestPointOnLine (0,0) (posAt t p2 |- posAt t p1) (vel p2)
+    to2 = closestPointOnLine (0,0) (posAt t p1 |- posAt t p2) (vel p1)
+
+hitTimes :: Radius -> Time -> Points -> [(Side, Duration)]
+hitTimes rad t ps = case root of
+  Nothing -> [] 
+  Just r -> times t $ possTimes r
+  where
+    times :: Time -> (Time, Time) -> [(Side, Duration)]
+    times t (t1, t2)
+      | highT < t = []
+      | lowT < t = [(In, highT)]
       | otherwise = [(Out, lowT), (In, highT)]
       where
         (lowT, highT) = if t1 < t2 then (t1, t2) else (t2, t1)
