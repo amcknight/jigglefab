@@ -56,7 +56,7 @@ hitTimes rad ps = case root of
     times (t1, t2)
       | highT < 0 = []
       | lowT < 0 = [(In, highT)]
-      | otherwise = [(Out, lowT), (In, highT)] 
+      | otherwise = [(Out, lowT), (In, highT)]
       where
         (lowT, highT) = if t1 < t2 then (t1, t2) else (t2, t1)
 

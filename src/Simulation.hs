@@ -3,6 +3,7 @@ module Simulation
 , twoBallModel
 , twoBallModelInner
 , threeBallModel
+, fourBallModel
 ) where
 
 import Graphics.Gloss hiding (Vector)
@@ -28,7 +29,7 @@ run = do
     FullScreen
     black
     60
-    (randomLinearModel seed 60)
+    (randomLinearModel seed 200)
     draw
     update
 
@@ -48,7 +49,7 @@ randomLinearModel' :: StdGen -> Int -> [Link]
 randomLinearModel' _ 0 = []
 randomLinearModel' seed n = Link ((x, 0), v) (buildChem want) : randomLinearModel' newSeed (n-1)
   where
-    (want, vSeed) = randomR (2, 2) seed :: (Int, StdGen)
+    (want, vSeed) = randomR (2, 3) seed :: (Int, StdGen)
     x = fromIntegral n * 18.0
     (v, newSeed) = randomV vSeed 100
 
@@ -71,6 +72,14 @@ threeBallModel = buildModel 250
   , Link ((500, 1000), (0, -30)) chem1
   ]
 
+fourBallModel :: Model
+fourBallModel = buildModel 250
+  [ Link ((0, -100), (60, 20)) chem1
+  , Link ((1000, -150), (-50, 10)) chem1
+  , Link ((500, 1000), (0, -30)) chem1
+  , Link ((700, 1000), (0, -20)) chem1
+  ]
+
 draw :: Model -> Picture
 draw m = Pictures $ bodies ++ centres ++ bonds
   where
@@ -81,14 +90,14 @@ update :: ViewPort -> Duration -> Model -> Model
 update vp = step
 
 drawLink :: Radius -> Link -> (Picture, Picture)
-drawLink rad (Link ((x, y), _) chem) = (translate x y (body bodyColor rad), translate x y (innerPoint centerColor))
+drawLink rad (Link ((x, y), _) chem) = bimap (translate x y) (body bodyColor rad, innerPoint centerColor)
   where
     (bodyColor, centerColor) = chemColors chem
 
 drawBond :: Model -> IP -> Picture
 drawBond m ip = Color white $ line [p1, p2]
   where
-    (p1, p2) = bimap pos (points (linksByI m ip))
+    (p1, p2) = bimap pos $ points $ linksByI m ip
 
 body :: Color -> Radius -> Picture
 body color rad = Color color $ circleSolid rad
