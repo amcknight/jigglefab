@@ -14,6 +14,7 @@ import Data.Maybe (mapMaybe)
 import qualified Data.Array as A
 import qualified Data.Map as M
 import qualified Data.List as L
+import qualified Data.Heap as H
 import Space
 import Time
 import Pair
@@ -23,19 +24,20 @@ import Link
 import Links
 import Hit
 
+type HitHeap = H.MinHeap Hit
 type LinkArray = A.Array Int Link
 type SideMap = M.Map (Int, Int) Side
 data Model = Model
   { rad :: Radius
   , time :: Time
-  , hits :: [Hit]
+  , hits :: HitHeap
   , sides :: SideMap
   , links :: LinkArray
   } deriving Show
 
 -- Assumes all initial Chem's have: "has" == 0
 buildModel :: Radius -> [Link] -> Model
-buildModel r ls = tieAll $ populateHits $ Model r 0 [] sideMap lsArray
+buildModel r ls = tieAll $ populateHits $ Model r 0 H.empty sideMap lsArray
   where
     sideMap = M.fromList $ findSides <$> pairs (A.indices lsArray)
     lsArray = A.listArray (1, len) ls
@@ -48,8 +50,8 @@ buildModel r ls = tieAll $ populateHits $ Model r 0 [] sideMap lsArray
     populateHits m = Model r t (allHits m) ss ls
       where (Model r t _ ss ls) = m
 
-    allHits :: Model -> [Hit]
-    allHits m = L.sort $ hitsFromIps m $ pairs $ A.indices $ links m
+    allHits :: Model -> HitHeap
+    allHits m = hitsFromIps m $ pairs $ A.indices $ links m
 
     tieAll :: Model -> Model
     tieAll m = ties (innerIps m) m
@@ -88,33 +90,37 @@ replacePair m ip s ls = Model r t (updateHits newM ip oldHs) newSS newLs
 
 step :: Duration -> Model -> Model
 step dt m = case nextHit m of
-  Nothing -> moveModel dt m
-  Just (Hit ht s ip) ->
-    if endT < ht then moveModel dt m
-    else step (endT - ht) $ bounceModel s ip $ moveModel (ht - startT) m
+  (Nothing, newM) -> moveModel dt newM
+  (Just (Hit ht s ip), newM) ->
+    if endT < ht then moveModel dt newM
+    else step (endT - ht) $ bounceModel s ip $ moveModel (ht - startT) newM
   where
     startT = time m
     endT = startT + dt
 
-nextHit :: Model -> Maybe Hit
-nextHit m = nextValidHit m $ hits m
+nextHit :: Model -> (Maybe Hit, Model)
+nextHit m = case item of
+  Nothing -> (Nothing, newM)
+  Just hit -> (Just hit, newM)
   where
-    nextValidHit :: Model -> [Hit] -> Maybe Hit
-    nextValidHit _ [] = Nothing 
-    nextValidHit m (h:hs) = if sideByI m ip == s then Just h else nextValidHit m hs
-      where (Hit _ s ip) = h
+    newM = Model r t newHs ss ls
+    Model r t hs ss ls = m
+    item = H.viewHead newHs
+    (_, newHs) = H.break (validHit m) (hits m)
+    validHit :: Model -> Hit -> Bool
+    validHit m (Hit dt s ip) = sideByI m ip == s && dt >= time m
 
-updateHits :: Model -> IP -> [Hit] -> [Hit]
-updateHits m ip hs = L.sort $ keep ++ newHits
+updateHits :: Model -> IP -> HitHeap -> HitHeap
+updateHits m ip hs = H.union keep newHits
   where
-    keep = filter (uneffected ip) hs
+    keep = H.filter (uneffected ip) hs
     newHits = hitsFromIps m $ pairsOf (A.indices (links m)) ip
 
     uneffected :: IP -> Hit -> Bool
-    uneffected ip h = not $(overlaps ip . ixPair) h
+    uneffected ip h = not $ (overlaps ip . ixPair) h
 
-hitsFromIps :: Model -> [IP] -> [Hit]
-hitsFromIps m = concatMap (toHits . times m)
+hitsFromIps :: Model -> [IP] -> HitHeap
+hitsFromIps m ips = H.fromList $ concatMap (toHits . times m) ips
   where
     times :: Model -> IP -> ([(Side, Duration)], IP)
     times m ip = (hitTimes (rad m) (time m) (points (linksByI m ip)), ip)
