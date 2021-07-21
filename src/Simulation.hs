@@ -29,7 +29,7 @@ run = do
     FullScreen
     black
     60
-    (randomLinearModel seed 100)
+    (randomLinearModel seed 80)
     draw
     update
 
@@ -49,7 +49,7 @@ randomLinearModel' :: StdGen -> Int -> [Link]
 randomLinearModel' _ 0 = []
 randomLinearModel' seed n = Link ((x, 0), v) (buildChem want) : randomLinearModel' newSeed (n-1)
   where
-    (want, vSeed) = randomR (2, 3) seed :: (Int, StdGen)
+    (want, vSeed) = randomR (2, 2) seed :: (Int, StdGen)
     x = fromIntegral n * 18.0
     (v, newSeed) = randomV vSeed 100
 

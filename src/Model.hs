@@ -13,7 +13,6 @@ module Model
 import Data.Maybe (mapMaybe)
 import qualified Data.Array as A
 import qualified Data.Map as M
-import qualified Data.List as L
 import qualified Data.Heap as H
 import Space
 import Time
@@ -25,8 +24,8 @@ import Links
 import Hit
 
 type HitHeap = H.MinHeap Hit
-type LinkArray = A.Array Int Link
 type SideMap = M.Map (Int, Int) Side
+type LinkArray = A.Array Int Link
 data Model = Model
   { rad :: Radius
   , time :: Time
