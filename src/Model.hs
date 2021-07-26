@@ -12,7 +12,7 @@ module Model
 
 import Data.Maybe (mapMaybe)
 import qualified Data.Array as A
-import qualified Data.Map as M
+import qualified Data.Map.Strict as M
 import qualified Data.Heap as H
 import Space
 import Time
@@ -27,11 +27,11 @@ type HitHeap = H.MinHeap Hit
 type SideMap = M.Map (Int, Int) Side
 type LinkArray = A.Array Int Link
 data Model = Model
-  { rad :: Radius
-  , time :: Time
-  , hits :: HitHeap
-  , sides :: SideMap
-  , links :: LinkArray
+  { rad :: !Radius
+  , time :: !Time
+  , hits :: !HitHeap
+  , sides :: !SideMap
+  , links :: !LinkArray
   } deriving Show
 
 -- Assumes all initial Chem's have: "has" == 0
@@ -114,6 +114,7 @@ updateHits m ip hs = H.union keep newHits
   where
     keep = H.filter (uneffected ip) hs
     newHits = hitsFromIps m $ pairsOf (A.indices (links m)) ip
+    {-# INLINE newHits #-}  
 
     uneffected :: IP -> Hit -> Bool
     uneffected ip h = not $ (overlaps ip . ixPair) h
