@@ -29,7 +29,7 @@ run = do
     FullScreen
     black
     60
-    (randomLinearModel seed 200)
+    (randomLinearModel seed 100)
     draw
     update
 
