@@ -13,7 +13,7 @@ module Points
 ) where
 
 import Space
-import Time ( Interval, Duration, Time, minFuture )
+import Time
 import Pair
 import Vector
 import Vectors
