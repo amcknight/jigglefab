@@ -11,7 +11,7 @@ module Model
 ) where
 
 import Data.Maybe (mapMaybe)
-import qualified Data.Array as A
+import qualified Data.Vector as V
 import qualified Data.Map as M
 import qualified Data.List as L
 import Space
@@ -23,32 +23,32 @@ import Link
 import Links
 import Hit
 
-type LinkArray = A.Array Int Link
+type LinkVector = V.Vector Link
 type SideMap = M.Map (Int, Int) Side
 data Model = Model
   { rad :: Radius
   , hits :: [Hit]
   , sides :: SideMap
-  , links :: LinkArray
+  , links :: LinkVector
   } deriving Show
 
 -- Assumes all initial Chem's have: "has" == 0
 buildModel :: Radius -> [Link] -> Model
-buildModel r ls = tieAll $ populateHits $ Model r [] sideMap lsArray
+buildModel r ls = tieAll $ populateHits $ Model r [] sideMap lsVector
   where
-    sideMap = M.fromList $ findSides <$> pairs (A.indices lsArray)
-    lsArray = A.listArray (1, len) ls
+    sideMap = M.fromList $ findSides <$> pairsTo len
+    lsVector = V.fromList ls
     len = length ls
 
     findSides :: IP -> (IP, Side)
-    findSides ip = (ip, side r $ points $ bimap (lsArray A.!) ip)
+    findSides ip = (ip, side r $ points $ bimap (lsVector V.!) ip)
     
     populateHits :: Model -> Model
     populateHits m = Model r (allHits m) ss ls
       where (Model r _ ss ls) = m
 
     allHits :: Model -> [Hit]
-    allHits m = L.sort $ hitsFromIps m $ pairs $ A.indices $ links m
+    allHits m = L.sort $ hitsFromIps m $ pairsTo len
 
     tieAll :: Model -> Model
     tieAll m = ties (innerIps m) m
@@ -71,7 +71,7 @@ innerIps m = innerIps' $ M.assocs $ sides m
     innerIps' ((ip, In):ss) = ip : innerIps' ss
 
 linksByI :: Model -> IP -> Links
-linksByI m = bimap (links m A.!)
+linksByI m = bimap (links m V.!)
 
 sideByI :: Model -> IP -> Side
 sideByI m = (sides m M.!)
@@ -79,7 +79,7 @@ sideByI m = (sides m M.!)
 replacePair :: Model -> IP -> Side -> Links -> Model
 replacePair m ip s ls = Model r (updateHits newM ip oldHs) newSS newLs
   where
-    newM = Model r oldHs (M.insert ip s oldSS) (oldLs A.// [(i1, l1), (i2, l2)])
+    newM = Model r oldHs (M.insert ip s oldSS) (oldLs V.// [(i1, l1), (i2, l2)])
     (Model _ _ newSS newLs) = newM
     (Model r oldHs oldSS oldLs) = m
     (i1, i2) = ip
@@ -104,7 +104,7 @@ updateHits :: Model -> IP -> [Hit] -> [Hit]
 updateHits m ip hs = L.sort $ keep ++ newHits
   where
     keep = filter (uneffected ip) hs
-    newHits = hitsFromIps m $ pairsOf (A.indices (links m)) ip
+    newHits = hitsFromIps m $ pairsOfTo (length (links m)) ip
 
     uneffected :: IP -> Hit -> Bool
     uneffected ip h = not $ (overlaps ip . ixPair) h

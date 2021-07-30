@@ -10,7 +10,7 @@ import Graphics.Gloss hiding (Vector)
 import Graphics.Gloss.Data.ViewPort (ViewPort)
 import System.Random ( getStdGen, Random(randomR), StdGen )
 import Data.Maybe (fromMaybe)
-import Data.Array (elems)
+import Data.Vector (toList)
 import Data.Map (keys)
 import Vector
 import Space
@@ -28,8 +28,8 @@ run = do
   simulate
     FullScreen
     black
-    60
-    (randomLinearModel seed 100)
+    30
+    (randomLinearModel seed 200)
     draw
     update
 
@@ -83,7 +83,7 @@ fourBallModel = buildModel 250
 draw :: Model -> Picture
 draw m = Pictures $ bodies ++ centres ++ bonds
   where
-    (bodies, centres) = unzip $ fmap (drawLink (rad m)) (elems (links m))
+    (bodies, centres) = unzip $ fmap (drawLink (rad m)) (toList (links m))
     bonds = fmap (drawBond m) (innerIps m)
 
 update :: ViewPort -> Duration -> Model -> Model
