@@ -18,6 +18,6 @@ instance Ord Hit where
 
 moveHit :: Duration -> Hit -> Maybe Hit
 moveHit dt (Hit d s ip)
-  | newDur < 0 = Nothing 
+  | newDur < 0 = Nothing
   | otherwise = Just $ Hit newDur s ip
   where newDur = d - dt
