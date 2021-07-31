@@ -1,9 +1,8 @@
 module Point
-( Point
+( Point (Point)
 , Position
 , Velocity
-, pos
-, vel
+, pos, vel
 , movePoint
 ) where
 
@@ -13,13 +12,10 @@ import Time
 
 type Position = Vector
 type Velocity = Vector
-type Point = (Position, Velocity)
-
-pos :: Point -> Position
-pos (p, _) = p
-
-vel :: Point -> Velocity
-vel (_, v) = v
+data Point = Point
+  { pos :: Position
+  , vel :: Velocity
+  } deriving Show
 
 movePoint :: Duration -> Point -> Point
-movePoint dt (p, v) = (p |+ (dt |* v) , v)
+movePoint dt (Point p v) = Point (p |+ (dt |* v)) v

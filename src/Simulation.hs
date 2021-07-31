@@ -4,11 +4,11 @@ module Simulation
 
 import Graphics.Gloss hiding (Vector)
 import Graphics.Gloss.Data.ViewPort (ViewPort)
-import Data.Maybe (fromMaybe)
 import Data.Vector (toList)
-import Data.Map (keys)
+import System.Random (getStdGen)
 import Space
 import Time
+import Vector
 import Chem
 import Point
 import Link
@@ -16,7 +16,6 @@ import Links
 import Pair
 import Model
 import ModelLibrary
-import System.Random ( getStdGen )
 
 run :: IO ()
 run = do
@@ -25,7 +24,7 @@ run = do
     FullScreen
     black
     30
-    (randomLinearModel seed 300)
+    (chainModel seed 20 (V (-500) (-200)) (V 500 500)) -- (randomLinearModel seed 20.0 (V (-500) (-200)) (V 500 500) 10)
     draw
     update
 
@@ -39,14 +38,13 @@ update :: ViewPort -> Duration -> Model -> Model
 update vp = step
 
 drawLink :: Radius -> Link -> (Picture, Picture)
-drawLink rad (Link ((x, y), _) chem) = bimap (translate x y) (body bodyColor rad, innerPoint centerColor)
-  where
-    (bodyColor, centerColor) = chemColors chem
+drawLink rad (Link (Point (V x y) _) chem) = bimap (translate x y) (body bodyColor rad, innerPoint centerColor)
+  where (bodyColor, centerColor) = chemColors chem
 
 drawBond :: Model -> IP -> Picture
 drawBond m ip = Color white $ line [p1, p2]
   where
-    (p1, p2) = bimap pos $ points $ linksByI m ip
+    (p1, p2) = bimap (coords . pos) $ points $ linksByI m ip
 
 body :: Color -> Radius -> Picture
 body color rad = Color color $ circleSolid rad
