@@ -4,11 +4,15 @@ module Point
 , Velocity
 , pos, vel
 , movePoint
+, bonk
 ) where
 
 import Vector
 import Vectors
 import Time
+import Space
+
+import Debug.Trace
 
 type Position = Vector
 type Velocity = Vector
@@ -19,3 +23,6 @@ data Point = Point
 
 movePoint :: Duration -> Point -> Point
 movePoint dt (Point p v) = Point (p |+ (dt |* v)) v
+
+bonk :: Ortho -> Point -> Point
+bonk o p = Point (pos p) $ reflect o $ vel p

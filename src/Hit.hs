@@ -1,5 +1,5 @@
 module Hit
-( Hit (Hit, dur, sid, ixPair)
+( Hit (Hit, hitTime, hitSide, ixPair)
 , moveHit
 ) where
 
@@ -8,13 +8,13 @@ import Space
 import Pair
 
 data Hit = Hit
-  { dur :: Duration
-  , sid :: Side 
+  { hitTime :: Time
+  , hitSide :: Side
   , ixPair :: IP
   } deriving (Eq, Show)
 
 instance Ord Hit where
-  compare (Hit dt1 _ _) (Hit dt2 _ _) = compare dt1 dt2
+  compare h1 h2 = compare (hitTime h1) (hitTime h2)
 
 moveHit :: Duration -> Hit -> Maybe Hit
 moveHit dt (Hit d s ip)

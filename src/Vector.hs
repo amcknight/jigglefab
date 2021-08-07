@@ -6,9 +6,11 @@ module Vector
 , randomV
 , randomVIn
 , (|*)
+, reflect
 ) where
 
 import System.Random as R
+import Space
 
 data Vector = V Float Float deriving Show
 
@@ -45,3 +47,7 @@ randomVIn seed maxLen = randomV vSeed $ maxLen * sqrt lenFactor
 
 (|*) :: Float -> Vector -> Vector
 (|*) scale (V x y) = V (scale * x) (scale * y)
+
+reflect :: Ortho -> Vector -> Vector
+reflect Vertical (V x y) = V (-x) y
+reflect Horizontal (V x y) = V x (-y)
