@@ -41,6 +41,7 @@ library
       Time
       Vector
       Vectors
+      Wall
   other-modules:
       Paths_chains
   hs-source-dirs:
