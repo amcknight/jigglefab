@@ -1,12 +1,10 @@
 module Wall
 ( Wall (Wall, ortho, place)
 , wSide
-, Bonk (Bonk, bonkTime, bonkSide, ixPair)
 ) where
 
 import Time
 import Space
-import Link
 import Pair
 import Point
 import Vector
@@ -23,12 +21,3 @@ wSide' :: Float -> Float -> Side
 wSide' pl p = case compare pl p of
   LT -> In
   _ -> Out
-
-data Bonk = Bonk
-  { bonkTime :: Time
-  , bonkSide :: Side
-  , ixPair :: IP
-  } deriving (Eq, Show)
-
-instance Ord Bonk where
-  compare b1 b2 = compare (bonkTime b1) (bonkTime b2)

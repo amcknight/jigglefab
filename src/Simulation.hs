@@ -11,8 +11,8 @@ import Time
 import Vector
 import Chem
 import Point
-import Link
-import Links
+import Ball
+import Balls
 import Pair
 import Model
 import ModelLibrary
@@ -32,15 +32,15 @@ run = do
 draw :: Model -> Picture
 draw m = Pictures $ ws ++ bodies ++ centres ++ bonds
   where
-    (bodies, centres) = unzip $ fmap (drawLink (rad m)) (toList (links m))
+    (bodies, centres) = unzip $ fmap (drawBall (rad m)) (toList (balls m))
     ws = toList $ fmap drawWall (walls m)
     bonds = fmap (drawBond m) (innerIps m)
 
 update :: ViewPort -> Duration -> Model -> Model
 update vp = step
 
-drawLink :: Radius -> Link -> (Picture, Picture)
-drawLink rad (Link (Point (V x y) _) chem) = bimap (translate x y) (body bodyColor rad, innerPoint centerColor)
+drawBall :: Radius -> Ball -> (Picture, Picture)
+drawBall rad (Ball (Point (V x y) _) chem) = bimap (translate x y) (body bodyColor rad, innerPoint centerColor)
   where (bodyColor, centerColor) = chemColors chem
 
 drawWall :: Wall -> Picture 
@@ -50,7 +50,7 @@ drawWall (Wall Vertical f) = Color yellow $ line [(f, -3000), (f, 3000)]
 drawBond :: Model -> IP -> Picture
 drawBond m ip = Color white $ line [p1, p2]
   where
-    (p1, p2) = bimap (coords . pos) $ points $ linksByI m ip
+    (p1, p2) = bimap (coords . pos) $ points $ ballsByI m ip
 
 body :: Color -> Radius -> Picture
 body color rad = Color color $ circleSolid rad

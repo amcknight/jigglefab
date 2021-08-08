@@ -26,11 +26,11 @@ source-repository head
 
 library
   exposed-modules:
+      Ball
+      Balls
       Chem
       Chems
       Hit
-      Link
-      Links
       Model
       ModelLibrary
       Pair
