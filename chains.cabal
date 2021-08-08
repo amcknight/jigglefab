@@ -30,6 +30,7 @@ library
       Balls
       Chem
       Chems
+      Form
       Hit
       Model
       ModelLibrary

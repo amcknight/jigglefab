@@ -25,7 +25,9 @@ fromTo :: Vector -> Vector -> Int -> [Vector]
 fromTo _ _ 0 = []
 fromTo v1 _ 1 = [v1]
 fromTo (V x1 y1) (V x2 y2) n = zipWith V (fromTo' x1 x2 n) (fromTo' y1 y2 n) 
-  where fromTo' a b n = [a, a + (b - a) / fromIntegral n .. b]
+  where
+    fromTo' :: Float -> Float -> Int -> [Float]
+    fromTo' a b n = [a, a + (b - a) / fromIntegral n .. b]
 
 distSq :: Vectors -> Float 
 distSq (v1, v2) = lengthSq $ v2 |- v1

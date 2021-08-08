@@ -3,9 +3,7 @@ module Wall
 , wSide
 ) where
 
-import Time
 import Space
-import Pair
 import Point
 import Vector
 

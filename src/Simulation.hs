@@ -17,6 +17,7 @@ import Pair
 import Model
 import ModelLibrary
 import Wall
+import Form
 
 run :: IO ()
 run = do
@@ -30,11 +31,13 @@ run = do
     update
 
 draw :: Model -> Picture
-draw m = Pictures $ ws ++ bodies ++ centres ++ bonds
+draw m = Pictures $ drawForm (rad m) (form m) ++ fmap (drawBond m) (innerIps m)
+
+drawForm :: Radius -> Form -> [Picture]
+drawForm rad f = ws ++ bodies ++ centres
   where
-    (bodies, centres) = unzip $ fmap (drawBall (rad m)) (toList (balls m))
-    ws = toList $ fmap drawWall (walls m)
-    bonds = fmap (drawBond m) (innerIps m)
+    (bodies, centres) = unzip $ fmap (drawBall rad) (toList (balls f))
+    ws = toList $ fmap drawWall (walls f)
 
 update :: ViewPort -> Duration -> Model -> Model
 update vp = step
@@ -50,7 +53,7 @@ drawWall (Wall Vertical f) = Color yellow $ line [(f, -3000), (f, 3000)]
 drawBond :: Model -> IP -> Picture
 drawBond m ip = Color white $ line [p1, p2]
   where
-    (p1, p2) = bimap (coords . pos) $ points $ ballsByI m ip
+    (p1, p2) = bimap (coords . pos) $ points $ ballsByI (form m) ip
 
 body :: Color -> Radius -> Picture
 body color rad = Color color $ circleSolid rad
