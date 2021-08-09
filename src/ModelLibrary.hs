@@ -28,20 +28,22 @@ randomModel size num seed = (newSeed, buildModel 20 f)
   where (newSeed, f) = randomForm 50 size num seed
 
 fourChains :: StdGen -> Radius -> (Model, StdGen)
-fourChains s0 rad = (buildModel rad $ box (V (-1000) (-1000), V 1000 1000) <> f1 <> f2 <> f3 <> f4, s4)
-  where
+fourChains s0 rad = let
     (s1, f1) = chainForm rad 150 (V (-800)   800)  (V (-200)   200)  s0
     (s2, f2) = chainForm rad 150 (V   800    800)  (V   200    200)  s1
     (s3, f3) = chainForm rad 150 (V   800  (-800)) (V   200  (-200)) s2
     (s4, f4) = chainForm rad 150 (V (-800) (-800)) (V (-200) (-200)) s3
+  in (buildModel rad $ box (V (-1000) (-1000), V 1000 1000) <> f1 <> f2 <> f3 <> f4, s4)
 
 chainModel :: Radius -> Position -> Position -> StdGen -> (StdGen, Model)
-chainModel rad from to seed = (newSeed, buildModel rad $ box (V (-300) (-1000), V 1000 500) <> c)
-  where (newSeed, c) = chainForm rad 150 from to seed
+chainModel rad from to seed = let
+    (newSeed, c) = chainForm rad 150 from to seed
+  in (newSeed, buildModel rad $ box (V (-300) (-1000), V 1000 500) <> c)
 
 randomLinearModel :: Radius -> Position -> Position -> Int -> StdGen -> (StdGen, Model)
-randomLinearModel rad from to num seed = (newSeed, buildModel rad $ box (V (-300) (-1000), V 1000 500) <> f)
-  where (newSeed, f) = randomLinearForm 150 from to num seed
+randomLinearModel rad from to num seed = let
+    (newSeed, f) = randomLinearForm 150 from to num seed
+  in (newSeed, buildModel rad $ box (V (-300) (-1000), V 1000 500) <> f)
 
 ballWall :: Model 
 ballWall = buildModel 200 $
