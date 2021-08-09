@@ -38,11 +38,19 @@ chainForm :: Radius -> Float -> Position -> Position -> State StdGen Form
 chainForm rad speed from to = randomLinearForm speed from to num
  where num = round $ dist (from,to) / (rad-0.001) + 1
 
+<<<<<<< HEAD
 randomLinearForm :: Float -> Position -> Position -> Int -> State StdGen Form
 randomLinearForm speed from to num = do
   vels <- randomVs speed num
   let poss = fromTo from to num
   pure $ mconcat (zipWith toBallForm poss vels)
+=======
+randomLinearForm :: Float -> Position -> Position -> Int -> StdGen -> (StdGen, Form)
+randomLinearForm speed from to num seed = let
+    (newSeed, vels) = randomVs speed num seed
+    poss = fromTo from to num
+  in (newSeed, mconcat (zipWith toBallForm poss vels))
+>>>>>>> main
   where
     toBallForm :: Position -> Velocity -> Form
     toBallForm p v = ballForm $ Ball (Point p v) chem2
