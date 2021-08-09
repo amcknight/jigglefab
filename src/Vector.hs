@@ -57,6 +57,7 @@ randomVIn :: Float -> State StdGen Vector
 randomVIn maxLen = do
   seed <- get
   let (lenFactor, vSeed) = randomR (0.0, 1.0) seed
+  put vSeed
   randomV $ maxLen * sqrt lenFactor
 
 (|*) :: Float -> Vector -> Vector

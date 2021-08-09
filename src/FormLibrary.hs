@@ -28,6 +28,7 @@ randomForm _ _ 0 = do pure mempty
 randomForm speed size num = do
   seed <- get
   let (valence, pSeed) = randomR (1, 3) seed
+  put pSeed
   pos <- randomVIn size
   vel <- randomV speed
   let headForm = ballForm (Ball (Point pos vel) (buildChem valence))
