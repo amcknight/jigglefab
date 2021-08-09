@@ -21,26 +21,27 @@ import Space
 import Wall
 import FormLibrary
 import Form
+import Control.Monad.State  
 
-randomModel :: StdGen -> Float -> Int -> (Model, StdGen)
-randomModel seed size num = (buildModel 20 f, newSeed)
-  where (f, newSeed) = randomForm seed 50 size num
+randomModel :: Float -> Int -> StdGen -> (StdGen, Model)
+randomModel size num seed = (newSeed, buildModel 20 f)
+  where (newSeed, f) = randomForm 50 size num seed
 
 fourChains :: StdGen -> Radius -> (Model, StdGen)
 fourChains s0 rad = (buildModel rad $ box (V (-1000) (-1000), V 1000 1000) <> f1 <> f2 <> f3 <> f4, s4)
   where
-    (f1, s1) = chainForm s0 rad 150 (V (-800)   800)  (V (-200)   200)
-    (f2, s2) = chainForm s1 rad 150 (V   800    800)  (V   200    200)
-    (f3, s3) = chainForm s2 rad 150 (V   800  (-800)) (V   200  (-200))
-    (f4, s4) = chainForm s3 rad 150 (V (-800) (-800)) (V (-200) (-200))
+    (s1, f1) = chainForm rad 150 (V (-800)   800)  (V (-200)   200)  s0
+    (s2, f2) = chainForm rad 150 (V   800    800)  (V   200    200)  s1
+    (s3, f3) = chainForm rad 150 (V   800  (-800)) (V   200  (-200)) s2
+    (s4, f4) = chainForm rad 150 (V (-800) (-800)) (V (-200) (-200)) s3
 
-chainModel :: StdGen -> Radius -> Position -> Position -> (Model, StdGen)
-chainModel seed rad from to = (buildModel rad $ box (V (-300) (-1000), V 1000 500) <> c, newSeed)
-  where (c, newSeed) = chainForm seed rad 150 from to
+chainModel :: Radius -> Position -> Position -> StdGen -> (StdGen, Model)
+chainModel rad from to seed = (newSeed, buildModel rad $ box (V (-300) (-1000), V 1000 500) <> c)
+  where (newSeed, c) = chainForm rad 150 from to seed
 
-randomLinearModel :: StdGen -> Radius -> Position -> Position -> Int -> (Model, StdGen)
-randomLinearModel seed rad from to num = (buildModel rad $ box (V (-300) (-1000), V 1000 500) <> f, newSeed)
-  where (f, newSeed) = randomLinearForm seed 150 from to num
+randomLinearModel :: Radius -> Position -> Position -> Int -> StdGen -> (StdGen, Model)
+randomLinearModel rad from to num seed = (newSeed, buildModel rad $ box (V (-300) (-1000), V 1000 500) <> f)
+  where (newSeed, f) = randomLinearForm 150 from to num seed
 
 ballWall :: Model 
 ballWall = buildModel 200 $
