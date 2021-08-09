@@ -41,6 +41,7 @@ executables:
     - chains
     - heap
     - vector
+    - mtl
 
 tests:
   chains-test:
