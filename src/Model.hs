@@ -4,9 +4,7 @@ module Model
 , wSideByI, hSideByI, ballsByI
 , step
 , moveModel
-, hits
 , innerIps
-, updateHits
 ) where
 
 import Data.Maybe (mapMaybe)
@@ -88,19 +86,12 @@ wSideByI :: Model -> IP -> Side
 wSideByI m = (wSides m M.!)
 
 replace :: Model -> Int -> Ball -> Model
-replace m i b = Model r newF wss hss $ updateHits1 r newF i oldHs
-  where
-    newF = replaceBall i b oldF
-    (Model r oldF wss hss oldHs) = m
+replace (Model r oldF wss hss oldHs) i b = Model r newF wss hss $ updateHits1 r newF i oldHs
+  where newF = replaceBall i b oldF
 
 replacePair :: Model -> IP -> Side -> Balls -> Model
-replacePair m ip s bs = Model r newF wss newHss $ updateHits (rad newM) (form newM) ip hs
-  where
-    newM = Model r (replaceBalls ip bs oldF) wss (M.insert ip s oldHss) hs
-    (Model _ newF _ newHss _) = newM
-    (Model r oldF wss oldHss hs) = m
-    (i1, i2) = ip
-    (b1, b2) = bs
+replacePair (Model r oldF wss hss oldHs) ip s bs = Model r newF wss hss $ updateHits2 r newF ip oldHs
+  where newF = replaceBalls ip bs oldF
 
 step :: Duration -> Model -> Model
 step dt m = case (nextBonk m, nextBounce m) of
@@ -125,7 +116,7 @@ step dt m = case (nextBonk m, nextBounce m) of
 nextBonk :: Model -> Maybe Hit
 nextBonk m = nextValidBonk m bonks
   where
-    bonks = L.sort (mapMaybe (toBonk m) (bonkIndices f))
+    bonks = L.sort (mapMaybe (toModelBonk m) (bonkIndices f))
     Model rad f _ _ _ = m
     nextValidBonk :: Model -> [Hit] -> Maybe Hit
     nextValidBonk _ [] = Nothing 
@@ -147,16 +138,16 @@ updateHits1 r f i hs = L.sort $ keep ++ newHits
     newHits = hitsFromIps r f $ pairsOfTo1 (length (balls f)) i
 
     uneffected :: Int -> Hit -> Bool
-    uneffected i h = not $ (overlaps1 i . Hit.ixPair) h
+    uneffected i h = not $ (overlaps1 i . ixPair) h
 
-updateHits :: Radius -> Form -> IP -> [Hit] -> [Hit]
-updateHits r f ip hs = L.sort $ keep ++ newHits
+updateHits2 :: Radius -> Form -> IP -> [Hit] -> [Hit]
+updateHits2 r f ip hs = L.sort $ keep ++ newHits
   where
     keep = filter (uneffected ip) hs
-    newHits = hitsFromIps r f $ pairsOfTo (length (balls f)) ip
+    newHits = hitsFromIps r f $ pairsOfTo2 (length (balls f)) ip
 
     uneffected :: IP -> Hit -> Bool
-    uneffected ip h = not $ (overlaps ip . Hit.ixPair) h
+    uneffected ip h = not $ (overlaps2 ip . ixPair) h
 
 hitsFromIps :: Radius -> Form -> [IP] -> [Hit]
 hitsFromIps r f = concatMap (toHits . times r f)
@@ -183,22 +174,10 @@ bounceModel s ip m = replacePair m ip newS $ buildBalls newPs newCs
 bonkModel :: Side -> IP -> Model -> Model
 bonkModel s (wi, li) m = replace m li newBall
   where
-    Ball p c = ballByI (form m) li
-    Wall o _ = wallByI (form m) wi
+    f = form m
+    Wall o _ = wallByI f wi
+    Ball p c = ballByI f li
     newBall = Ball (bonk o p) c
 
-toBonk :: Model -> IP -> Maybe Hit
-toBonk m wlip = case compare t 0 of
-  GT -> Just $ Hit t ws wlip
-  _ -> Nothing
-  where
-    (wi, li) = wlip
-    w = wallByI (form m) wi
-    ws = wSideByI m wlip
-    Ball p _ = ballByI (form m) li
-    t = intersectTime w p
-  
-intersectTime :: Wall -> Point -> Time
-intersectTime (Wall o p) (Point (V x y) (V xv yv)) = case o of
-  Vertical -> -(x-p)/xv
-  Horizontal -> -(y-p)/yv
+toModelBonk :: Model -> IP -> Maybe Hit
+toModelBonk m ip = toBonk (form m) (wSideByI m ip) ip

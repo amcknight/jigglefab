@@ -30,10 +30,10 @@ randomModel size num = do
 
 fourChains :: Radius -> State StdGen Model
 fourChains rad = do
-  f1 <- chainForm rad 150 (V (-800)   800)  (V (-500)   500)
-  f2 <- chainForm rad 150 (V   800    800)  (V   500    500)
-  f3 <- chainForm rad 150 (V   800  (-800)) (V   500  (-500))
-  f4 <- chainForm rad 150 (V (-800) (-800)) (V (-500) (-500))
+  f1 <- chainForm rad 150 (V (-800)   800)  (V (-100)   100)
+  f2 <- chainForm rad 150 (V   800    800)  (V   100    100)
+  f3 <- chainForm rad 150 (V   800  (-800)) (V   100  (-100))
+  f4 <- chainForm rad 150 (V (-800) (-800)) (V (-100) (-100))
   pure $ buildModel rad $ box (V (-1000) (-1000), V 1000 1000) <> f1 <> f2 <> f3 <> f4
 
 chainModel :: Radius -> Position -> Position -> State StdGen Model

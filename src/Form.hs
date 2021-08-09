@@ -7,16 +7,20 @@ module Form
 , replaceBall
 , replaceBalls
 , bonkIndices, bounceIndices
+, toBonk
 , moveForm
 ) where
 
+import qualified Data.Vector as V
 import Ball
 import Balls
 import Wall
 import Pair
-import qualified Data.Vector as V
-import Space
 import Time
+import Hit
+import Space
+import Point
+import Vector
 
 type BallVector = V.Vector Ball
 type WallVector = V.Vector Wall
@@ -62,5 +66,20 @@ bonkIndices (Form ws bs) = prodTo (length ws) (length bs)
 bounceIndices :: Form -> [IP]
 bounceIndices (Form _ bs) = pairsTo (length bs)
 
+toBonk :: Form -> Side -> IP -> Maybe Hit
+toBonk f s ip = case compare t 0 of
+  GT -> Just $ Hit t s ip
+  _ -> Nothing
+  where
+    (wi, li) = ip
+    w = wallByI f wi
+    Ball p _ = ballByI f li
+    t = intersectTime w p
+
+intersectTime :: Wall -> Point -> Time
+intersectTime (Wall o p) (Point (V x y) (V xv yv)) = case o of
+  Vertical -> -(x-p)/xv
+  Horizontal -> -(y-p)/yv
+
 moveForm :: Duration -> Form -> Form
-moveForm dt (Form ws bs) = Form ws (fmap (moveBall dt) bs)
+moveForm dt (Form ws bs) = Form ws $ fmap (moveBall dt) bs

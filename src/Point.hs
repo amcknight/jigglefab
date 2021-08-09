@@ -12,8 +12,6 @@ import Vectors
 import Time
 import Space
 
-import Debug.Trace
-
 type Position = Vector
 type Velocity = Vector
 data Point = Point
