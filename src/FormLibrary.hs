@@ -28,18 +28,18 @@ randomForm speed size num seed = (newSeed, headForm <> nextForms)
   where
     headForm = ballForm (Ball (Point pos vel) (buildChem valence))
     (newSeed, nextForms) = randomForm size speed (num-1) tailSeed
-    (valence, pSeed) = randomR (1, 3) seed :: (Int, StdGen)
-    (pos, vSeed) = randomVIn pSeed size
-    (vel, tailSeed) = randomV vSeed speed
-
-randomLinearForm :: Float -> Position -> Position -> Int -> StdGen -> (StdGen, Form)
-randomLinearForm speed from to num seed = (newSeed, mconcat (zipWith toBallForm poss vels))
-  where
-    (vels, newSeed) = randomVs seed speed num
-    poss = fromTo from to num
-    toBallForm :: Position -> Velocity -> Form
-    toBallForm p v = ballForm $ Ball (Point p v) chem2
+    (valence, pSeed) = randomR (1, 3) seed
+    (vSeed, pos) = randomVIn size pSeed
+    (tailSeed, vel) = randomV speed vSeed
 
 chainForm :: Radius -> Float -> Position -> Position -> StdGen -> (StdGen, Form)
 chainForm rad speed from to = randomLinearForm speed from to num
  where num = round $ dist (from,to) / (rad-0.001) + 1
+
+randomLinearForm :: Float -> Position -> Position -> Int -> StdGen -> (StdGen, Form)
+randomLinearForm speed from to num seed = (newSeed, mconcat (zipWith toBallForm poss vels))
+  where
+    (newSeed, vels) = randomVs speed num seed
+    poss = fromTo from to num
+    toBallForm :: Position -> Velocity -> Form
+    toBallForm p v = ballForm $ Ball (Point p v) chem2

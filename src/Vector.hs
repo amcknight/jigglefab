@@ -38,19 +38,19 @@ zeroV = V 0 0
 lengthSq :: Vector -> Float
 lengthSq (V x y) = x^2 + y^2
 
-randomV :: StdGen -> Float -> (Vector, StdGen)
-randomV seed len = (len |* unit, newSeed)
+randomV :: Float -> StdGen -> (StdGen, Vector)
+randomV len seed = (newSeed, len |* unit)
   where (unit, newSeed) = random seed
 
-randomVs :: StdGen -> Float -> Int -> ([Vector], StdGen)
-randomVs seed _ 0 = ([], seed)
-randomVs seed len num = (vel:vels, newSeed)
+randomVs :: Float -> Int -> StdGen -> (StdGen, [Vector])
+randomVs _ 0 seed = (seed, [])
+randomVs len num seed = (newSeed, vel:vels)
   where
-    (vel, tailSeed) = randomV seed len
-    (vels, newSeed) = randomVs tailSeed len (num-1)
+    (tailSeed, vel) = randomV len seed
+    (newSeed, vels) = randomVs len (num-1) tailSeed
 
-randomVIn :: StdGen -> Float -> (Vector, StdGen)
-randomVIn seed maxLen = randomV vSeed $ maxLen * sqrt lenFactor
+randomVIn :: Float -> StdGen -> (StdGen, Vector)
+randomVIn maxLen seed = randomV (maxLen * sqrt lenFactor) vSeed
   where (lenFactor, vSeed) = randomR (0.0, 1.0) seed
 
 (|*) :: Float -> Vector -> Vector
