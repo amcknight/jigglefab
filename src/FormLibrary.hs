@@ -8,13 +8,13 @@ module FormLibrary
 import Point
 import Vector
 import Space
-import System.Random
 import Ball
 import Chem
 import Form
 import Wall
-import Control.Monad.State
 import Utils
+import System.Random
+import Control.Monad.State
 
 box :: Vector -> Vector -> Form 
 box (V x1 y1) (V x2 y2) =
