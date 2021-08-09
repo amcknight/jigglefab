@@ -4,6 +4,7 @@ module Vector
 , zeroV
 , lengthSq
 , randomV
+, randomVs
 , randomVIn
 , (|*)
 , reflect
@@ -40,6 +41,13 @@ lengthSq (V x y) = x^2 + y^2
 randomV :: StdGen -> Float -> (Vector, StdGen)
 randomV seed len = (len |* unit, newSeed)
   where (unit, newSeed) = random seed
+
+randomVs :: StdGen -> Float -> Int -> ([Vector], StdGen)
+randomVs seed _ 0 = ([], seed)
+randomVs seed len num = (vel:vels, newSeed)
+  where
+    (vel, tailSeed) = randomV seed len
+    (vels, newSeed) = randomVs tailSeed len (num-1)
 
 randomVIn :: StdGen -> Float -> (Vector, StdGen)
 randomVIn seed maxLen = randomV vSeed $ maxLen * sqrt lenFactor

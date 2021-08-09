@@ -22,11 +22,12 @@ import Form
 run :: IO ()
 run = do
   seed <- getStdGen
+  let (model, newSeed) = fourChains seed 20  --(chainModel seed 20 (V (-500) (-200)) (V 500 500))
   simulate
     FullScreen
     black
     30
-    (chainModel seed 20 (V (-500) (-200)) (V 500 500))
+    model
     draw
     update
 

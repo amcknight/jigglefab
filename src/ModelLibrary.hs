@@ -5,6 +5,7 @@ module ModelLibrary
 , threeBallModel
 , fourBallModel
 , chainModel
+, fourChains
 , randomLinearModel
 , randomModel
 ) where
@@ -21,14 +22,25 @@ import Wall
 import FormLibrary
 import Form
 
-randomModel :: StdGen -> Float -> Int -> Model
-randomModel seed size num = buildModel 20 $ randomForm seed 50 size num
+randomModel :: StdGen -> Float -> Int -> (Model, StdGen)
+randomModel seed size num = (buildModel 20 f, newSeed)
+  where (f, newSeed) = randomForm seed 50 size num
 
-chainModel :: StdGen -> Radius -> Position -> Position -> Model
-chainModel seed rad from to = randomLinearModel seed rad from to $ round $ dist (from,to) / (rad-0.001) + 1
+fourChains :: StdGen -> Radius -> (Model, StdGen)
+fourChains s0 rad = (buildModel rad $ box (V (-1000) (-1000), V 1000 1000) <> f1 <> f2 <> f3 <> f4, s4)
+  where
+    (f1, s1) = chainForm s0 rad 150 (V (-800)   800)  (V (-200)   200)
+    (f2, s2) = chainForm s1 rad 150 (V   800    800)  (V   200    200)
+    (f3, s3) = chainForm s2 rad 150 (V   800  (-800)) (V   200  (-200))
+    (f4, s4) = chainForm s3 rad 150 (V (-800) (-800)) (V (-200) (-200))
 
-randomLinearModel :: StdGen -> Radius -> Position -> Position -> Int -> Model
-randomLinearModel seed rad from to num = buildModel rad $ box (V (-300) (-1000), V 1000 500) <> randomLinearForm seed 150 from to num
+chainModel :: StdGen -> Radius -> Position -> Position -> (Model, StdGen)
+chainModel seed rad from to = (buildModel rad $ box (V (-300) (-1000), V 1000 500) <> c, newSeed)
+  where (c, newSeed) = chainForm seed rad 150 from to
+
+randomLinearModel :: StdGen -> Radius -> Position -> Position -> Int -> (Model, StdGen)
+randomLinearModel seed rad from to num = (buildModel rad $ box (V (-300) (-1000), V 1000 500) <> f, newSeed)
+  where (f, newSeed) = randomLinearForm seed 150 from to num
 
 ballWall :: Model 
 ballWall = buildModel 200 $
