@@ -3,8 +3,6 @@ module Chems
 , react
 , tie
 , untie
-, Reactants
-, Products
 ) where
 
 import Chem
@@ -13,10 +11,8 @@ import Pair
 
 type Chems = (Chem, Chem)
 type SidedChems = (Side, Chems)
-type Reactants = SidedChems
-type Products = SidedChems
 
-react :: Reactants -> Products
+react :: SidedChems -> SidedChems
 react (Out, cs)
   | wantsMore cs = (In, tie cs)
   | otherwise    = (Out, cs)
