@@ -1,38 +1,18 @@
 module Chem
-( Chem (Chem)
-, buildChem
-, chem1, chem2, chem3
-, hasUp, hasDown
-, valence
-, desire
+( Chem
+, Chems
+, react, prereact, chemColor
+, Sided
 ) where
 
--- Chem Wanted Has
-data Chem = Chem
-  { wants :: Int 
-  , has :: Int 
-  } deriving Show
+import Space
+import Graphics.Gloss
 
-buildChem :: Int -> Chem
-buildChem w = Chem w 0
+type Sided a = (Side, (a, a))
 
-chem1 :: Chem
-chem1 = buildChem 1
-chem2 :: Chem
-chem2 = buildChem 2
-chem3 :: Chem
-chem3 = buildChem 3
+type Chems a = (a, a)
 
-hasUp :: Chem -> Chem
-hasUp (Chem w h) = Chem w (h+1)
-hasDown :: Chem -> Chem
-hasDown (Chem w h) = Chem w (h-1)
-
-valence :: Chem -> Int
-valence (Chem want have) = want - have
-
-desire :: Chem -> Ordering
-desire (Chem want have)
-  | have == want = EQ
-  | have < want = LT
-  | otherwise = GT
+class Chem a where
+  react :: Sided a -> Sided a
+  prereact :: Sided a -> (a, a)
+  chemColor :: a -> Color

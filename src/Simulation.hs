@@ -9,7 +9,6 @@ import System.Random (getStdGen)
 import Space
 import Time
 import Vector
-import Chem
 import Point
 import Ball
 import Balls
@@ -19,11 +18,13 @@ import ModelLibrary
 import Wall
 import Form
 import Control.Monad.State
+import Chem
+import Electro.Electro
 
 run :: IO ()
 run = do
   seed <- getStdGen
-  let (model, _) = runState (wireModel 30 100 (V (-500) 500) (V 500 (-500))) seed  --(chainModel seed 20 (V (-500) (-200)) (V 500 500))
+  let (model, _) = runState (wireModel 30 100 (V (-500) 500) (V 500 (-500)) Active) seed  --(chainModel seed 20 (V (-500) (-200)) (V 500 500))
   simulate
     FullScreen
     black
@@ -32,27 +33,26 @@ run = do
     draw
     update
 
-draw :: Model -> Picture
+draw :: Chem c => Model c -> Picture
 draw m = Pictures $ drawForm (rad m) (form m) ++ fmap (drawBond m) (innerIps m)
 
-drawForm :: Radius -> Form -> [Picture]
+drawForm :: Chem c => Radius -> Form c -> [Picture]
 drawForm rad f = ws ++ bodies ++ centres
   where
     (bodies, centres) = unzip $ fmap (drawBall rad) (toList (balls f))
     ws = toList $ fmap drawWall (walls f)
 
-update :: ViewPort -> Duration -> Model -> Model
+update :: Chem c => ViewPort -> Duration -> Model c -> Model c
 update vp = step
 
-drawBall :: Radius -> Ball -> (Picture, Picture)
-drawBall rad (Ball (Point (V x y) _) chem) = bimap (translate x y) (body bodyColor rad, innerPoint centerColor)
-  where (bodyColor, centerColor) = chemColors chem
+drawBall :: Chem c => Radius -> Ball c -> (Picture, Picture)
+drawBall rad (Ball (Point (V x y) _) chem) = bimap (translate x y) (body (chemColor chem) rad, innerPoint)
 
 drawWall :: Wall -> Picture 
 drawWall (Wall Horizontal f) = Color yellow $ line [(-3000, f), (3000, f)]
 drawWall (Wall Vertical f) = Color yellow $ line [(f, -3000), (f, 3000)]
 
-drawBond :: Model -> IP -> Picture
+drawBond :: Model c -> IP -> Picture
 drawBond m ip = Color white $ line [p1, p2]
   where
     (p1, p2) = bimap (coords . pos) $ points $ ballsByI (form m) ip
@@ -60,11 +60,5 @@ drawBond m ip = Color white $ line [p1, p2]
 body :: Color -> Radius -> Picture
 body color rad = Color color $ circleSolid rad
 
-innerPoint :: Color -> Picture
-innerPoint color = Color color $ circleSolid 1
-
-chemColors :: Chem -> (Color, Color)
-chemColors chem = case desire chem of
-  EQ -> (greyN 0.5, white)
-  GT -> (red, white)
-  LT -> (green, white)
+innerPoint :: Picture
+innerPoint = Color white $ circleSolid 1

@@ -3,24 +3,20 @@ module Balls
 , points
 , chems
 , buildBalls
-, asList
 ) where
 
 import Points
-import Chems
 import Ball
 import Pair
+import Chem
 
-type Balls = (Ball, Ball)
+type Balls a = (Ball a, Ball a)
 
-points :: Balls -> Points
+points :: Balls a -> Points
 points = bimap point
 
-chems :: Balls -> Chems
+chems :: Balls a -> Chems a
 chems = bimap chem
 
-buildBalls :: Points -> Chems -> Balls
+buildBalls :: Points -> Chems a -> Balls a
 buildBalls (p1, p2) (c1, c2) = (Ball p1 c1, Ball p2 c2)
-
-asList :: Balls -> [Ball]
-asList (l1, l2) = [l1, l2]

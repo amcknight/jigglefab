@@ -29,7 +29,7 @@ library
       Ball
       Balls
       Chem
-      Chems
+      Electro.Electro
       Form
       FormLibrary
       Hit
@@ -42,6 +42,9 @@ library
       Space
       Time
       Utils
+      Valence.Valence
+      Valence.ValenceForms
+      Valence.ValenceModels
       Vector
       Wall
   other-modules:
