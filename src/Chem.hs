@@ -1,18 +1,18 @@
-module Chemy
-( Chemy
+module Chem
+( Chem
+, Chems
 , react, prereact, chemColor
 , Sided
-, Chemies
 ) where
 
 import Space
 import Graphics.Gloss
 
-type Sided a = (Side, Chemies a)
+type Sided a = (Side, (a, a))
 
-type Chemies a = (a, a)
+type Chems a = (a, a)
 
-class Chemy a where
+class Chem a where
   react :: Sided a -> Sided a
   prereact :: Sided a -> (a, a)
   chemColor :: a -> Color

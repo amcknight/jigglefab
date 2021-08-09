@@ -22,7 +22,7 @@ import Hit
 import Wall
 import Vector
 import Form
-import Chemy
+import Chem
 
 type SideMap = M.Map IP Side
 data Model c = Model
@@ -33,7 +33,7 @@ data Model c = Model
   , hits :: [Hit]
   } deriving Show
 
-buildModel :: Chemy c => Radius -> Form c -> Model c
+buildModel :: Chem c => Radius -> Form c -> Model c
 buildModel rad f = tieAll $ populateHits $ Model rad f wss hss []
   where
     wss = M.fromList $ findWSides f <$> bonkIndices f
@@ -59,14 +59,14 @@ buildModel rad f = tieAll $ populateHits $ Model rad f wss hss []
     populateHits :: Model c -> Model c
     populateHits (Model r f wss hss _) = Model r f wss hss $ L.sort $ hitsFromIps r f $ bounceIndices f
 
-    tieAll :: Chemy c => Model c -> Model c
+    tieAll :: Chem c => Model c -> Model c
     tieAll m = ties (innerIps m) m
 
-    ties :: Chemy c => [IP] -> Model c -> Model c
+    ties :: Chem c => [IP] -> Model c -> Model c
     ties [] m = m
     ties (ip:ips) m = ties ips $ tie1 ip m
 
-    tie1 :: Chemy c => IP -> Model c -> Model c
+    tie1 :: Chem c => IP -> Model c -> Model c
     tie1 ip m = replacePair m ip In $ buildBalls (points bs) (prereact (In, chems bs))
       where
         bs = ballsByI (form m) ip
@@ -93,7 +93,7 @@ replacePair :: Model c -> IP -> Side -> Balls c -> Model c
 replacePair (Model r oldF wss hss oldHs) ip s bs = Model r newF wss hss $ updateHits2 r newF ip oldHs
   where newF = replaceBalls ip bs oldF
 
-step :: Chemy c => Duration -> Model c -> Model c
+step :: Chem c => Duration -> Model c -> Model c
 step dt m = case (nextBonk m, nextBounce m) of
   (Nothing, Nothing) -> moveModel dt m
   (Nothing, Just (Hit bt s ip)) ->
@@ -162,7 +162,7 @@ hitsFromIps r f = concatMap (toHits . times r f)
 moveModel :: Duration -> Model c -> Model c
 moveModel dt (Model r f wss hss hs) = Model r (moveForm dt f) wss hss (mapMaybe (moveHit dt) hs)
 
-bounceModel :: Chemy c => Side -> IP -> Model c -> Model c
+bounceModel :: Chem c => Side -> IP -> Model c -> Model c
 bounceModel s ip m = replacePair m ip newS $ buildBalls newPs newCs
   where
     bs = ballsByI (form m) ip

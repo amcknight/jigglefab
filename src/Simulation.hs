@@ -18,7 +18,7 @@ import ModelLibrary
 import Wall
 import Form
 import Control.Monad.State
-import Chemy
+import Chem
 import Electro.Electro
 
 run :: IO ()
@@ -33,19 +33,19 @@ run = do
     draw
     update
 
-draw :: Chemy c => Model c -> Picture
+draw :: Chem c => Model c -> Picture
 draw m = Pictures $ drawForm (rad m) (form m) ++ fmap (drawBond m) (innerIps m)
 
-drawForm :: Chemy c => Radius -> Form c -> [Picture]
+drawForm :: Chem c => Radius -> Form c -> [Picture]
 drawForm rad f = ws ++ bodies ++ centres
   where
     (bodies, centres) = unzip $ fmap (drawBall rad) (toList (balls f))
     ws = toList $ fmap drawWall (walls f)
 
-update :: Chemy c => ViewPort -> Duration -> Model c -> Model c
+update :: Chem c => ViewPort -> Duration -> Model c -> Model c
 update vp = step
 
-drawBall :: Chemy c => Radius -> Ball c -> (Picture, Picture)
+drawBall :: Chem c => Radius -> Ball c -> (Picture, Picture)
 drawBall rad (Ball (Point (V x y) _) chem) = bimap (translate x y) (body (chemColor chem) rad, innerPoint)
 
 drawWall :: Wall -> Picture 

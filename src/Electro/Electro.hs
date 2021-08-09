@@ -2,12 +2,12 @@ module Electro.Electro
 ( Electro (Dormant, Active)
 ) where
 
-import Chemy
+import Chem
 import Graphics.Gloss
 
 data Electro = Dormant | Active
 
-instance Chemy Electro where
+instance Chem Electro where
   react = id
   prereact (_, es) = es
   chemColor Dormant = greyN 0.5

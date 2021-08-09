@@ -9,7 +9,7 @@ module Valence.Valence
 , untie
 ) where
 
-import Chemy
+import Chem
 import Space
 import Pair
 import Graphics.Gloss
@@ -19,7 +19,7 @@ data Valence = Valence
   , has :: Int 
   } deriving Show
 
-instance Chemy Valence where
+instance Chem Valence where
   react (In, cs)
     | wantsLess cs = (Out, untie cs)
     | otherwise    = (In, cs)
@@ -33,7 +33,7 @@ instance Chemy Valence where
     GT -> red
     LT -> green
 
-type Valences = Chemies Valence
+type Valences = Chems Valence
 
 vale :: Int -> Valence
 vale w = Valence w 0
