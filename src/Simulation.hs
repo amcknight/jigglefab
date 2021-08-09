@@ -23,7 +23,7 @@ import Control.Monad.State
 run :: IO ()
 run = do
   seed <- getStdGen
-  let (model, _) = runState (fourChains 20) seed  --(chainModel seed 20 (V (-500) (-200)) (V 500 500))
+  let (model, _) = runState (wireModel 30 100 (V (-500) 500) (V 500 (-500))) seed  --(chainModel seed 20 (V (-500) (-200)) (V 500 500))
   simulate
     FullScreen
     black

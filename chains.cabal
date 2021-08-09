@@ -41,8 +41,8 @@ library
       Simulation
       Space
       Time
+      Utils
       Vector
-      Vectors
       Wall
   other-modules:
       Paths_chains

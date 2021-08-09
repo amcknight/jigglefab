@@ -14,7 +14,6 @@ import Space
 import Time
 import Pair
 import Vector
-import Vectors
 import Point
 import Graphics.Gloss.Geometry.Line (closestPointOnLine)
 
@@ -26,12 +25,9 @@ minus (Point p1 v1, Point p2 v2) = Point (p1 |- p2) (v1 |- v2)
 movePoints :: Duration -> Points -> Points
 movePoints dt = bimap (movePoint dt)
 
--- distSq :: Points -> Float
--- distSq (p1, p2) = lengthSq $ pos p1 |- pos p2
-
 furtherThan :: Float -> Points -> Bool
 furtherThan d ps
-  | distSq (bimap pos ps) > d^2 = True
+  | uncurry distSq (bimap pos ps) > d^2 = True
   | otherwise = False
 
 side :: Radius -> Points -> Side 

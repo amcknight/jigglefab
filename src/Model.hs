@@ -24,7 +24,7 @@ import Wall
 import Vector
 import Form
 
-type SideMap = M.Map (Int, Int) Side
+type SideMap = M.Map IP Side
 data Model = Model
   { rad :: Radius
   , form :: Form

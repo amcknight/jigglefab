@@ -8,7 +8,6 @@ module Point
 ) where
 
 import Vector
-import Vectors
 import Time
 import Space
 

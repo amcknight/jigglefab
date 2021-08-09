@@ -11,19 +11,19 @@ import Space
 import System.Random
 import Ball
 import Chem
-import Vectors
 import Form
 import Wall
 import Control.Monad.State
+import Utils
 
-box :: Vectors -> Form 
-box (V x1 y1, V x2 y2) =
+box :: Vector -> Vector -> Form 
+box (V x1 y1) (V x2 y2) =
   wallForm (wallV x1) <> 
   wallForm (wallV x2) <> 
   wallForm (wallH y1) <> 
   wallForm (wallH y2)
 
-randomForm :: Float -> Float -> Int -> State StdGen Form
+randomForm :: Float -> Float -> Int -> R Form
 randomForm _ _ 0 = do pure mempty
 randomForm speed size num = do
   seed <- get
@@ -35,11 +35,11 @@ randomForm speed size num = do
   nextForms <- randomForm size speed (num-1)
   pure $ headForm <> nextForms
 
-chainForm :: Radius -> Float -> Position -> Position -> State StdGen Form
-chainForm rad speed from to = randomLinearForm speed from to num
- where num = round $ dist (from,to) / (rad-0.001) + 1
+chainForm :: Radius -> Float -> Int -> Position -> Position -> R Form
+chainForm rad speed slack from to = randomLinearForm speed from to num
+ where num = (ceiling (dist from to / rad) + 1) + slack
 
-randomLinearForm :: Float -> Position -> Position -> Int -> State StdGen Form
+randomLinearForm :: Float -> Position -> Position -> Int -> R Form
 randomLinearForm speed from to num = do
   vels <- randomVs speed num
   let poss = fromTo from to num
