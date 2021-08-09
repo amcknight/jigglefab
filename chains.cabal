@@ -55,6 +55,7 @@ library
     , random
     , heap
     , vector
+    , mtl
   default-language: Haskell2010
 
 executable chains-exe

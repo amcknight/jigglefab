@@ -18,11 +18,12 @@ import Model
 import ModelLibrary
 import Wall
 import Form
+import Control.Monad.State
 
 run :: IO ()
 run = do
   seed <- getStdGen
-  let (model, newSeed) = fourChains seed 20  --(chainModel seed 20 (V (-500) (-200)) (V 500 500))
+  let (model, _) = runState (fourChains 20) seed  --(chainModel seed 20 (V (-500) (-200)) (V 500 500))
   simulate
     FullScreen
     black
