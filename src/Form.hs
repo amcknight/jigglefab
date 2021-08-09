@@ -1,11 +1,12 @@
 module Form
 ( Form (Form)
 , walls, balls
+, wallForm, ballForm
 , wallByI, ballByI
 , ballsByI
 , replaceBall
 , replaceBalls
-, indices
+, bonkIndices, bounceIndices
 , moveForm
 ) where
 
@@ -27,6 +28,14 @@ data Form = Form
 
 instance Semigroup Form where
   (<>) (Form w1 b1) (Form w2 b2) = Form (w1 <> w2) (b1 <> b2)
+instance Monoid Form where
+  mempty = Form V.empty V.empty 
+
+wallForm :: Wall -> Form
+wallForm w = Form (V.fromList [w]) V.empty 
+
+ballForm :: Ball -> Form
+ballForm b = Form V.empty (V.fromList [b])
 
 wallByI :: Form -> Int -> Wall
 wallByI m = (walls m V.!)
@@ -47,8 +56,11 @@ replaceBalls ip bs f = Form ws (oldBs V.// [(i1, b1), (i2, b2)])
     (b1, b2) = bs
     (Form ws oldBs) = f
 
-indices :: Form -> [IP]
-indices (Form ws bs) = prodTo (length ws) (length bs)
+bonkIndices :: Form -> [IP]
+bonkIndices (Form ws bs) = prodTo (length ws) (length bs)
+
+bounceIndices :: Form -> [IP]
+bounceIndices (Form _ bs) = pairsTo (length bs)
 
 moveForm :: Duration -> Form -> Form
 moveForm dt (Form ws bs) = Form ws (fmap (moveBall dt) bs)

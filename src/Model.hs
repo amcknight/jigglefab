@@ -35,39 +35,31 @@ data Model = Model
   , hits :: [Hit]
   } deriving Show
 
-buildModel :: Radius -> [Wall] -> [Ball] -> Model
-buildModel r ws bs = tieAll $ populateHits $ Model r f wss hss []
+buildModel :: Radius -> Form -> Model
+buildModel rad f = tieAll $ populateHits $ Model rad f wss hss []
   where
-    f = Form wsVector bsVector
-    wsVector = V.fromList ws
-    bsVector = V.fromList bs
-    wLen = length ws
-    bLen = length bs
-    wss = M.fromList $ findWSides <$> prodTo wLen bLen 
-    hss = M.fromList $ findHSides <$> pairsTo bLen
+    wss = M.fromList $ findWSides f <$> bonkIndices f
+    hss = M.fromList $ findHSides rad f <$> bounceIndices f
 
-    findWSides :: IP -> (IP, Side)
-    findWSides (wi, bi) = case ortho w of
-      Vertical -> case compare (place w) x of
+    findWSides :: Form -> IP -> (IP, Side)
+    findWSides f (wi, bi) = case o of
+      Vertical -> case compare pl x of
         LT -> ((wi, bi), Out)
         _ -> ((wi, bi), In)
-      Horizontal -> case compare (place w) y of
+      Horizontal -> case compare pl y of
         LT -> ((wi, bi), Out)
         _ -> ((wi, bi), In)
       where
-        (x, y) = coords (pos (point b))
-        w = wsVector V.! wi
-        b = bsVector V.! bi
+        (x, y) = coords (pos p)
+        Wall o pl = wallByI f wi
+        Ball p _ = ballByI f bi
 
-    findHSides :: IP -> (IP, Side)
-    findHSides ip = (ip, side r $ points $ bimap (bsVector V.!) ip)
+    findHSides :: Radius -> Form -> IP -> (IP, Side)
+    findHSides rad f ip = (ip, hSide)
+      where hSide = side rad $ points $ bimap (ballByI f) ip
     
     populateHits :: Model -> Model
-    populateHits m = Model r f wss hss (allHits m)
-      where (Model r _ wss hss ls) = m
-
-    allHits :: Model -> [Hit]
-    allHits m = L.sort $ hitsFromIps (rad m) (form m) $ pairsTo bLen
+    populateHits (Model r f wss hss _) = Model r f wss hss $ L.sort $ hitsFromIps r f $ bounceIndices f
 
     tieAll :: Model -> Model
     tieAll m = ties (innerIps m) m
@@ -133,7 +125,7 @@ step dt m = case (nextBonk m, nextBounce m) of
 nextBonk :: Model -> Maybe Hit
 nextBonk m = nextValidBonk m bonks
   where
-    bonks = L.sort (mapMaybe (toBonk m) (indices f))
+    bonks = L.sort (mapMaybe (toBonk m) (bonkIndices f))
     Model rad f _ _ _ = m
     nextValidBonk :: Model -> [Hit] -> Maybe Hit
     nextValidBonk _ [] = Nothing 

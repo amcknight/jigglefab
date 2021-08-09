@@ -1,6 +1,7 @@
 module Wall
 ( Wall (Wall, ortho, place)
 , wSide
+, wallV, wallH
 ) where
 
 import Space
@@ -19,3 +20,9 @@ wSide' :: Float -> Float -> Side
 wSide' pl p = case compare pl p of
   LT -> In
   _ -> Out
+
+wallV :: Float -> Wall
+wallV = Wall Vertical
+
+wallH :: Float -> Wall
+wallH = Wall Horizontal
