@@ -6,13 +6,12 @@ module Ball
 ) where
 
 import Point
-import Chem
 import Time
 
-data Ball = Ball
+data Ball a = Ball
   { point :: Point
-  , chem :: Chem
+  , chem :: a
   } deriving Show
 
-moveBall :: Duration -> Ball -> Ball
+moveBall :: Duration -> Ball a -> Ball a
 moveBall dt (Ball p c) = Ball (movePoint dt p) c
