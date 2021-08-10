@@ -19,15 +19,19 @@ import Wall
 import Form
 import Control.Monad.State
 import Chem
-import Electro.Electro
+import Electro.ElectroModels
+import Pallet
+import Valence.Valence
+
+pallet = nicePallet
 
 run :: IO ()
 run = do
   seed <- getStdGen
-  let (model, _) = runState (wireModel 30 100 (V (-500) 500) (V 500 (-500)) Active) seed  --(chainModel seed 20 (V (-500) (-200)) (V 500 500))
+  let (model, _) = runState wireModel seed --runState (chainModel 20 (V (-500) (-200)) (V 500 500) (vale 2)) seed  
   simulate
     FullScreen
-    black
+    (greyN 0.2)
     30
     model
     draw
@@ -40,17 +44,17 @@ drawForm :: Chem c => Radius -> Form c -> [Picture]
 drawForm rad f = ws ++ bodies ++ centres
   where
     (bodies, centres) = unzip $ fmap (drawBall rad) (toList (balls f))
-    ws = toList $ fmap drawWall (walls f)
+    ws = toList $ fmap (drawWall (getCold pallet)) (walls f) 
 
 update :: Chem c => ViewPort -> Duration -> Model c -> Model c
 update vp = step
 
 drawBall :: Chem c => Radius -> Ball c -> (Picture, Picture)
-drawBall rad (Ball (Point (V x y) _) chem) = bimap (translate x y) (body (chemColor chem) rad, innerPoint)
+drawBall rad (Ball (Point (V x y) _) chem) = bimap (translate x y) (body (chemColor chem pallet) rad, innerPoint)
 
-drawWall :: Wall -> Picture 
-drawWall (Wall Horizontal f) = Color yellow $ line [(-3000, f), (3000, f)]
-drawWall (Wall Vertical f) = Color yellow $ line [(f, -3000), (f, 3000)]
+drawWall :: Color -> Wall -> Picture
+drawWall color (Wall Horizontal f) = Color color $ line [(-3000, f), (3000, f)]
+drawWall color (Wall Vertical f) = Color color $ line [(f, -3000), (f, 3000)]
 
 drawBond :: Model c -> IP -> Picture
 drawBond m ip = Color white $ line [p1, p2]

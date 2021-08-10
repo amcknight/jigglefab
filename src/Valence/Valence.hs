@@ -13,6 +13,7 @@ import Chem
 import Space
 import Pair
 import Graphics.Gloss
+import Pallet
 
 data Valence = Valence
   { wants :: Int 
@@ -28,10 +29,10 @@ instance Chem Valence where
     | otherwise    = (Out, cs)
   prereact (In, cs) = tie cs
   prereact (Out, cs) = cs
-  chemColor ch = case desire ch of
-    EQ -> greyN 0.5
-    GT -> red
-    LT -> green
+  chemColor ch p = case desire ch of
+    EQ -> getNeutral p
+    GT -> getCool p
+    LT -> getWarm p
 
 type Valences = Chems Valence
 

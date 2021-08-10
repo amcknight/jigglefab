@@ -19,6 +19,7 @@ module Vector
 import System.Random as R
 import Space
 import Control.Monad.State
+import Utils
 
 data Vector = V Float Float deriving Show
 
@@ -45,21 +46,21 @@ zeroV = V 0 0
 lengthSq :: Vector -> Float
 lengthSq (V x y) = x^2 + y^2
 
-randomV :: Float -> State StdGen Vector
+randomV :: Float -> R Vector
 randomV len = do
   seed <- get
   let (unit, newSeed) = random seed
   put newSeed
   pure $ len |* unit
 
-randomVs :: Float -> Int -> State StdGen [Vector]
+randomVs :: Float -> Int -> R [Vector]
 randomVs _ 0 = do pure mempty
 randomVs len num = do
   vel <- randomV len
   vels <- randomVs len (num-1)
   pure $ vel:vels
 
-randomVIn :: Float -> State StdGen Vector
+randomVIn :: Float -> R Vector
 randomVIn maxLen = do
   seed <- get
   let (lenFactor, vSeed) = randomR (0.0, 1.0) seed

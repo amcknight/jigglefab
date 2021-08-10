@@ -30,12 +30,15 @@ library
       Balls
       Chem
       Electro.Electro
+      Electro.ElectroForm
+      Electro.ElectroModels
       Form
       FormLibrary
       Hit
       Model
       ModelLibrary
       Pair
+      Pallet
       Point
       Points
       Simulation
