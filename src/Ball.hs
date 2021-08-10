@@ -2,16 +2,20 @@ module Ball
 ( Ball (Ball)
 , point
 , chem
-, moveBall
+, buildBalls
 ) where
 
+import Pair
 import Point
 import Time
 
-data Ball a = Ball
+data Ball c = Ball
   { point :: Point
-  , chem :: a
+  , chem :: c
   } deriving Show
 
-moveBall :: Duration -> Ball a -> Ball a
-moveBall dt (Ball p c) = Ball (movePoint dt p) c
+instance Mover (Ball c) where
+  move dt (Ball p c) = Ball (move dt p) c
+
+buildBalls :: P Point -> P a -> P (Ball a)
+buildBalls (p1, p2) (c1, c2) = (Ball p1 c1, Ball p2 c2)

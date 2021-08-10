@@ -1,9 +1,8 @@
 module Model
 ( Model (Model, rad, form, wSides, hSides)
 , buildModel
-, wSideByI, hSideByI, ballsByI
+, wSideByI, hSideByI
 , step
-, moveModel
 , innerIps
 ) where
 
@@ -15,16 +14,14 @@ import Space
 import Time
 import Pair
 import Point
-import Points
 import Ball
-import Balls
 import Hit
 import Wall
 import Vector
 import Form
 import Chem
 
-type SideMap = M.Map IP Side
+type SideMap = M.Map (P Int) Side
 data Model c = Model
   { rad :: Radius
   , form :: Form c
@@ -33,13 +30,16 @@ data Model c = Model
   , hits :: [Hit]
   } deriving Show
 
+instance Mover (Model c) where
+  move dt (Model r f wss hss hs) = Model r (move dt f) wss hss (fmap (move dt) hs)
+
 buildModel :: Chem c => Radius -> Form c -> Model c
 buildModel rad f = tieAll $ populateHits $ Model rad f wss hss []
   where
     wss = M.fromList $ findWSides f <$> bonkIndices f
     hss = M.fromList $ findHSides rad f <$> bounceIndices f
 
-    findWSides :: Form c -> IP -> (IP, Side)
+    findWSides :: Form c -> P Int -> Sided Int
     findWSides f (wi, bi) = case o of
       Vertical -> case compare pl x of
         LT -> ((wi, bi), Out)
@@ -52,9 +52,9 @@ buildModel rad f = tieAll $ populateHits $ Model rad f wss hss []
         Wall o pl = wallByI f wi
         Ball p _ = ballByI f bi
 
-    findHSides :: Radius -> Form c -> IP -> (IP, Side)
+    findHSides :: Radius -> Form c -> P Int -> Sided Int
     findHSides rad f ip = (ip, hSide)
-      where hSide = side rad $ points $ bimap (ballByI f) ip
+      where hSide = side rad $ bi (point . ballByI f) ip
     
     populateHits :: Model c -> Model c
     populateHits (Model r f wss hss _) = Model r f wss hss $ L.sort $ hitsFromIps r f $ bounceIndices f
@@ -62,56 +62,56 @@ buildModel rad f = tieAll $ populateHits $ Model rad f wss hss []
     tieAll :: Chem c => Model c -> Model c
     tieAll m = ties (innerIps m) m
 
-    ties :: Chem c => [IP] -> Model c -> Model c
+    ties :: Chem c => [P Int] -> Model c -> Model c
     ties [] m = m
     ties (ip:ips) m = ties ips $ tie1 ip m
 
-    tie1 :: Chem c => IP -> Model c -> Model c
-    tie1 ip m = replacePair m ip In $ buildBalls (points bs) (prereact (In, chems bs))
+    tie1 :: Chem c => P Int -> Model c -> Model c
+    tie1 ip m = replacePair m ip In $ buildBalls (bi point bs) (prereact (bi chem bs, In))
       where
-        bs = ballsByI (form m) ip
+        bs = (bi . ballByI) (form m) ip
 
-innerIps :: Model c -> [IP]
+innerIps :: Model c -> [P Int]
 innerIps m = innerIps' $ M.assocs $ hSides m
   where
-    innerIps' :: [(IP, Side)] -> [IP]
+    innerIps' :: [Sided Int] -> [P Int]
     innerIps' [] = []
     innerIps' ((ip, Out):ss) = innerIps' ss
     innerIps' ((ip, In):ss) = ip : innerIps' ss
 
-hSideByI :: Model c -> IP -> Side
+hSideByI :: Model c -> P Int -> Side
 hSideByI m = (hSides m M.!)
 
-wSideByI :: Model c -> IP -> Side
+wSideByI :: Model c -> P Int -> Side
 wSideByI m = (wSides m M.!)
 
 replace :: Model c -> Int -> Ball c -> Model c
-replace (Model r oldF wss hss oldHs) i b = Model r newF wss hss $ updateHits1 r newF i oldHs
+replace (Model r oldF wss hss oldHs) i b = Model r newF wss hss $ updateBounces1 r newF i oldHs
   where newF = replaceBall i b oldF
 
-replacePair :: Model c -> IP -> Side -> Balls c -> Model c
-replacePair (Model r oldF wss hss oldHs) ip s bs = Model r newF wss hss $ updateHits2 r newF ip oldHs
+replacePair :: Model c -> P Int -> Side -> P (Ball c) -> Model c
+replacePair (Model r oldF wss hss oldHs) ip s bs = Model r newF wss hss $ updateBounces2 r newF ip oldHs
   where newF = replaceBalls ip bs oldF
 
 step :: Chem c => Duration -> Model c -> Model c
 step dt m = case (nextBonk m, nextBounce m) of
-  (Nothing, Nothing) -> moveModel dt m
+  (Nothing, Nothing) -> move dt m
   (Nothing, Just (Hit bt s ip)) ->
-    if dt < bt then moveModel dt m
-    else step (dt - bt) $ bounceModel s ip $ moveModel bt m
+    if dt < bt then move dt m
+    else step (dt - bt) $ bounceModel s ip $ move bt m
   (Just (Hit bt s wlip), Nothing) ->
-    if dt < bt then moveModel dt m
-    else step (dt - bt) $ bonkModel s wlip $ moveModel bt m
+    if dt < bt then move dt m
+    else step (dt - bt) $ bonkModel s wlip $ move bt m
   (Just (Hit bnkTime bs wlip), Just (Hit bncTime hs ip)) -> case compare bnkTime bncTime of
     LT ->
-      if dt < bnkTime then moveModel dt m
-      else step (dt - bnkTime) $ bonkModel bs wlip $ moveModel bnkTime m
+      if dt < bnkTime then move dt m
+      else step (dt - bnkTime) $ bonkModel bs wlip $ move bnkTime m
     GT ->
-      if dt < bncTime then moveModel dt m
-      else step (dt - bncTime) $ bounceModel hs ip $ moveModel bncTime m
+      if dt < bncTime then move dt m
+      else step (dt - bncTime) $ bounceModel hs ip $ move bncTime m
     EQ ->
-      if dt < bncTime then moveModel dt m
-      else step (dt - bncTime) $ bounceModel hs ip $ bonkModel bs wlip $ moveModel bncTime m
+      if dt < bncTime then move dt m
+      else step (dt - bncTime) $ bounceModel hs ip $ bonkModel bs wlip $ move bncTime m
 
 nextBonk :: Model c -> Maybe Hit
 nextBonk m = nextValidBonk m bonks
@@ -131,8 +131,8 @@ nextBounce m = nextValidBounce m $ hits m
     nextValidBounce m (h:hs) = if hSideByI m ip == s then Just h else nextValidBounce m hs
       where (Hit _ s ip) = h
 
-updateHits1 :: Radius -> Form c -> Int -> [Hit] -> [Hit]
-updateHits1 r f i hs = L.sort $ keep ++ newHits
+updateBounces1 :: Radius -> Form c -> Int -> [Hit] -> [Hit]
+updateBounces1 r f i hs = L.sort $ keep ++ newHits
   where
     keep = filter (uneffected i) hs
     newHits = hitsFromIps r f $ pairsOfTo1 (length (balls f)) i
@@ -140,34 +140,57 @@ updateHits1 r f i hs = L.sort $ keep ++ newHits
     uneffected :: Int -> Hit -> Bool
     uneffected i h = not $ (overlaps1 i . ixPair) h
 
-updateHits2 :: Radius -> Form c -> IP -> [Hit] -> [Hit]
-updateHits2 r f ip hs = L.sort $ keep ++ newHits
+updateBounces2 :: Radius -> Form c -> P Int -> [Hit] -> [Hit]
+updateBounces2 r f ip hs = L.sort $ keep ++ newHits
   where
     keep = filter (uneffected ip) hs
     newHits = hitsFromIps r f $ pairsOfTo2 (length (balls f)) ip
 
-    uneffected :: IP -> Hit -> Bool
+    uneffected :: P Int -> Hit -> Bool
     uneffected ip h = not $ (overlaps2 ip . ixPair) h
 
-hitsFromIps :: Radius -> Form c -> [IP] -> [Hit]
+hitsFromIps :: Radius -> Form c -> [P Int] -> [Hit]
 hitsFromIps r f = concatMap (times r f)
   where
-    times :: Radius -> Form c -> IP -> [Hit]
-    times r f ip = hitTimes r (points (ballsByI f ip)) ip
-  
-moveModel :: Duration -> Model c -> Model c
-moveModel dt (Model r f wss hss hs) = Model r (moveForm dt f) wss hss (mapMaybe (moveHit dt) hs)
+    times :: Radius -> Form c -> P Int -> [Hit]
+    times r f ip = hitTimes r (bi point ((bi . ballByI) f ip)) ip
 
-bounceModel :: Chem c => Side -> IP -> Model c -> Model c
+hitTimes :: Radius -> P Point -> P Int -> [Hit]
+hitTimes rad ps ip = case root of
+  Nothing -> []
+  Just r -> times ip $ possTimes r
+  where
+    times :: P Int -> (Time, Time) -> [Hit]
+    times ip (t1, t2)
+      | highT < 0 = []
+      | lowT < 0 = [Hit highT In ip]
+      | otherwise = [Hit lowT Out ip, Hit highT In ip]
+      where
+        (lowT, highT) = if t1 < t2 then (t1, t2) else (t2, t1)
+    
+    possTimes :: Float -> (Time, Time)
+    possTimes r = ((r - s)/speedSq, (-r - s)/speedSq)
+
+    safeRoot :: Float -> Maybe Float
+    safeRoot x
+      | x < 0     = Nothing
+      | otherwise = Just $ sqrt x
+
+    root = safeRoot $ speedSq * (rad^2 - lengthSq (pos diff)) + s^2
+    s = pos diff |. vel diff
+    speedSq = lengthSq $ vel diff
+    diff = minus ps
+
+bounceModel :: Chem c => Side -> P Int -> Model c -> Model c
 bounceModel s ip m = replacePair m ip newS $ buildBalls newPs newCs
   where
-    bs = ballsByI (form m) ip
-    ps = points bs
-    cs = chems bs
-    (newS, newCs) = react (s, cs)
+    bs = (bi . ballByI) (form m) ip
+    ps = bi point bs
+    cs = bi chem bs
+    (newCs, newS) = react (cs, s)
     newPs = if s == newS then bounce ps else ps
 
-bonkModel :: Side -> IP -> Model c -> Model c
+bonkModel :: Side -> P Int -> Model c -> Model c
 bonkModel s (wi, li) m = replace m li newBall
   where
     f = form m
@@ -175,5 +198,5 @@ bonkModel s (wi, li) m = replace m li newBall
     Ball p c = ballByI f li
     newBall = Ball (bonk o p) c
 
-toModelBonk :: Model c -> IP -> Maybe Hit
+toModelBonk :: Model c -> P Int -> Maybe Hit
 toModelBonk m ip = toBonk (form m) (wSideByI m ip) ip

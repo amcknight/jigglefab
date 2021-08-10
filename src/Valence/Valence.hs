@@ -1,6 +1,5 @@
 module Valence.Valence
 ( Valence (Valence)
-, Valences
 , vale
 , hasUp, hasDown
 , valence
@@ -21,20 +20,18 @@ data Valence = Valence
   } deriving Show
 
 instance Chem Valence where
-  react (In, cs)
-    | wantsLess cs = (Out, untie cs)
-    | otherwise    = (In, cs)
-  react (Out, cs)
-    | wantsMore cs = (In, tie cs)
-    | otherwise    = (Out, cs)
-  prereact (In, cs) = tie cs
-  prereact (Out, cs) = cs
+  react (cs, In)
+    | wantsLess cs = (untie cs, Out)
+    | otherwise    = (cs, In)
+  react (cs, Out)
+    | wantsMore cs = (tie cs, In)
+    | otherwise    = (cs, Out)
+  prereact (cs, In) = tie cs
+  prereact (cs, Out) = cs
   chemColor ch p = case desire ch of
     EQ -> getNeutral p
     GT -> getCool p
     LT -> getWarm p
-
-type Valences = Chems Valence
 
 vale :: Int -> Valence
 vale w = Valence w 0
@@ -53,14 +50,14 @@ desire (Valence want have)
   | have < want = LT
   | otherwise = GT
 
-wantsMore :: Valences -> Bool
+wantsMore :: P Valence -> Bool
 wantsMore (Valence w1 h1, Valence w2 h2) = w1 > h1 && w2 > h2
 
-wantsLess :: Valences -> Bool 
+wantsLess :: P Valence -> Bool 
 wantsLess (Valence w1 h1, Valence w2 h2) = w1 < h1 || w2 < h2
 
-tie :: Valences -> Valences
-tie = bimap hasUp
+tie :: P Valence -> P Valence
+tie = bi hasUp
 
-untie :: Valences -> Valences
-untie = bimap hasDown
+untie :: P Valence -> P Valence
+untie = bi hasDown

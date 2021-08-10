@@ -27,7 +27,6 @@ source-repository head
 library
   exposed-modules:
       Ball
-      Balls
       Chem
       Electro.Electro
       Electro.ElectroForm
@@ -40,7 +39,6 @@ library
       Pair
       Pallet
       Point
-      Points
       Simulation
       Space
       Time

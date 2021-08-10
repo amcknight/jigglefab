@@ -10,15 +10,15 @@ import FormLibrary
 import Wall
 import Form
 import Electro.ElectroForm
+import Space
 
-wireModel :: R (Model Electro)
-wireModel = do
+wireModel :: Radius -> R (Model Electro)
+wireModel rad = do
   let walls = wallForm (wallV (damp x1)) <> wallForm (wallH (damp y1)) <> wallForm (wallV (damp x2)) <> wallForm (wallH (damp y2))
   chain <- chainForm rad speed 20 v1 v2 Dormant
   signal <- signalForm (V 400 400) 100
   pure $ buildModel rad $ walls <> chain <> signal
-  where 
-    rad = 10
+  where
     speed = 100
     x1 = -500
     y1 = 500
