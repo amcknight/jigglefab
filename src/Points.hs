@@ -16,6 +16,7 @@ import Pair
 import Vector
 import Point
 import Graphics.Gloss.Geometry.Line (closestPointOnLine)
+import Hit
 
 type Points = (Point, Point)
 
@@ -42,21 +43,18 @@ bounce (Point p1 v1, Point p2 v2) = (p3, p4)
     to1 = uncurry V $ closestPointOnLine (0,0) (coords (p2 |- p1)) (coords v2)
     to2 = uncurry V $ closestPointOnLine (0,0) (coords (p1 |- p2)) (coords v1)
 
-hitTimes :: Radius -> Points -> [(Side, Duration)]
-hitTimes rad ps = case root of
-  Nothing -> [] 
-  Just r -> times $ possTimes r
+hitTimes :: Radius -> Points -> IP -> [Hit]
+hitTimes rad ps ip = case root of
+  Nothing -> []
+  Just r -> times ip $ possTimes r
   where
-    times :: (Time, Time) -> [(Side, Duration)]
-    times (t1, t2)
+    times :: IP -> (Time, Time) -> [Hit]
+    times ip (t1, t2)
       | highT < 0 = []
-      | lowT < 0 = [(In, highT)]
-      | otherwise = [(Out, lowT), (In, highT)]
+      | lowT < 0 = [Hit highT In ip]
+      | otherwise = [Hit lowT Out ip, Hit highT In ip]
       where
         (lowT, highT) = if t1 < t2 then (t1, t2) else (t2, t1)
-
-    root :: Maybe Float
-    root = safeRoot $ speedSq * (rad^2 - lengthSq (pos diff)) + s^2
     
     possTimes :: Float -> (Time, Time)
     possTimes r = ((r - s)/speedSq, (-r - s)/speedSq)
@@ -66,6 +64,7 @@ hitTimes rad ps = case root of
       | x < 0     = Nothing
       | otherwise = Just $ sqrt x
 
+    root = safeRoot $ speedSq * (rad^2 - lengthSq (pos diff)) + s^2
     s = pos diff |. vel diff
     speedSq = lengthSq $ vel diff
     diff = minus ps

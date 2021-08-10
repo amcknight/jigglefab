@@ -18,7 +18,7 @@ wireModel = do
   signal <- signalForm (V 400 400) 100
   pure $ buildModel rad $ walls <> chain <> signal
   where 
-    rad = 20
+    rad = 10
     speed = 100
     x1 = -500
     y1 = 500

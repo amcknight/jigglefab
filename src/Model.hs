@@ -150,14 +150,10 @@ updateHits2 r f ip hs = L.sort $ keep ++ newHits
     uneffected ip h = not $ (overlaps2 ip . ixPair) h
 
 hitsFromIps :: Radius -> Form c -> [IP] -> [Hit]
-hitsFromIps r f = concatMap (toHits . times r f)
+hitsFromIps r f = concatMap (times r f)
   where
-    times :: Radius -> Form c -> IP -> ([(Side, Duration)], IP)
-    times r f ip = (hitTimes r (points (ballsByI f ip)), ip)
-    toHits :: ([(Side, Duration)], IP) -> [Hit]
-    toHits (hs, ip) = fmap (toHit ip) hs
-    toHit :: IP -> (Side, Duration) -> Hit
-    toHit ip (s, dt) = Hit dt s ip
+    times :: Radius -> Form c -> IP -> [Hit]
+    times r f ip = hitTimes r (points (ballsByI f ip)) ip
   
 moveModel :: Duration -> Model c -> Model c
 moveModel dt (Model r f wss hss hs) = Model r (moveForm dt f) wss hss (mapMaybe (moveHit dt) hs)
