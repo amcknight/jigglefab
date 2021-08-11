@@ -6,6 +6,7 @@ module Point
 , side
 , minus
 , bonk, bounce
+, hitTimes
 ) where
 
 import Vector
@@ -45,3 +46,26 @@ bounce (Point p1 v1, Point p2 v2) = (p3, p4)
     p4 = Point p2 (v2 |+ to2 |- to1)
     to1 = closestPointOnLine (0,0) (p2 |- p1) v2
     to2 = closestPointOnLine (0,0) (p1 |- p2) v1
+
+hitTimes :: Radius -> P Point -> [(Time, Side)]
+hitTimes rad ps = maybe [] times root
+  where
+    times :: Float -> [(Time, Side)]
+    times r
+      -- Inferring the Side from the time
+      | highT < 0 = []
+      | lowT < 0 = [(highT, In)]
+      | otherwise = [(lowT, Out), (highT, In)]
+      where
+        (lowT, highT) = sortP $ bi (/speedSq) (r - s, -r - s)
+
+    safeRoot :: Float -> Maybe Float
+    safeRoot x = case compare x 0 of
+      LT -> Nothing
+      EQ -> Just 0
+      GT -> Just $ sqrt x
+
+    root = safeRoot $ speedSq * (rad^2 - lengthSq (pos diff)) + s^2
+    s = pos diff |. vel diff
+    speedSq = lengthSq $ vel diff
+    diff = minus ps

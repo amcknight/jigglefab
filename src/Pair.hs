@@ -3,6 +3,7 @@
 module Pair
 ( P
 , bi
+, sortP
 , prodTo
 , pairsTo
 , pairsOfTo1
@@ -24,6 +25,11 @@ bi f (x, y) = (f x, f y)
 
 to :: Int -> [Int]
 to n = [0..(n-1)]
+
+sortP :: Ord a => P a -> P a
+sortP (x,y) = case compare x y of
+  GT -> (y, x)
+  _ -> (x, y)
 
 prodTo :: Int -> Int -> [P Int]
 prodTo n m = [(x,y) | x <- to n, y <- to m]

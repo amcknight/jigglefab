@@ -3,6 +3,7 @@ module Form
 , walls, balls
 , wallForm, ballForm
 , wallByI, ballByI
+, wbSide, bbSide
 , replaceBall
 , replaceBalls
 , bonkIndices, bounceIndices
@@ -38,20 +39,26 @@ ballForm :: Ball c -> Form c
 ballForm b = Form V.empty (V.fromList [b])
 
 wallByI :: Form c -> Int -> Wall
-wallByI m = (walls m V.!)
+wallByI f = (walls f V.!)
 
 ballByI :: Form c -> Int -> Ball c
-ballByI m = (balls m V.!)
+ballByI f = (balls f V.!)
+
+wbSide :: Form c -> P Int -> Sided Int
+wbSide f wbi = (wbi, wSide w (pos (point b)))
+  where
+    (wi, bi) = wbi
+    w = wallByI f wi
+    b = ballByI f wi
+
+bbSide :: Radius -> Form c -> P Int -> Sided Int 
+bbSide rad f bbi = (bbi, side rad (bi (point . ballByI f) bbi))
 
 replaceBall :: Int -> Ball c -> Form c -> Form c
-replaceBall i b f = Form (walls f) (balls f V.// [(i, b)])
+replaceBall i b (Form ws bs) = Form ws $ bs V.// [(i, b)]
 
 replaceBalls :: P Int -> P (Ball c) -> Form c -> Form c
-replaceBalls ip bs f = Form ws (oldBs V.// [(i1, b1), (i2, b2)])
-  where
-    (i1, i2) = ip
-    (b1, b2) = bs
-    (Form ws oldBs) = f
+replaceBalls (i1, i2) (b1, b2) (Form ws oldBs) = Form ws $ oldBs V.// [(i1, b1), (i2, b2)]
 
 bonkIndices :: Form c -> [P Int]
 bonkIndices (Form ws bs) = prodTo (length ws) (length bs)
