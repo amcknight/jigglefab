@@ -11,11 +11,9 @@ import Ball
 import Form
 import Wall
 import Utils
-import System.Random
-import Control.Monad.State
 
 box :: Vector -> Vector -> Form c
-box (V x1 y1) (V x2 y2) =
+box (x1,y1) (x2,y2) =
   wallForm (wallV x1) <> 
   wallForm (wallV x2) <> 
   wallForm (wallH y1) <> 

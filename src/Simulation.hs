@@ -8,7 +8,6 @@ import Data.Vector (toList)
 import System.Random (getStdGen)
 import Space
 import Time
-import Vector
 import Point
 import Ball
 import Pair
@@ -27,7 +26,7 @@ pallet = nicePallet
 run :: IO ()
 run = do
   seed <- getStdGen
-  let (model, _) = runState (wireModel 15) seed --runState (chainModel 20 (V (-500) (-200)) (V 500 500) (vale 2)) seed  
+  let (model, _) = runState (wireModel 12) seed
   simulate
     FullScreen
     (greyN 0.2)
@@ -49,16 +48,15 @@ update :: Chem c => ViewPort -> Duration -> Model c -> Model c
 update vp = step
 
 drawBall :: Chem c => Radius -> Ball c -> P Picture
-drawBall rad (Ball (Point (V x y) _) chem) = bi (translate x y) (body (chemColor chem pallet) rad, innerPoint)
+drawBall rad (Ball (Point (x,y) _) chem) = bi (translate x y) (body (chemColor chem pallet) rad, innerPoint)
 
 drawWall :: Color -> Wall -> Picture
 drawWall color (Wall Horizontal f) = Color color $ line [(-3000, f), (3000, f)]
-drawWall color (Wall Vertical f) = Color color $ line [(f, -3000), (f, 3000)]
+drawWall color (Wall Vertical   f) = Color color $ line [(f, -3000), (f, 3000)]
 
 drawBond :: Model c -> P Int -> Picture
 drawBond m ip = Color white $ line [p1, p2]
-  where
-    (p1, p2) = bi (coords . pos . point) $ (bi . ballByI) (form m) ip
+  where (p1, p2) = bi (pos . point . ballByI (form m)) ip
 
 body :: Color -> Radius -> Picture
 body color rad = Color color $ circleSolid rad

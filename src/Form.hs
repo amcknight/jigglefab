@@ -17,7 +17,6 @@ import Time
 import Hit
 import Space
 import Point
-import Vector
 
 data Form c = Form
   { walls :: V.Vector Wall
@@ -71,6 +70,6 @@ toBonk f s ip = case compare t 0 of
     t = intersectTime w p
 
 intersectTime :: Wall -> Point -> Time
-intersectTime (Wall o p) (Point (V x y) (V xv yv)) = case o of
+intersectTime (Wall o p) (Point (x,y) (xv,yv)) = case o of
   Vertical -> -(x-p)/xv
   Horizontal -> -(y-p)/yv

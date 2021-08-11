@@ -14,8 +14,8 @@ data Wall = Wall
   } deriving (Eq, Show)
 
 wSide :: Wall -> Position -> Side
-wSide (Wall Vertical pl) (V x _) = wSide' pl x
-wSide (Wall Horizontal pl) (V _ y) = wSide' pl y
+wSide (Wall Vertical   pl) p = wSide' pl $ fst p
+wSide (Wall Horizontal pl) p = wSide' pl $ snd p
 wSide' :: Float -> Float -> Side
 wSide' pl p = case compare pl p of
   LT -> In

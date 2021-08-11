@@ -1,5 +1,4 @@
 {-# LANGUAGE TupleSections #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
 module Pair
 ( P
@@ -45,8 +44,8 @@ pairsOfTo2 n (i,j) = (i,j) : fmap (,i) low ++ fmap (i,) mid ++ fmap (i,) high ++
     mid = [(i+1)..(j-1)]
     high = [(j+1)..(n-1)]
 
-overlaps1 :: Eq a => a -> P a-> Bool 
+overlaps1 :: Eq a => a -> P a -> Bool 
 overlaps1 i1 (j1, j2) = i1 == j1 || i1 == j2
 
-overlaps2 :: Eq a => P a -> P a-> Bool
+overlaps2 :: Eq a => P a -> P a -> Bool
 overlaps2 (i1, i2) j = overlaps1 i1 j || overlaps1 i2 j

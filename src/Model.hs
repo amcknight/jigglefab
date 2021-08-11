@@ -48,9 +48,8 @@ buildModel rad f = tieAll $ populateHits $ Model rad f wss hss []
         LT -> ((wi, bi), Out)
         _ -> ((wi, bi), In)
       where
-        (x, y) = coords (pos p)
         Wall o pl = wallByI f wi
-        Ball p _ = ballByI f bi
+        Ball (Point (x,y) _) _ = ballByI f bi
 
     findHSides :: Radius -> Form c -> P Int -> Sided Int
     findHSides rad f ip = (ip, hSide)
@@ -96,22 +95,20 @@ replacePair (Model r oldF wss hss oldHs) ip s bs = Model r newF wss hss $ update
 step :: Chem c => Duration -> Model c -> Model c
 step dt m = case (nextBonk m, nextBounce m) of
   (Nothing, Nothing) -> move dt m
-  (Nothing, Just (Hit bt s ip)) ->
-    if dt < bt then move dt m
-    else step (dt - bt) $ bounceModel s ip $ move bt m
-  (Just (Hit bt s wlip), Nothing) ->
-    if dt < bt then move dt m
-    else step (dt - bt) $ bonkModel s wlip $ move bt m
-  (Just (Hit bnkTime bs wlip), Just (Hit bncTime hs ip)) -> case compare bnkTime bncTime of
-    LT ->
-      if dt < bnkTime then move dt m
-      else step (dt - bnkTime) $ bonkModel bs wlip $ move bnkTime m
-    GT ->
-      if dt < bncTime then move dt m
-      else step (dt - bncTime) $ bounceModel hs ip $ move bncTime m
-    EQ ->
-      if dt < bncTime then move dt m
-      else step (dt - bncTime) $ bounceModel hs ip $ bonkModel bs wlip $ move bncTime m
+  (Nothing, Just (Hit bt s ip)) -> case compare dt bt of
+    LT -> move dt m
+    _ -> step (dt - bt) $ bounceModel s ip $ move bt m
+  (Just (Hit bt s ip), Nothing) -> case compare dt bt of
+    LT -> move dt m
+    _ -> step (dt - bt) $ bonkModel s ip $ move bt m
+  (Just bk, Just bc) ->
+    let Hit t s ip = minimum [bk, bc]
+        newDt = dt - t
+    in case compare dt t of
+      LT -> move dt m
+      _ -> case compare bk bc of
+        LT -> step newDt $ bonkModel s ip $ move t m
+        _ -> step newDt $ bounceModel s ip $ move t m
 
 nextBonk :: Model c -> Maybe Hit
 nextBonk m = nextValidBonk m bonks

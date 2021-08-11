@@ -1,6 +1,7 @@
+{-# LANGUAGE FlexibleInstances #-}
+
 module Vector
-( Vector (V)
-, coords
+( Vector
 , zeroV
 , lengthSq
 , randomV
@@ -20,11 +21,12 @@ import System.Random as R
 import Space
 import Control.Monad.State
 import Utils
+import Pair
 
-data Vector = V Float Float deriving Show
+type Vector = P Float
 
 instance Random Vector where
-  randomR (V x1 y1, V x2 y2) g = (V x y, g3)
+  randomR ((x1,y1),(x2,y2)) g = ((x,y), g3)
     where
       (x, g2) = randomR (x1, x2) g
       (y, g3) = randomR (y1, y2) g2
@@ -35,16 +37,13 @@ instance Random Vector where
 type Angle = Float
 
 fromAngle :: Angle -> Vector
-fromAngle a = V (cos a) (sin a)
-
-coords :: Vector -> (Float, Float)
-coords (V x y) = (x, y)
+fromAngle a = (cos a, sin a)
 
 zeroV :: Vector
-zeroV = V 0 0
+zeroV = (0,0)
 
 lengthSq :: Vector -> Float
-lengthSq (V x y) = x^2 + y^2
+lengthSq (x,y) = x^2 + y^2
 
 randomV :: Float -> R Vector
 randomV len = do
@@ -68,29 +67,28 @@ randomVIn maxLen = do
   randomV $ maxLen * sqrt lenFactor
 
 reflect :: Ortho -> Vector -> Vector
-reflect Vertical (V x y) = V (-x) y
-reflect Horizontal (V x y) = V x (-y)
+reflect Vertical (x,y) = (-x,y)
+reflect Horizontal (x,y) = (x,-y)
 
 (|*) :: Float -> Vector -> Vector
-(|*) scale (V x y) = V (scale * x) (scale * y)
+(|*) scale (x,y) = (scale * x, scale * y)
 
 (|-) :: Vector -> Vector -> Vector
-(|-) (V x1 y1) (V x2 y2) = V (x1-x2) (y1-y2)
+(|-) (x1,y1) (x2,y2) = (x1-x2, y1-y2)
 
 (|+) :: Vector -> Vector -> Vector
-(|+) (V x1 y1) (V x2 y2) = V (x1+x2) (y1+y2)
+(|+) (x1,y1) (x2,y2) = (x1+x2, y1+y2)
 
 (|.) :: Vector -> Vector -> Float
-(|.) (V x1 y1) (V x2 y2) = x1*x2 + y1*y2
+(|.) (x1,y1) (x2,y2) = x1*x2 + y1*y2
 
 fromTo :: Vector -> Vector -> Int -> [Vector]
 fromTo _ _ 0 = []
 fromTo v1 _ 1 = [v1]
-fromTo (V x1 y1) (V x2 y2) n = V x1 y1 : fromTo (V (x1+hopX) (y1+hopY)) (V x2 y2) (n-1)
+fromTo v1 v2 n = v1 : fromTo (v1 |+ hop) v2 (n-1)
   where
     numHops = fromIntegral n - 1
-    hopX = (x2 - x1) / numHops
-    hopY = (y2 - y1) / numHops
+    hop = bi (/ numHops) (v2 |- v1)
 
 distSq :: Vector -> Vector -> Float 
 distSq v1 v2 = lengthSq $ v2 |- v1
