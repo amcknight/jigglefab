@@ -16,16 +16,13 @@ import Point
 
 genModel :: Radius -> R (Model Core)
 genModel rad = do
-  let signal = ballForm $ Ball (Point (500, 500) (-100,-100)) Active
-  let sense = ballForm $ Ball (Point (350, 350) (1,1)) Sensitized
+  let signal = ballForm $ Ball (Point (v1 |+ (4 |* gap)) (5 |* (-speed,-speed))) Active
+  let sense = ballForm $ Ball (Point (v1 |+ gap) (1,1)) Sensitized
   chain <- chainForm rad speed 1 v1 v2 Dormant
-  let gen = ballForm $ Ball (Point (-350, -350) (-1,-1)) Creator
+  let gen = ballForm $ Ball (Point (v2 |- gap) (-1,-1)) Creator
   pure $ buildModel rad $ signal <> sense <> chain <> gen
   where
     speed = 50
-    x1 = 300
-    y1 = 300
-    x2 = -300
-    y2 = -300
-    v1 = (x1,y1)
-    v2 = (x2,y2)
+    gap = (rad/2, rad/2)
+    v1 = (300,300)
+    v2 = (-300,-300)
