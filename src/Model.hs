@@ -19,6 +19,7 @@ import Wall
 import Vector
 import Form
 import Chem
+import Debug.Trace
 
 type SideMap = M.Map (P Int) Side
 data Model c = Model
@@ -72,8 +73,10 @@ replace (Model r oldF wss hss oldHs) i b = Model r newF wss hss $ updateBounces1
   where newF = replaceBall i b oldF
 
 replacePair :: Model c -> P Int -> Side -> P (Ball c) -> Model c
-replacePair (Model r oldF wss hss oldHs) ip s bs = Model r newF wss hss $ updateBounces2 r newF ip oldHs
-  where newF = replaceBalls ip bs oldF
+replacePair (Model r oldF wbs bbs oldHs) bbi s bs = Model r newF wbs newBbs (updateBounces2 r newF bbi oldHs)
+  where
+    newBbs = M.insert bbi s bbs
+    newF = replaceBalls bbi bs oldF
 
 step :: Chem c => Duration -> Model c -> Model c
 step dt m = case (nextBonk m, nextBounce m) of

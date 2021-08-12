@@ -28,6 +28,9 @@ library
   exposed-modules:
       Ball
       Chem
+      Core.Core
+      Core.CoreForm
+      Core.CoreModels
       Electro.Electro
       Electro.ElectroForm
       Electro.ElectroModels

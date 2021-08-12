@@ -4,6 +4,7 @@ module Space
 , Side (In, Out)
 , Sided
 , flipSide
+, flipSided
 ) where
 
 import Pair
@@ -17,3 +18,5 @@ flipSide In = Out
 flipSide Out = In
 
 type Sided a = (P a, Side)
+flipSided :: Sided a -> Sided a
+flipSided (p, s) = (p, flipSide s)
