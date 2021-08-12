@@ -25,7 +25,6 @@ ballWall = buildModel 200 $
 
 twoBallModel :: Model Valence
 twoBallModel = buildModel 250 $
-  wallForm (wallV 300) <>
   ballForm (Ball (Point zeroV (120, 40)) (vale 1)) <>
   ballForm (Ball (Point (1000, 30) (-200, 40)) (vale 1))
 

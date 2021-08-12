@@ -20,13 +20,15 @@ import Chem
 import Electro.ElectroModels
 import Pallet
 import Valence.Valence
+import Core.CoreModels
+import Valence.ValenceModels
 
 pallet = nicePallet
 
 run :: IO ()
 run = do
   seed <- getStdGen
-  let (model, _) = runState (wireModel 12) seed
+  let (model, _) = runState (genModel 100) seed
   simulate
     FullScreen
     (greyN 0.2)
