@@ -136,7 +136,7 @@ hitsFromIps :: Radius -> Form c -> [P Int] -> [Hit]
 hitsFromIps r f = concatMap (times r f)
   where
     times :: Radius -> Form c -> P Int -> [Hit]
-    times r f ip = fmap (toHit ip) (hitTimes r (bi point ((bi . ballByI) f ip)))
+    times r f ip = fmap (toHit ip) (hitTimes r (bi (point . ballByI f) ip))
     toHit :: P Int -> (Time, Side) -> Hit
     toHit ip (t, s) = Hit t s ip
 
