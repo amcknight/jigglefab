@@ -2,7 +2,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 module Pair
 ( P
-, bi
+, pmap
+, pair
 , sortP
 , prodTo
 , pairsTo
@@ -18,10 +19,13 @@ import Time
 
 type P a = (a, a)
 instance Mover a => Mover (P a) where
-  move dt = bi (move dt)
+  move = pmap . move
 
-bi :: (a -> b) -> P a -> P b
-bi f (x, y) = (f x, f y)
+pmap :: (a -> b) -> P a -> P b
+pmap f (x, y) = (f x, f y)
+
+pair :: a -> P a
+pair x = (x, x)
 
 to :: Int -> [Int]
 to n = [0..(n-1)]

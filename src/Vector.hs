@@ -3,7 +3,8 @@
 module Vector
 ( Vector
 , zeroV
-, lengthSq
+, unit
+, magnitudeSq
 , randomV
 , randomVs
 , randomVIn
@@ -30,20 +31,26 @@ instance Random Vector where
     where
       (x, g2) = randomR (x1, x2) g
       (y, g3) = randomR (y1, y2) g2
-  random g = (fromAngle theta, g2)
+  random g = (toVector theta, g2)
     where
       (theta, g2) = randomR (-pi, pi) g
 
 type Angle = Float
 
-fromAngle :: Angle -> Vector
-fromAngle a = (cos a, sin a)
+toVector:: Angle -> Vector
+toVector a = (cos a, sin a)
 
 zeroV :: Vector
 zeroV = (0,0)
 
-lengthSq :: Vector -> Float
-lengthSq (x,y) = x^2 + y^2
+unit :: Vector -> Vector
+unit v = (1 / magnitude v) |* v
+
+magnitudeSq :: Vector -> Float
+magnitudeSq (x,y) = x^2 + y^2
+
+magnitude :: Vector -> Float 
+magnitude = sqrt . magnitudeSq
 
 randomV :: Float -> R Vector
 randomV len = do
@@ -88,10 +95,10 @@ fromTo v1 _ 1 = [v1]
 fromTo v1 v2 n = v1 : fromTo (v1 |+ hop) v2 (n-1)
   where
     numHops = fromIntegral n - 1
-    hop = bi (/ numHops) (v2 |- v1)
+    hop = pmap (/ numHops) (v2 |- v1)
 
 distSq :: Vector -> Vector -> Float 
-distSq v1 v2 = lengthSq $ v2 |- v1
+distSq v1 v2 = magnitudeSq $ v2 |- v1
 
 dist :: Vector -> Vector -> Float
-dist v1 v2 = sqrt $ distSq v1 v2
+dist v1 v2 = magnitude $ v2 |- v1

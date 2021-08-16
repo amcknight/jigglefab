@@ -6,6 +6,8 @@ module Form
 , wbSide, bbSide
 , replaceBall
 , replaceBalls
+, addBall
+, removeBall
 , bonkIndices, bounceIndices
 , toBonk
 ) where
@@ -44,6 +46,12 @@ wallByI f = (walls f V.!)
 ballByI :: Form c -> Int -> Ball c
 ballByI f = (balls f V.!)
 
+addBall :: Form c -> Ball c -> Form c
+addBall (Form ws bs) b = Form ws $ V.snoc bs b
+
+removeBall :: Form c -> Int -> Form c
+removeBall (Form ws bs) i = Form ws (V.take i bs V.++ V.drop (i+1) bs)
+
 wbSide :: Form c -> P Int -> Sided Int
 wbSide f wbi = (wbi, wSide w (pos (point b)))
   where
@@ -52,7 +60,7 @@ wbSide f wbi = (wbi, wSide w (pos (point b)))
     b = ballByI f wi
 
 bbSide :: Radius -> Form c -> P Int -> Sided Int 
-bbSide rad f bbi = (bbi, side rad (bi (point . ballByI f) bbi))
+bbSide rad f bbi = (bbi, side rad (pmap (point . ballByI f) bbi))
 
 replaceBall :: Int -> Ball c -> Form c -> Form c
 replaceBall i b (Form ws bs) = Form ws $ bs V.// [(i, b)]

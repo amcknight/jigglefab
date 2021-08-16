@@ -22,18 +22,19 @@ import Pallet
 import Valence.Valence
 import Core.CoreModels
 import Valence.ValenceModels
+import Core.Core
 
 pallet = nicePallet
 
 run :: IO ()
 run = do
   seed <- getStdGen
-  let (model, _) = runState (genModel 100) seed
+  let (model, _) = runState (genModel 20) seed
   simulate
     FullScreen
     (greyN 0.2)
     30
-    model
+    (innerBumpModel 200 Active Creator)--model
     draw
     update
 
@@ -50,7 +51,7 @@ update :: Chem c => ViewPort -> Duration -> Model c -> Model c
 update vp = step
 
 drawBall :: Chem c => Radius -> Ball c -> P Picture
-drawBall rad (Ball (Point (x,y) _) chem) = bi (translate x y) (body (chemColor chem pallet) rad, innerPoint)
+drawBall rad (Ball (Point (x,y) _) chem) = pmap (translate x y) (body (chemColor chem pallet) rad, innerPoint)
 
 drawWall :: Color -> Wall -> Picture
 drawWall color (Wall Horizontal f) = Color color $ line [(-3000, f), (3000, f)]
@@ -58,7 +59,7 @@ drawWall color (Wall Vertical   f) = Color color $ line [(f, -3000), (f, 3000)]
 
 drawBond :: Model c -> P Int -> Picture
 drawBond m ip = Color white $ line [p1, p2]
-  where (p1, p2) = bi (pos . point . ballByI (form m)) ip
+  where (p1, p2) = pmap (pos . point . ballByI (form m)) ip
 
 body :: Color -> Radius -> Picture
 body color rad = Color color $ circleSolid rad

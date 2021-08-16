@@ -21,11 +21,11 @@ data Valence = Valence
 
 instance Chem Valence where
   react (cs, In)
-    | wantsLess cs = (untie cs, Out)
-    | otherwise    = (cs, In)
+    | wantsLess cs = Exchange (untie cs, Out)
+    | otherwise    = Exchange (cs, In)
   react (cs, Out)
-    | wantsMore cs = (tie cs, In)
-    | otherwise    = (cs, Out)
+    | wantsMore cs = Exchange (tie cs, In)
+    | otherwise    = Exchange (cs, Out)
   prereact (cs, In) = tie cs
   prereact (cs, Out) = cs
   chemColor ch p = case desire ch of
@@ -57,7 +57,7 @@ wantsLess :: P Valence -> Bool
 wantsLess (Valence w1 h1, Valence w2 h2) = w1 < h1 || w2 < h2
 
 tie :: P Valence -> P Valence
-tie = bi hasUp
+tie = pmap hasUp
 
 untie :: P Valence -> P Valence
-untie = bi hasDown
+untie = pmap hasDown

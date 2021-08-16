@@ -6,11 +6,12 @@ import Chem
 import Graphics.Gloss
 import Pallet
 import Data.Tuple
+import Space
 
 data Electro = Dormant | Active deriving Show
 
 instance Chem Electro where
-  react (es, s) = (swap es, s)
+  react se = Exchange $ swapPair se
   prereact (es, _) = es
   chemColor Dormant p = getNeutral p
   chemColor Active p = getHot p

@@ -7,6 +7,7 @@ module Point
 , minus
 , bonk, bounce
 , hitTimes
+, birthPoint
 ) where
 
 import Vector
@@ -33,7 +34,7 @@ side rad ps = if furtherThan rad ps then Out else In
 
 furtherThan :: Float -> P Point -> Bool
 furtherThan d ps
-  | uncurry distSq (bi pos ps) > d^2 = True
+  | uncurry distSq (pmap pos ps) > d^2 = True
   | otherwise = False
 
 bonk :: Ortho -> Point -> Point
@@ -57,7 +58,7 @@ hitTimes rad ps = maybe [] times root
       | lowT < 0 = [(highT, In)]
       | otherwise = [(lowT, Out), (highT, In)]
       where
-        (lowT, highT) = sortP $ bi (/speedSq) (r - s, -r - s)
+        (lowT, highT) = sortP $ pmap (/speedSq) (r - s, -r - s)
 
     safeRoot :: Float -> Maybe Float
     safeRoot x = case compare x 0 of
@@ -65,7 +66,10 @@ hitTimes rad ps = maybe [] times root
       EQ -> Just 0
       GT -> Just $ sqrt x
 
-    root = safeRoot $ speedSq * (rad^2 - lengthSq (pos diff)) + s^2
+    root = safeRoot $ speedSq * (rad^2 - magnitudeSq (pos diff)) + s^2
     s = pos diff |. vel diff
-    speedSq = lengthSq $ vel diff
+    speedSq = magnitudeSq $ vel diff
     diff = minus ps
+
+birthPoint :: Point -> Point -> Point
+birthPoint p q = Point (0.5 |* (pos p |+ pos q)) ((-1) |* unit (vel p |+ vel q))
