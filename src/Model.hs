@@ -35,7 +35,7 @@ instance Mover (Model c) where
   move dt (Model r f wss hss hs) = Model r (move dt f) wss hss (fmap (move dt) hs)
 
 buildModel :: Chem c => Radius -> Form c -> Model c
-buildModel rad f = tieAll $ populateHits $ Model rad f wss hss []
+buildModel rad f = prereactAll $ populateHits $ Model rad f wss hss []
   where
     wss = M.fromList $ wbSide f <$> bonkIndices f
     hss = M.fromList $ bbSide rad f <$> bounceIndices f
@@ -43,25 +43,17 @@ buildModel rad f = tieAll $ populateHits $ Model rad f wss hss []
     populateHits :: Model c -> Model c
     populateHits (Model r f wss hss _) = Model r f wss hss $ L.sort $ hitsFromIps r f $ bounceIndices f
 
-    tieAll :: Chem c => Model c -> Model c
-    tieAll m = ties (innerIps m) m
+    prereactAll :: Chem c => Model c -> Model c
+    prereactAll m = foldr prereactPair m (innerIps m)
 
-    ties :: Chem c => [P Int] -> Model c -> Model c
-    ties [] m = m
-    ties (ip:ips) m = ties ips $ tie1 ip m
-
-    tie1 :: Chem c => P Int -> Model c -> Model c
-    tie1 ip m = replacePair m ip In $ buildBalls (pmap point bs) (prereact (pmap chem bs, In))
+    prereactPair :: Chem c => P Int -> Model c -> Model c
+    prereactPair ip m = replacePair ip In newBs m
       where
+        newBs = buildBalls (pmap point bs) (prereact (pmap chem bs, In))
         bs = pmap (ballByI (form m)) ip
 
 innerIps :: Model c -> [P Int]
-innerIps m = innerIps' $ M.assocs $ bbSides m
-  where
-    innerIps' :: [Sided Int] -> [P Int]
-    innerIps' [] = []
-    innerIps' ((ip, Out):ss) = innerIps' ss
-    innerIps' ((ip, In):ss) = ip : innerIps' ss
+innerIps = fmap fst . filter isIn . M.assocs . bbSides
 
 bbSideByI :: Model c -> P Int -> Side
 bbSideByI m = (bbSides m M.!)
@@ -69,28 +61,28 @@ bbSideByI m = (bbSides m M.!)
 wbSideByI :: Model c -> P Int -> Side
 wbSideByI m = (wbSides m M.!)
 
-replace :: Model c -> Int -> Ball c -> Model c
-replace (Model r oldF wss hss oldHs) i b = Model r newF wss hss $ updateBounces1 r newF i oldHs
+replace :: Int -> Ball c -> Model c -> Model c
+replace i b (Model r oldF wss hss oldHs) = Model r newF wss hss $ updateBounces1 r newF i oldHs
   where newF = replaceBall i b oldF
 
-replacePair :: Model c -> P Int -> Side -> P (Ball c) -> Model c
-replacePair (Model r oldF wbs bbs oldHs) bbi s bs = Model r newF wbs newBbs (updateBounces2 r newF bbi oldHs)
+replacePair :: P Int -> Side -> P (Ball c) -> Model c -> Model c
+replacePair bbi s bs (Model r oldF wbs bbs oldHs) = Model r newF wbs newBbs (updateBounces2 r newF bbi oldHs)
   where
     newBbs = M.insert bbi s bbs
     newF = replaceBalls bbi bs oldF
 
-remove :: Model c -> Int -> Model c
-remove (Model r f wbs bbs hs) bi = Model r (removeBall f bi) newWbs newBbs newHs
+remove :: Int -> Model c -> Model c
+remove bi (Model r f wbs bbs hs) = Model r (removeBall f bi) newWbs newBbs newHs
   where
     newWbs = M.mapKeys (second decIfOver) $ M.filterWithKey (\ (_,i) _ -> bi /= i) wbs
-    newBbs = M.mapKeys (\ (i,j) -> (decIfOver i, decIfOver j)) $ M.filterWithKey (\ (i,j) _ -> bi /= i && bi /= j) bbs
+    newBbs = M.mapKeys (pmap decIfOver) $ M.filterWithKey (\ (i,j) _ -> bi /= i && bi /= j) bbs
     newHs = (\(Hit dt s (i,j)) -> Hit dt s (decIfOver i, decIfOver j)) <$> filter (\(Hit dt s (i,j)) -> bi /= i && bi /= j) hs
     
     decIfOver :: Int -> Int
     decIfOver i = if i > bi then i-1 else i
 
-add :: Model c -> Ball c -> Model c
-add (Model r f@(Form ws bs) wbs bbs hs) b = Model r newF newWbs newBbs newHs
+add :: Ball c -> Model c -> Model c
+add b (Model r f@(Form ws bs) wbs bbs hs) = Model r newF newWbs newBbs newHs
   where
     i = length bs
     wis = [0..length ws - 1]
@@ -99,8 +91,8 @@ add (Model r f@(Form ws bs) wbs bbs hs) b = Model r newF newWbs newBbs newHs
     ballsWithI = zip bis $ V.toList bs
 
     newF = addBall f b
-    newWbs = M.union wbs $ M.fromList $ fmap (\ (wi, w) -> ((wi, i), wSide w (pos (point b)))) wallsWithI
-    newBbs = M.union bbs $ M.fromList $ fmap (\ (bi, b2) -> (sortP (bi, i), side r (point b, point b2))) ballsWithI
+    newWbs = M.union wbs $ M.fromList $ fmap (\(wi, w) -> ((wi, i), wSide w (pos (point b)))) wallsWithI
+    newBbs = M.union bbs $ M.fromList $ fmap (\(bi, b2) -> (sortP (bi, i), side r (point b, point b2))) ballsWithI
     newHs = L.sort $ hs ++ hitsFromIps r newF (fmap (\bi -> sortP (bi, i)) bis)
 
 step :: Chem c => Duration -> Model c -> Model c
@@ -167,24 +159,24 @@ bounceModel s ip@(i1,i2) m = case react (cs, s) of
   LeftOnly newC -> 
     let (v1, v2) = pmap vel ps
         newP = Point (pos p1) (v1 |+ v2)
-    in remove (replace m i1 (Ball newP newC)) i2
+    in remove i2 (replace i1 (Ball newP newC) m)
   RightOnly newC ->
     let (v1, v2) = pmap vel ps
         newP = Point (pos p2) (v1 |+ v2)
-    in remove (replace m i2 (Ball newP newC)) i1
+    in remove i1 (replace i2 (Ball newP newC) m)
   Exchange (newCs, newS) ->
     let newPs = if s == newS then bounce ps else ps
-    in replacePair m ip newS $ buildBalls newPs newCs
+    in replacePair ip newS (buildBalls newPs newCs) m
   Birth (newCs, newS) newC ->
     let newPs = if s == newS then bounce ps else ps
-    in add (replacePair m ip newS (buildBalls newPs newCs)) (Ball (birthPoint p1 p2) newC)
+    in add (Ball (birthPoint p1 p2) newC) (replacePair ip newS (buildBalls newPs newCs) m)
   where
     bs = pmap (ballByI (form m)) ip
     ps@(p1, p2) = pmap point bs
     cs = pmap chem bs
 
 bonkModel :: Side -> P Int -> Model c -> Model c
-bonkModel s (wi, li) m = replace m li newBall
+bonkModel s (wi, li) m = replace li newBall m
   where
     f = form m
     Wall o _ = wallByI f wi

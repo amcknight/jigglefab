@@ -72,4 +72,7 @@ hitTimes rad ps = maybe [] times root
     diff = minus ps
 
 birthPoint :: Point -> Point -> Point
-birthPoint p q = Point (0.5 |* (pos p |+ pos q)) ((-1) |* unit (vel p |+ vel q))
+birthPoint (Point p1 v1) (Point p2 v2) = Point newP newV
+  where
+    newP = 0.5 |* (p1 |+ p2)
+    newV = (-0.5) |* (v1 |+ v2)

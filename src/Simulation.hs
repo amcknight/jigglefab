@@ -34,7 +34,7 @@ run = do
     FullScreen
     (greyN 0.2)
     30
-    (innerBumpModel 200 Active Creator)--model
+    model
     draw
     update
 

@@ -6,6 +6,7 @@ module Space
 , flipSide
 , flipSided
 , swapPair
+, isIn
 ) where
 
 import Pair
@@ -27,3 +28,6 @@ flipSided (p, s) = (p, flipSide s)
 
 swapPair :: Sided a -> Sided a
 swapPair (p, s) = (swap p, s)
+
+isIn :: Sided a -> Bool
+isIn (_, s) = s == In

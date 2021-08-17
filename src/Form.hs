@@ -53,11 +53,7 @@ removeBall :: Form c -> Int -> Form c
 removeBall (Form ws bs) i = Form ws (V.take i bs V.++ V.drop (i+1) bs)
 
 wbSide :: Form c -> P Int -> Sided Int
-wbSide f wbi = (wbi, wSide w (pos (point b)))
-  where
-    (wi, bi) = wbi
-    w = wallByI f wi
-    b = ballByI f wi
+wbSide f wbi@(wi, bi) = (wbi, wSide (wallByI f wi) (pos (point (ballByI f bi))))
 
 bbSide :: Radius -> Form c -> P Int -> Sided Int 
 bbSide rad f bbi = (bbi, side rad (pmap (point . ballByI f) bbi))
