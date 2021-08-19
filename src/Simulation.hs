@@ -5,7 +5,7 @@ module Simulation
 import Graphics.Gloss hiding (Vector)
 import Graphics.Gloss.Data.ViewPort (ViewPort)
 import Data.Vector (toList)
-import System.Random (getStdGen)
+import System.Random (getStdGen, StdGen)
 import Space
 import Time
 import Point
@@ -23,14 +23,17 @@ import Valence.Valence
 import Core.CoreModels
 import Valence.ValenceModels
 import Core.Core
+import Debug.Trace
 
 pallet = nicePallet
 
 run :: IO ()
-run = do
-  seed <- getStdGen
+run = runSeeded =<< getStdGen
+
+runSeeded :: StdGen -> IO ()
+runSeeded seed = do
   let (model, _) = runState (genModel 20) seed
-  simulate
+  trace (show seed) simulate
     FullScreen
     (greyN 0.2)
     30
