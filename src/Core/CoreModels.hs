@@ -1,6 +1,7 @@
 module Core.CoreModels
 ( genModel
 , innerBumpModel
+, andGateModel
 ) where
 
 import Utils
@@ -19,7 +20,7 @@ genModel :: Radius -> R (Model Core)
 genModel rad = do
   let signal = ballForm $ Ball (Point (v1 |+ (4 |* gap)) (5 |* (-speed,-speed))) Active
   let sense = ballForm $ Ball (Point (v1 |+ gap) (pair 1)) Sensor
-  chain <- chainForm rad speed 1 v1 v2 Dormant
+  chain <- chainFormIncl rad speed 1 v1 v2 Dormant
   let gen = ballForm $ Ball (Point (v2 |- gap) (pair (-1))) Creator
   pure $ buildModel rad $ signal <> sense <> chain <> gen
   where
@@ -33,3 +34,8 @@ innerBumpModel rad c1 c2 = buildModel rad $
   ballForm (Ball (Point (pair 0) (speed, 0)) c1) <>
   ballForm (Ball (Point (pair 1) (0, speed)) c2)
   where speed = rad/4
+
+andGateModel :: Radius -> R (Model Core)
+andGateModel rad = do
+  andGate <- gateForm 150 3 Destroyer
+  pure $ buildModel rad andGate

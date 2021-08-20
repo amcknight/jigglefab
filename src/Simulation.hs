@@ -32,7 +32,7 @@ run = runSeeded =<< getStdGen
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
-  let (model, _) = runState (genModel 20) seed
+  let (model, _) = runState (andGateModel 50) seed
   trace (show seed) simulate
     FullScreen
     (greyN 0.2)
@@ -59,6 +59,7 @@ drawBall rad (Ball (Point (x,y) _) chem) = pmap (translate x y) (body (chemColor
 drawWall :: Color -> Wall -> Picture
 drawWall color (Wall Horizontal f) = Color color $ line [(-3000, f), (3000, f)]
 drawWall color (Wall Vertical   f) = Color color $ line [(f, -3000), (f, 3000)]
+drawWall color (Rock (x,y) rad) = Color color $ translate x y $ circleSolid rad
 
 drawBond :: Model c -> P Int -> Picture
 drawBond m ip = Color white $ line [p1, p2]

@@ -21,6 +21,7 @@ import Form
 import Chem
 import Debug.Trace
 import Data.Bifunctor
+import HitTime
 
 type SideMap = M.Map (P Int) Side
 data Model c = Model
@@ -150,7 +151,7 @@ hitsFromIps :: Radius -> Form c -> [P Int] -> [Hit]
 hitsFromIps r f = concatMap (times r f)
   where
     times :: Radius -> Form c -> P Int -> [Hit]
-    times r f ip = fmap (toHit ip) (hitTimes r (pmap (point . ballByI f) ip))
+    times r f ip = fmap (toHit ip) (toList (hitTimes r (pmap (point . ballByI f) ip)))
     toHit :: P Int -> (Time, Side) -> Hit
     toHit ip (t, s) = Hit t s ip
 
@@ -179,9 +180,11 @@ bonkModel :: Side -> P Int -> Model c -> Model c
 bonkModel s (wi, li) m = replace li newBall m
   where
     f = form m
-    Wall o _ = wallByI f wi
+    w = wallByI f wi
     Ball p c = ballByI f li
-    newBall = Ball (bonk o p) c
+    newBall = case w of
+      Wall o _ -> Ball (bonkWall o p) c
+      Rock pl r -> Ball (bonkRock pl r p) c
 
 toModelBonk :: Model c -> P Int -> Maybe Hit
 toModelBonk m ip = toBonk (form m) (wbSideByI m ip) ip

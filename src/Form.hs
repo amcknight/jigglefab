@@ -18,8 +18,11 @@ import Wall
 import Pair
 import Time
 import Hit
+import HitTime
 import Space
 import Point
+import Vector
+import GHC.Base (Maybe(Nothing))
 
 data Form c = Form
   { walls :: V.Vector Wall
@@ -71,16 +74,26 @@ bounceIndices :: Form c -> [P Int]
 bounceIndices (Form _ bs) = pairsTo (length bs)
 
 toBonk :: Form c -> Side -> P Int -> Maybe Hit
-toBonk f s ip = case compare t 0 of
-  GT -> Just $ Hit t s ip
-  _ -> Nothing
+toBonk f s ip = case mt of
+  Nothing -> Nothing
+  Just t -> Just $ Hit t s ip
   where
     (wi, li) = ip
     w = wallByI f wi
     Ball p _ = ballByI f li
-    t = intersectTime w p
+    mt = intersectTime s w p
 
-intersectTime :: Wall -> Point -> Time
-intersectTime (Wall o p) (Point (x,y) (xv,yv)) = case o of
-  Vertical -> -(x-p)/xv
-  Horizontal -> -(y-p)/yv
+intersectTime :: Side -> Wall -> Point -> Maybe Time
+intersectTime s (Wall o p) (Point (x,y) (xv,yv)) = case compare t 0 of
+  GT -> Just t
+  _ -> Nothing
+  where
+    t = case o of
+      Vertical -> -(x-p)/xv
+      Horizontal -> -(y-p)/yv
+intersectTime s (Rock pl r) p = case hitTimes r (Point pl zeroV, p) of
+  NoHit -> Nothing
+  InHit t -> if s == In then Just t else Nothing
+  OutAndInHit t1 t2 -> case s of
+    Out -> Just t1
+    In -> Just t2
