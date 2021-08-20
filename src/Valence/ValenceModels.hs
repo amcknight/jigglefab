@@ -30,13 +30,13 @@ twoBallModel = buildModel 250 $
 
 twoBallModelInner :: Model Valence
 twoBallModelInner = buildModel 250 $
-  wallForm (wallV 0) <>
+  wallForm (VLine 0) <>
   ballForm (Ball (Point zeroV (90, 30)) (vale 1)) <>
   ballForm (Ball (Point (10, 30) (-150, 30)) (vale 1))
 
 threeBallModel :: Model Valence
 threeBallModel = buildModel 250 $
-  wallForm (wallV 1200) <>
+  wallForm (VLine 1200) <>
   ballForm (Ball (Point (0,-100) (180, 60)) (vale 1)) <>
   ballForm (Ball (Point (1000,-150) (-150, 30)) (vale 1)) <>
   ballForm (Ball (Point (500, 1000) (0,-90)) (vale 1))

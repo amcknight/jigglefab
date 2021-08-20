@@ -21,6 +21,7 @@ import Form
 import Chem
 import Debug.Trace
 import Data.Bifunctor
+import HitTime
 
 type SideMap = M.Map (P Int) Side
 data Model c = Model
@@ -50,16 +51,16 @@ buildModel rad f = prereactAll $ populateHits $ Model rad f wss hss []
     prereactPair ip m = replacePair ip In newBs m
       where
         newBs = buildBalls (pmap point bs) (prereact (pmap chem bs, In))
-        bs = pmap (ballByI (form m)) ip
+        bs = pmap (ballI (form m)) ip
 
 innerIps :: Model c -> [P Int]
 innerIps = fmap fst . filter isIn . M.assocs . bbSides
 
-bbSideByI :: Model c -> P Int -> Side
-bbSideByI m = (bbSides m M.!)
+bbSideI :: Model c -> P Int -> Side
+bbSideI m = (bbSides m M.!)
 
-wbSideByI :: Model c -> P Int -> Side
-wbSideByI m = (wbSides m M.!)
+wbSideI :: Model c -> P Int -> Side
+wbSideI m = (wbSides m M.!)
 
 replace :: Int -> Ball c -> Model c -> Model c
 replace i b (Model r oldF wss hss oldHs) = Model r newF wss hss $ updateBounces1 r newF i oldHs
@@ -116,17 +117,20 @@ step dt m = case (nextBonk m, nextBounce m) of
 nextBonk :: Model c -> Maybe Hit
 nextBonk m = nextValidBonk m bonks
   where
-    bonks = L.sort (mapMaybe (toModelBonk m) (bonkIndices (form m)))
+    f = form m
+    bonks = L.sort $ mapMaybe (toBonkFromModel m) (bonkIndices f)
     nextValidBonk :: Model c -> [Hit] -> Maybe Hit
     nextValidBonk _ [] = Nothing 
-    nextValidBonk m (b@(Hit _ s ip):bs) = if wbSideByI m ip == s then Just b else nextValidBonk m bs
+    nextValidBonk m (b@(Hit _ s ip):bs) = if wbSideI m ip == s then Just b else nextValidBonk m bs
+    toBonkFromModel :: Model c -> P Int -> Maybe Hit
+    toBonkFromModel m ip = toBonk f (wbSideI m ip) ip
       
 nextBounce :: Model c -> Maybe Hit
 nextBounce m = nextValidBounce m $ bounces m
   where
     nextValidBounce :: Model c -> [Hit] -> Maybe Hit
     nextValidBounce _ [] = Nothing 
-    nextValidBounce m (b@(Hit _ s ip):bs) = if bbSideByI m ip == s then Just b else nextValidBounce m bs
+    nextValidBounce m (b@(Hit _ s ip):bs) = if bbSideI m ip == s then Just b else nextValidBounce m bs
 
 updateBounces1 :: Radius -> Form c -> Int -> [Hit] -> [Hit]
 updateBounces1 r f i hs = L.sort $ keep ++ newHits
@@ -150,7 +154,7 @@ hitsFromIps :: Radius -> Form c -> [P Int] -> [Hit]
 hitsFromIps r f = concatMap (times r f)
   where
     times :: Radius -> Form c -> P Int -> [Hit]
-    times r f ip = fmap (toHit ip) (hitTimes r (pmap (point . ballByI f) ip))
+    times r f ip = fmap (toHit ip) (toList (hitTimes r (pmap (point . ballI f) ip)))
     toHit :: P Int -> (Time, Side) -> Hit
     toHit ip (t, s) = Hit t s ip
 
@@ -171,7 +175,7 @@ bounceModel s ip@(i1,i2) m = case react (cs, s) of
     let newPs = if s == newS then bounce ps else ps
     in add (Ball (birthPoint p1 p2) newC) (replacePair ip newS (buildBalls newPs newCs) m)
   where
-    bs = pmap (ballByI (form m)) ip
+    bs = pmap (ballI (form m)) ip
     ps@(p1, p2) = pmap point bs
     cs = pmap chem bs
 
@@ -179,9 +183,9 @@ bonkModel :: Side -> P Int -> Model c -> Model c
 bonkModel s (wi, li) m = replace li newBall m
   where
     f = form m
-    Wall o _ = wallByI f wi
-    Ball p c = ballByI f li
-    newBall = Ball (bonk o p) c
-
-toModelBonk :: Model c -> P Int -> Maybe Hit
-toModelBonk m ip = toBonk (form m) (wbSideByI m ip) ip
+    w = wallI f wi
+    Ball p c = ballI f li
+    newBall = case w of
+      VLine _ -> Ball (bonkVLine p) c
+      HLine _ -> Ball (bonkHLine p) c
+      Circle pl r -> Ball (bonkCircle pl r p) c

@@ -37,6 +37,7 @@ library
       Form
       FormLibrary
       Hit
+      HitTime
       Model
       ModelLibrary
       Pair

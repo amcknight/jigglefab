@@ -5,8 +5,7 @@ module Point
 , pos, vel
 , side
 , minus
-, bonk, bounce
-, hitTimes
+, bonkVLine, bonkHLine, bonkCircle, bounce
 , birthPoint
 ) where
 
@@ -37,39 +36,25 @@ furtherThan d ps
   | uncurry distSq (pmap pos ps) > d^2 = True
   | otherwise = False
 
-bonk :: Ortho -> Point -> Point
-bonk o p = Point (pos p) $ reflect o $ vel p
+bonkVLine :: Point -> Point
+bonkVLine p = Point (pos p) $ reflect Vertical $ vel p
+
+bonkHLine :: Point -> Point
+bonkHLine p = Point (pos p) $ reflect Horizontal $ vel p
+
+bonkCircle :: Position -> Radius -> Point -> Point
+bonkCircle pl r p = p {vel = vel p |+ ((-2) |* velTransferTo p pl) }
 
 bounce :: P Point -> P Point
-bounce (Point p1 v1, Point p2 v2) = (p3, p4)
+bounce (p1, p2) = (p3, p4)
   where
-    p3 = Point p1 (v1 |+ to1 |- to2)
-    p4 = Point p2 (v2 |+ to2 |- to1)
-    to1 = closestPointOnLine (0,0) (p2 |- p1) v2
-    to2 = closestPointOnLine (0,0) (p1 |- p2) v1
+    p3 = p1 {vel = vel p1 |+ to1 |- to2} 
+    p4 = p2 {vel = vel p2 |+ to2 |- to1} 
+    to1 = velTransferTo p2 (pos p1)
+    to2 = velTransferTo p1 (pos p2)
 
-hitTimes :: Radius -> P Point -> [(Time, Side)]
-hitTimes rad ps = maybe [] times root
-  where
-    times :: Float -> [(Time, Side)]
-    times r
-      -- Inferring the Side from the time
-      | highT < 0 = []
-      | lowT < 0 = [(highT, In)]
-      | otherwise = [(lowT, Out), (highT, In)]
-      where
-        (lowT, highT) = sortP $ pmap (/speedSq) (r - s, -r - s)
-
-    safeRoot :: Float -> Maybe Float
-    safeRoot x = case compare x 0 of
-      LT -> Nothing
-      EQ -> Just 0
-      GT -> Just $ sqrt x
-
-    root = safeRoot $ speedSq * (rad^2 - magnitudeSq (pos diff)) + s^2
-    s = pos diff |. vel diff
-    speedSq = magnitudeSq $ vel diff
-    diff = minus ps
+velTransferTo :: Point -> Position -> Velocity
+velTransferTo (Point p1 v1) p2 = closestPointOnLine (0,0) (p1 |- p2) v1
 
 birthPoint :: Point -> Point -> Point
 birthPoint (Point p1 v1) (Point p2 v2) = Point newP newV

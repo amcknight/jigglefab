@@ -14,8 +14,8 @@ import Space
 
 wireModel :: Radius -> R (Model Electro)
 wireModel rad = do
-  let walls = wallForm (wallV (damp x1)) <> wallForm (wallH (damp y1)) <> wallForm (wallV (damp x2)) <> wallForm (wallH (damp y2))
-  chain <- chainForm rad speed 20 v1 v2 Dormant
+  let walls = wallForm (Circle v1 20) <> wallForm (Circle v2 20)--wallForm (wallV (damp x1)) <> wallForm (wallH (damp y1)) <> wallForm (wallV (damp x2)) <> wallForm (wallH (damp y2))
+  chain <- chainFormIncl rad speed 20 v1 v2 Dormant
   signal <- signalForm (400, 400) 100
   pure $ buildModel rad $ walls <> chain <> signal
   where
@@ -30,3 +30,4 @@ wireModel rad = do
       LT -> x + 1
       EQ -> x
       GT -> x - 1
+ 
