@@ -81,20 +81,20 @@ toBonk f s ip = case mt of
     (wi, li) = ip
     w = wallByI f wi
     Ball p _ = ballByI f li
-    mt = intersectTime s w p
+    mt = bonkTime s w p
 
-intersectTime :: Side -> Wall -> Point -> Maybe Time
-intersectTime s (VLine wx) (Point (x,_) (xv,_)) = case compare t 0 of
-  GT -> Just t
-  _ -> Nothing
-  where t = -(x-wx)/xv
-intersectTime s (HLine wy) (Point (_,y) (_,yv)) = case compare t 0 of
-  GT -> Just t
-  _ -> Nothing
-  where t = -(y-wy)/yv
-intersectTime s (Circle pl r) p = case hitTimes r (Point pl zeroV, p) of
+bonkTime :: Side -> Wall -> Point -> Maybe Time
+bonkTime s (VLine w) (Point (p,_) (v,_)) = bonkTime1d w p v
+bonkTime s (HLine w) (Point (_,p) (_,v)) = bonkTime1d w p v
+bonkTime s (Circle c r) p = case hitTimes r (Point c zeroV, p) of
   NoHit -> Nothing
   InHit t -> if s == In then Just t else Nothing
   OutAndInHit t1 t2 -> case s of
     Out -> Just t1
     In -> Just t2
+
+bonkTime1d :: Float -> Float -> Float -> Maybe Time
+bonkTime1d st dyn v = case compare t 0 of
+  GT -> Just t
+  _ -> Nothing
+  where t = -(dyn-st)/v
