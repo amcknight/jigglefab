@@ -2,7 +2,7 @@ module Form
 ( Form (Form)
 , walls, balls
 , wallForm, ballForm
-, wallByI, ballByI
+, wallI, ballI
 , wbSide, bbSide
 , replaceBall
 , replaceBalls
@@ -22,7 +22,6 @@ import HitTime
 import Space
 import Point
 import Vector
-import GHC.Base (Maybe(Nothing))
 
 data Form c = Form
   { walls :: V.Vector Wall
@@ -43,11 +42,11 @@ wallForm w = Form (V.fromList [w]) V.empty
 ballForm :: Ball c -> Form c
 ballForm b = Form V.empty (V.fromList [b])
 
-wallByI :: Form c -> Int -> Wall
-wallByI f = (walls f V.!)
+wallI :: Form c -> Int -> Wall
+wallI f = (walls f V.!)
 
-ballByI :: Form c -> Int -> Ball c
-ballByI f = (balls f V.!)
+ballI :: Form c -> Int -> Ball c
+ballI f = (balls f V.!)
 
 addBall :: Form c -> Ball c -> Form c
 addBall (Form ws bs) b = Form ws $ V.snoc bs b
@@ -56,10 +55,10 @@ removeBall :: Form c -> Int -> Form c
 removeBall (Form ws bs) i = Form ws (V.take i bs V.++ V.drop (i+1) bs)
 
 wbSide :: Form c -> P Int -> Sided Int
-wbSide f wbi@(wi, bi) = (wbi, wSide (wallByI f wi) (pos (point (ballByI f bi))))
+wbSide f wbi@(wi, bi) = (wbi, wSide (wallI f wi) (pos (point (ballI f bi))))
 
 bbSide :: Radius -> Form c -> P Int -> Sided Int 
-bbSide rad f bbi = (bbi, side rad (pmap (point . ballByI f) bbi))
+bbSide rad f bbi = (bbi, side rad (pmap (point . ballI f) bbi))
 
 replaceBall :: Int -> Ball c -> Form c -> Form c
 replaceBall i b (Form ws bs) = Form ws $ bs V.// [(i, b)]
@@ -74,14 +73,10 @@ bounceIndices :: Form c -> [P Int]
 bounceIndices (Form _ bs) = pairsTo (length bs)
 
 toBonk :: Form c -> Side -> P Int -> Maybe Hit
-toBonk f s ip = case mt of
-  Nothing -> Nothing
-  Just t -> Just $ Hit t s ip
+toBonk f s ip@(wi, li) = fmap (\t -> Hit t s ip) (bonkTime s w p)
   where
-    (wi, li) = ip
-    w = wallByI f wi
-    Ball p _ = ballByI f li
-    mt = bonkTime s w p
+    w = wallI f wi
+    Ball p _ = ballI f li
 
 bonkTime :: Side -> Wall -> Point -> Maybe Time
 bonkTime s (VLine w) (Point (p,_) (v,_)) = bonkTime1d w p v

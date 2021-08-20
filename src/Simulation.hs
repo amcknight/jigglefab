@@ -63,7 +63,7 @@ drawWall color (Wall.Circle (x,y) rad) = Color color $ translate x y $ circle ra
 
 drawBond :: Model c -> P Int -> Picture
 drawBond m ip = Color white $ line [p1, p2]
-  where (p1, p2) = pmap (pos . point . ballByI (form m)) ip
+  where (p1, p2) = pmap (pos . point . ballI (form m)) ip
 
 body :: Color -> Radius -> Picture
 body color rad = Color color $ circleSolid rad
