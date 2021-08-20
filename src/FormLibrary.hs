@@ -15,10 +15,10 @@ import Utils
 
 box :: Vector -> Vector -> Form c
 box (x1,y1) (x2,y2) =
-  wallForm (wallV x1) <> 
-  wallForm (wallV x2) <> 
-  wallForm (wallH y1) <> 
-  wallForm (wallH y2)
+  wallForm (VLine x1) <> 
+  wallForm (VLine x2) <> 
+  wallForm (HLine y1) <> 
+  wallForm (HLine y2)
 
 ballFormAt :: Float -> Position -> c -> R (Form c)
 ballFormAt speed p c = do

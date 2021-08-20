@@ -57,9 +57,9 @@ drawBall :: Chem c => Radius -> Ball c -> P Picture
 drawBall rad (Ball (Point (x,y) _) chem) = pmap (translate x y) (body (chemColor chem pallet) rad, innerPoint)
 
 drawWall :: Color -> Wall -> Picture
-drawWall color (Wall Horizontal f) = Color color $ line [(-3000, f), (3000, f)]
-drawWall color (Wall Vertical   f) = Color color $ line [(f, -3000), (f, 3000)]
-drawWall color (Rock (x,y) rad) = Color color $ translate x y $ circleSolid rad
+drawWall color (HLine f) = Color color $ line [(-3000, f), (3000, f)]
+drawWall color (VLine f) = Color color $ line [(f, -3000), (f, 3000)]
+drawWall color (Wall.Circle (x,y) rad) = Color color $ translate x y $ circleSolid rad
 
 drawBond :: Model c -> P Int -> Picture
 drawBond m ip = Color white $ line [p1, p2]

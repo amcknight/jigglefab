@@ -183,8 +183,9 @@ bonkModel s (wi, li) m = replace li newBall m
     w = wallByI f wi
     Ball p c = ballByI f li
     newBall = case w of
-      Wall o _ -> Ball (bonkWall o p) c
-      Rock pl r -> Ball (bonkRock pl r p) c
+      VLine _ -> Ball (bonkVLine p) c
+      HLine _ -> Ball (bonkHLine p) c
+      Circle pl r -> Ball (bonkCircle pl r p) c
 
 toModelBonk :: Model c -> P Int -> Maybe Hit
 toModelBonk m ip = toBonk (form m) (wbSideByI m ip) ip

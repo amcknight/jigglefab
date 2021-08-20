@@ -5,7 +5,7 @@ module Point
 , pos, vel
 , side
 , minus
-, bonkWall, bonkRock, bounce
+, bonkVLine, bonkHLine, bonkCircle, bounce
 , birthPoint
 ) where
 
@@ -36,11 +36,14 @@ furtherThan d ps
   | uncurry distSq (pmap pos ps) > d^2 = True
   | otherwise = False
 
-bonkWall :: Ortho -> Point -> Point
-bonkWall o p = Point (pos p) $ reflect o $ vel p
+bonkVLine :: Point -> Point
+bonkVLine p = Point (pos p) $ reflect Vertical $ vel p
 
-bonkRock :: Position -> Radius -> Point -> Point
-bonkRock pl r p = p {vel = vel p |+ ((-2) |* velTransferTo p pl) }
+bonkHLine :: Point -> Point
+bonkHLine p = Point (pos p) $ reflect Horizontal $ vel p
+
+bonkCircle :: Position -> Radius -> Point -> Point
+bonkCircle pl r p = p {vel = vel p |+ ((-2) |* velTransferTo p pl) }
 
 bounce :: P Point -> P Point
 bounce (p1, p2) = (p3, p4)

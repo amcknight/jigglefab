@@ -12,7 +12,7 @@ import FormLibrary
 
 gateForm :: Float -> Int -> Core -> R (Form Core)
 gateForm speed slack c = do
-  let rocks = wallForm (Rock in1V rad) <> wallForm (Rock in2V rad) <> wallForm (Rock outV rad)
+  let rocks = wallForm (Circle in1V rad) <> wallForm (Circle in2V rad) <> wallForm (Circle outV rad)
   s1 <- ballFormAt speed in1V Active
   s2 <- ballFormAt speed in2V Active
   let signals = s1 <> s2

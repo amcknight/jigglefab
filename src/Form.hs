@@ -84,14 +84,15 @@ toBonk f s ip = case mt of
     mt = intersectTime s w p
 
 intersectTime :: Side -> Wall -> Point -> Maybe Time
-intersectTime s (Wall o p) (Point (x,y) (xv,yv)) = case compare t 0 of
+intersectTime s (VLine wx) (Point (x,_) (xv,_)) = case compare t 0 of
   GT -> Just t
   _ -> Nothing
-  where
-    t = case o of
-      Vertical -> -(x-p)/xv
-      Horizontal -> -(y-p)/yv
-intersectTime s (Rock pl r) p = case hitTimes r (Point pl zeroV, p) of
+  where t = -(x-wx)/xv
+intersectTime s (HLine wy) (Point (_,y) (_,yv)) = case compare t 0 of
+  GT -> Just t
+  _ -> Nothing
+  where t = -(y-wy)/yv
+intersectTime s (Circle pl r) p = case hitTimes r (Point pl zeroV, p) of
   NoHit -> Nothing
   InHit t -> if s == In then Just t else Nothing
   OutAndInHit t1 t2 -> case s of
