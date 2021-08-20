@@ -51,4 +51,3 @@ randomLinearFormExcl speed from to num ch = do
   where
     toBallForm :: c -> Position -> Velocity -> Form c
     toBallForm ch p v = ballForm $ Ball (Point p v) ch
-
