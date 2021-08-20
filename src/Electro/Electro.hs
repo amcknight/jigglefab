@@ -3,15 +3,21 @@ module Electro.Electro
 ) where
 
 import Chem
-import Graphics.Gloss
 import Pallet
-import Data.Tuple
-import Space
 
-data Electro = Dormant | Active deriving Show
+data Electro = Dormant | Active | Tired Int deriving (Show, Eq, Ord)
 
 instance Chem Electro where
-  react se = Exchange $ swapPair se
-  prereact (es, _) = es
-  chemColor Dormant p = getNeutral p
-  chemColor Active p = getHot p
+  chemColor Dormant = getNeutral
+  chemColor Active = getHot
+  chemColor (Tired n) = getCool
+
+instance InnerChem Electro where
+  innerReact (Dormant, Active) = InExchange (Active, Tired 3)
+  innerReact (Dormant, Tired 0) = InExchange (Dormant, Dormant)
+  innerReact (Dormant, Tired n) = InExchange (Dormant, Tired (n-1))
+  innerReact (Tired 0, Tired 0) = InExchange (Dormant, Dormant)
+  innerReact (Tired 0, Tired n) = InExchange (Dormant, Tired (n-1))
+  innerReact (Tired m, Tired n) = InExchange (Tired (m-1), Tired (n-1))
+  innerReact es = InExchange es
+  allowThru _ = False

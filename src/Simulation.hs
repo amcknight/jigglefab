@@ -32,7 +32,7 @@ run = runSeeded =<< getStdGen
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
-  let (model, _) = runState (andGateModel 50) seed
+  let (model, _) = runState (wireModel 50) seed
   trace (show seed) simulate
     FullScreen
     (greyN 0.2)

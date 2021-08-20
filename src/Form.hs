@@ -64,7 +64,7 @@ replaceBall :: Int -> Ball c -> Form c -> Form c
 replaceBall i b (Form ws bs) = Form ws $ bs V.// [(i, b)]
 
 replaceBalls :: P Int -> P (Ball c) -> Form c -> Form c
-replaceBalls (i1, i2) (b1, b2) (Form ws oldBs) = Form ws $ oldBs V.// [(i1, b1), (i2, b2)]
+replaceBalls (i1, i2) (b1, b2) (Form ws bs) = Form ws $ bs V.// [(i1, b1), (i2, b2)]
 
 bonkIndices :: Form c -> [P Int]
 bonkIndices (Form ws bs) = prodTo (length ws) (length bs)
