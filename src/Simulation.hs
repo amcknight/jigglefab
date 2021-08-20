@@ -21,7 +21,7 @@ import Electro.ElectroModels
 import Pallet
 import Valence.Valence
 import Core.CoreModels
-import AndGate.And
+import Gate.Gate
 import Valence.ValenceModels
 import Core.Core
 import Debug.Trace
@@ -33,7 +33,7 @@ run = runSeeded =<< getStdGen
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
-  let (model, _) = runState (explicitAndGateModel 40) seed
+  let (model, _) = runState (gateModel 40 Snd) seed
   trace (show seed) simulate
     FullScreen
     (greyN 0.2)

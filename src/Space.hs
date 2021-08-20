@@ -14,8 +14,7 @@ import Data.Tuple
 type Radius = Float
 
 data Ortho = Vertical | Horizontal deriving (Eq, Show)
-
-data Side = In | Out deriving (Show, Eq)
+data Side = Out | In deriving (Show, Eq, Ord)
 
 flipSide :: Side -> Side
 flipSide In = Out
