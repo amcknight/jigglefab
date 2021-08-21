@@ -2,6 +2,7 @@ module Core.CoreModels
 ( genModel
 , innerBumpModel
 , andGateModel
+, meshModel
 ) where
 
 import Utils
@@ -39,3 +40,26 @@ andGateModel :: Radius -> R (Model Core)
 andGateModel rad = do
   andGate <- gateForm 150 3 Destroyer
   pure $ buildModel rad andGate
+
+meshModel :: R (Model Core)
+meshModel = do
+  let rad = 25
+  form <- meshForm rad 100 1
+    [ ((   0,  0), Active)
+    , ((-400,200), Active)
+    , ((-600,200), Active)
+    , ((-400,300), Active)
+    , ((-200,600), Active)
+    , ((-400,700), Active)
+    , (( 300,400), Active)
+    ]
+    [ (0,1)
+    , (0,6)
+    , (1,2)
+    , (1,3)
+    , (3,6)
+    , (3,4)
+    , (4,5)
+    , (4,6)
+    ]
+  pure $ buildModel rad form

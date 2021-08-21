@@ -63,11 +63,11 @@ wbSideI :: Model c -> P Int -> Side
 wbSideI m = (wbSides m M.!)
 
 replace :: Int -> Ball c -> Model c -> Model c
-replace i b (Model r oldF wss hss oldHs) = Model r newF wss hss $ updateBounces1 r newF i oldHs
+replace i b (Model r oldF wss hss oldHs) = Model r newF wss hss $ updateBumps1 r newF i oldHs
   where newF = replaceBall i b oldF
 
 replacePair :: P Int -> Side -> P (Ball c) -> Model c -> Model c
-replacePair bbi s bs (Model r oldF wbs bbs oldHs) = Model r newF wbs newBbs (updateBounces2 r newF bbi oldHs)
+replacePair bbi s bs (Model r oldF wbs bbs oldHs) = Model r newF wbs newBbs (updateBumps2 r newF bbi oldHs)
   where
     newBbs = M.insert bbi s bbs
     newF = replaceBalls bbi bs oldF
@@ -97,7 +97,7 @@ add b (Model r f@(Form ws bs) wbs bbs hs) = Model r newF newWbs newBbs newHs
     newHs = L.sort $ hs ++ hitsFromIps r newF (fmap (\bi -> sortP (bi, i)) bis)
 
 step :: Chem c => Duration -> Model c -> Model c
-step dt m = case (nextBonk m, nextBounce m) of
+step dt m = case (nextBonk m, nextBump m) of
   (Nothing, Nothing) -> move dt m
   (Nothing, Just (Hit bt s ip)) -> case compare dt bt of
     LT -> move dt m
@@ -125,15 +125,15 @@ nextBonk m = nextValidBonk m bonks
     toBonkFromModel :: Model c -> P Int -> Maybe Hit
     toBonkFromModel m ip = toBonk f (wbSideI m ip) ip
       
-nextBounce :: Model c -> Maybe Hit
-nextBounce m = nextValidBounce m $ bounces m
+nextBump :: Model c -> Maybe Hit
+nextBump m = nextValidBump m $ bounces m
   where
-    nextValidBounce :: Model c -> [Hit] -> Maybe Hit
-    nextValidBounce _ [] = Nothing 
-    nextValidBounce m (b@(Hit _ s ip):bs) = if bbSideI m ip == s then Just b else nextValidBounce m bs
+    nextValidBump :: Model c -> [Hit] -> Maybe Hit
+    nextValidBump _ [] = Nothing 
+    nextValidBump m (b@(Hit _ s ip):bs) = if bbSideI m ip == s then Just b else nextValidBump m bs
 
-updateBounces1 :: Radius -> Form c -> Int -> [Hit] -> [Hit]
-updateBounces1 r f i hs = L.sort $ keep ++ newHits
+updateBumps1 :: Radius -> Form c -> Int -> [Hit] -> [Hit]
+updateBumps1 r f i hs = L.sort $ keep ++ newHits
   where
     keep = filter (uneffected i) hs
     newHits = hitsFromIps r f $ pairsOfTo1 (length (balls f)) i
@@ -141,8 +141,8 @@ updateBounces1 r f i hs = L.sort $ keep ++ newHits
     uneffected :: Int -> Hit -> Bool
     uneffected i h = not $ (overlaps1 i . ixPair) h
 
-updateBounces2 :: Radius -> Form c -> P Int -> [Hit] -> [Hit]
-updateBounces2 r f ip hs = L.sort $ keep ++ newHits
+updateBumps2 :: Radius -> Form c -> P Int -> [Hit] -> [Hit]
+updateBumps2 r f ip hs = L.sort $ keep ++ newHits
   where
     keep = filter (uneffected ip) hs
     newHits = hitsFromIps r f $ pairsOfTo2 (length (balls f)) ip
