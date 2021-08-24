@@ -3,6 +3,7 @@ module Core.CoreModels
 , innerBumpModel
 , andGateModel
 , meshModel
+, headModel
 ) where
 
 import Utils
@@ -66,3 +67,29 @@ meshModel = do
     , (turn 0.20, (6,4))
     ]
   pure $ buildModel rad form
+
+headModel :: R (Model Core)
+headModel = do
+  let rad = 30
+  let space = rad-1
+  let speed = 100
+  let tethSlack = 3
+  let toolLeft = (0,0)
+  let toolBottom = (0,0)
+  let toolRight = (0,0)
+  let leftPeg = (-500,0)
+  let rightPeg = (500,0)
+  let backPeg = (0,-1000)
+  let sigs = [Active, Active, Active, Active]
+  let up = (0,space)
+  let sigTopPos = backPeg |+ (fromIntegral (length sigs -1) |* up)
+  let pegs = wallForm (Circle leftPeg rad) <> wallForm (Circle rightPeg rad) <> wallForm (Circle backPeg rad)
+  port <- ballFormAt speed toolBottom Sensor
+  head <- ballFormAt speed (toolBottom |+ up) Creator
+  let tool = port <> head
+  leftTether <- linChainFormExcl rad speed tethSlack leftPeg toolLeft Dormant
+  rightTether <- linChainFormExcl rad speed tethSlack rightPeg toolRight Dormant
+  let tether = leftTether <> rightTether
+  packet <- sigForm speed backPeg sigTopPos sigs
+  hose <- linChainFormExcl rad speed 5 sigTopPos toolBottom Dormant
+  pure $ buildModel rad $ pegs <> tether <> tool <> packet <> hose

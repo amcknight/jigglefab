@@ -4,6 +4,7 @@ module FormLibrary
 , linChainFormIncl, linChainFormExcl
 , arcFormIncl, arcFormExcl
 , arcChainFormIncl, arcChainFormExcl
+, sigForm
 , box
 ) where
 
@@ -28,6 +29,15 @@ ballFormAt :: Float -> Position -> c -> R (Form c)
 ballFormAt speed p c = do
   v <- randomV speed
   pure $ ballForm $ Ball (Point p v) c
+
+sigForm :: Float -> Position -> Position -> [c] -> R (Form c)
+sigForm _ _ _ [] = do pure mempty 
+sigForm sp _ to [ch] = ballFormAt sp to ch
+sigForm sp from to (ch:cs) = do
+  form <- ballFormAt sp from ch
+  let gap = (1/ fromIntegral (length cs)) |* (to |- from)
+  forms <- sigForm sp (from |+ gap) to cs
+  pure $ form <> forms
 
 linFormIncl :: Float -> Position -> Position -> Int -> c -> R (Form c)
 linFormIncl speed from to num ch = do
