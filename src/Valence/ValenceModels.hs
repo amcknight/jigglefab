@@ -8,14 +8,14 @@ module Valence.ValenceModels
 ) where
 
 import Model
-import Valence.Valence
-import Vector
+import Geometry.Vector
 import Point
 import Ball
 import Form
 import Wall
 import Utils
 import FormLibrary
+import Valence.Valence
 import Valence.ValenceForms
 
 ballWall :: Model Valence

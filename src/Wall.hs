@@ -3,9 +3,9 @@ module Wall
 , wSide
 ) where
 
-import Space
+import Geometry.Space
 import Point
-import Vector
+import Geometry.Vector
 
 data Wall = VLine Float | HLine Float | Circle Position Radius deriving (Eq, Show)
 

@@ -9,14 +9,14 @@ import Data.Maybe (mapMaybe)
 import qualified Data.Map as M
 import qualified Data.List as L
 import qualified Data.Vector as V
-import Space
+import Geometry.Space
 import Time
 import Pair
 import Point
 import Ball
 import Hit
 import Wall
-import Vector
+import Geometry.Vector
 import Form
 import Chem
 import Debug.Trace

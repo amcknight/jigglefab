@@ -4,7 +4,7 @@ module Core.Core
 
 import Chem
 import Pallet
-import Space
+import Geometry.Space
 
 data Core = Dormant | Active | Sensor | Creator | Destroyer deriving (Show, Eq, Ord)
 

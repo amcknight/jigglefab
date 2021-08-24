@@ -7,7 +7,7 @@ import Form
 import Valence.Valence
 import System.Random
 import Control.Monad.State
-import Vector
+import Geometry.Vector
 import Ball
 import Point
 

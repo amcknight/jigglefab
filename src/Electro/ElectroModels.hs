@@ -5,12 +5,11 @@ module Electro.ElectroModels
 import Utils
 import Model
 import Electro.Electro
-import Vector
 import FormLibrary
 import Wall
 import Form
 import Electro.ElectroForm
-import Space
+import Geometry.Space
 
 wireModel :: Radius -> R (Model Electro)
 wireModel rad = do

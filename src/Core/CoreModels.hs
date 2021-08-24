@@ -3,19 +3,22 @@ module Core.CoreModels
 , innerBumpModel
 , andGateModel
 , meshModel
+, arcModel
 ) where
 
 import Utils
 import Model
-import Vector
+import Geometry.Vector
 import FormLibrary
 import Form
-import Space
+import Geometry.Space
 import Core.Core
 import Core.CoreForm
 import Ball
 import Point
 import Pair
+import Geometry.Angle
+import Wall
 
 genModel :: Radius -> R (Model Core)
 genModel rad = do
@@ -63,3 +66,10 @@ meshModel = do
     , (4,6)
     ]
   pure $ buildModel rad form
+
+arcModel :: Radius -> Float -> Angle -> Position -> Position -> Int -> R (Model Core)
+arcModel rad speed a p1 p2 num = do
+  let walls = wallForm (Circle p1 (rad*2)) <> wallForm (Circle p2 (rad*2)) 
+  form <- arcFormIncl speed a p1 p2 num Dormant
+  pure $ buildModel rad (form <> walls)
+  

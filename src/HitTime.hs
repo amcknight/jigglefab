@@ -5,10 +5,10 @@ module HitTime
 ) where
 
 import Time
-import Space
+import Geometry.Space
 import Pair
 import Point
-import Vector
+import Geometry.Vector
 
 data CircleHitTime = NoHit | InHit Time | OutAndInHit Time Time
 toList :: CircleHitTime -> [(Time, Side)]

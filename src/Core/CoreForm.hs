@@ -13,7 +13,7 @@ import FormLibrary
 
 import qualified Data.Vector as V
 import Pair
-import Space
+import Geometry.Space
 
 gateForm :: Float -> Int -> Core -> R (Form Core)
 gateForm speed slack c = do

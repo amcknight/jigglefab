@@ -6,7 +6,7 @@ import Graphics.Gloss hiding (Vector)
 import Graphics.Gloss.Data.ViewPort (ViewPort)
 import Data.Vector (toList)
 import System.Random (getStdGen, StdGen)
-import Space
+import Geometry.Space
 import Time
 import Point
 import Ball
@@ -25,6 +25,7 @@ import Gate.Gate
 import Valence.ValenceModels
 import Core.Core
 import Debug.Trace
+import Geometry.Angle
 
 pallet = nicePallet
 
@@ -33,7 +34,7 @@ run = runSeeded =<< getStdGen
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
-  let (model, _) = runState meshModel seed
+  let (model, _) = runState (arcModel 50 1 (turn 0.75) (0,0) (300,300) 11) seed
   trace (show seed) simulate
     FullScreen
     (greyN 0.2)

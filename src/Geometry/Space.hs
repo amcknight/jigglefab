@@ -1,4 +1,4 @@
-module Space
+module Geometry.Space
 ( Radius
 , Ortho (Vertical, Horizontal)
 , Side (In, Out)

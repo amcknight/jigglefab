@@ -3,7 +3,7 @@ module Hit
 ) where
 
 import Time
-import Space
+import Geometry.Space
 import Pair
 
 data Hit = Hit

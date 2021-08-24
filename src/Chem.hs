@@ -7,7 +7,7 @@ module Chem
 , InnerChem, innerReact, allowThru
 ) where
 
-import Space
+import Geometry.Space
 import Graphics.Gloss
 import Pallet
 import Pair

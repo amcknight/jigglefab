@@ -7,7 +7,7 @@ module ModelLibrary
 import Model
 import Point
 import Chem
-import Space
+import Geometry.Space
 import FormLibrary
 import Utils
 
@@ -26,5 +26,5 @@ chainModel rad from to ch = do
 
 randomLinearModel :: Chem c => Radius -> Position -> Position -> Int -> c -> R (Model c)
 randomLinearModel rad from to num ch = do
-  f <- randomLinearFormIncl 150 from to num ch
+  f <- linearFormIncl 150 from to num ch
   pure $ buildModel rad $ box (-300,-1000) (1000, 500) <> f

@@ -19,9 +19,9 @@ import Pair
 import Time
 import Hit
 import HitTime
-import Space
+import Geometry.Space
 import Point
-import Vector
+import Geometry.Vector
 
 data Form c = Form
   { walls :: V.Vector Wall

@@ -37,6 +37,9 @@ library
       Electro.ElectroModels
       Form
       FormLibrary
+      Geometry.Angle
+      Geometry.Space
+      Geometry.Vector
       Hit
       HitTime
       Model
@@ -45,13 +48,11 @@ library
       Pallet
       Point
       Simulation
-      Space
       Time
       Utils
       Valence.Valence
       Valence.ValenceForms
       Valence.ValenceModels
-      Vector
       Wall
   other-modules:
       Paths_chains

@@ -9,7 +9,7 @@ import Pallet
 import Form
 import Utils
 import Model
-import Space
+import Geometry.Space
 import Wall
 import FormLibrary
 

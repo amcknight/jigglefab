@@ -7,7 +7,7 @@ import Form
 import Utils
 import Point
 import Ball
-import Vector
+import Geometry.Vector
 
 signalForm :: Position -> Float -> R (Form Electro)
 signalForm pos speed = do

@@ -9,7 +9,7 @@ module Valence.Valence
 ) where
 
 import Chem
-import Space
+import Geometry.Space
 import Pair
 import Graphics.Gloss
 import Pallet

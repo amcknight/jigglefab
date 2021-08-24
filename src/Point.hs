@@ -9,9 +9,9 @@ module Point
 , birthPoint
 ) where
 
-import Vector
+import Geometry.Vector
 import Time
-import Space
+import Geometry.Space
 import Pair
 import Graphics.Gloss.Geometry.Line (closestPointOnLine)
 
