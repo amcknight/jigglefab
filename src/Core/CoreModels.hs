@@ -22,9 +22,9 @@ import Wall
 
 genModel :: Radius -> R (Model Core)
 genModel rad = do
-  let signal = ballForm $ Ball (Point (v1 |+ (4 |* gap)) (5 |* (-speed,-speed))) Active
+  let signal = ballForm $ Ball (Point (v1 |+ (4 |* gap)) (5 |* (-speed,-speed))) (Wire (On Red))
   let sense = ballForm $ Ball (Point (v1 |+ gap) (pair 1)) Sensor
-  chain <- linChainFormIncl rad speed 1 v1 v2 Dormant
+  chain <- linChainFormIncl rad speed 1 v1 v2 $ Wire Off
   let gen = ballForm $ Ball (Point (v2 |- gap) (pair (-1))) Creator
   pure $ buildModel rad $ signal <> sense <> chain <> gen
   where
@@ -48,13 +48,13 @@ meshModel :: R (Model Core)
 meshModel = do
   let rad = 25
   form <- meshForm rad 200 1
-    [ ((   0,  0), Active)
-    , ((-400,200), Active)
-    , ((-600,200), Active)
-    , ((-400,300), Active)
-    , ((-200,600), Active)
-    , ((-200,700), Active)
-    , (( 300,400), Active)
+    [ ((   0,  0), Wire (On Red))
+    , ((-400,200), Wire (On Red))
+    , ((-600,200), Wire (On Red))
+    , ((-400,300), Wire (On Red))
+    , ((-200,600), Wire (On Red))
+    , ((-200,700), Wire (On Red))
+    , (( 300,400), Wire (On Red))
     ]
     [ (0,1)
     , (1,2)
@@ -80,16 +80,16 @@ headModel = do
   let leftPeg = (-500,0)
   let rightPeg = (500,0)
   let backPeg = (0,-1000)
-  let sigs = [Active, Active, Active, Active]
+  let sigs = [Wire (On Red), Wire (On Red), Wire (On Blue), Wire (On Red)]
   let up = (0,space)
   let sigTopPos = backPeg |+ (fromIntegral (length sigs -1) |* up)
   let pegs = wallForm (Circle leftPeg rad) <> wallForm (Circle rightPeg rad) <> wallForm (Circle backPeg rad)
   port <- ballFormAt speed toolBottom Sensor
   head <- ballFormAt speed (toolBottom |+ up) Creator
   let tool = port <> head
-  leftTether <- linChainFormExcl rad speed tethSlack leftPeg toolLeft Dormant
-  rightTether <- linChainFormExcl rad speed tethSlack rightPeg toolRight Dormant
+  leftTether <- linChainFormExcl rad speed tethSlack leftPeg toolLeft $ Wire Off
+  rightTether <- linChainFormExcl rad speed tethSlack rightPeg toolRight $ Wire Off
   let tether = leftTether <> rightTether
   packet <- sigForm speed backPeg sigTopPos sigs
-  hose <- linChainFormExcl rad speed 5 sigTopPos toolBottom Dormant
+  hose <- linChainFormExcl rad speed 5 sigTopPos toolBottom $ Wire Off
   pure $ buildModel rad $ pegs <> tether <> tool <> packet <> hose
