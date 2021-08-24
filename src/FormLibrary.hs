@@ -1,8 +1,9 @@
 module FormLibrary
 ( ballFormAt
-, linearFormIncl, linearFormExcl
-, chainFormIncl, chainFormExcl
-, arcFormIncl
+, linFormIncl, linFormExcl
+, linChainFormIncl, linChainFormExcl
+, arcFormIncl, arcFormExcl
+, arcChainFormIncl, arcChainFormExcl
 , box
 ) where
 
@@ -28,16 +29,8 @@ ballFormAt speed p c = do
   v <- randomV speed
   pure $ ballForm $ Ball (Point p v) c
 
-chainFormIncl :: Radius -> Float -> Int -> Position -> Position -> c -> R (Form c)
-chainFormIncl rad speed slack from to = linearFormIncl speed from to num
- where num = (ceiling (dist from to / rad) + 1) + slack
-
-chainFormExcl :: Radius -> Float -> Int -> Position -> Position -> c -> R (Form c)
-chainFormExcl rad speed slack from to = linearFormExcl speed from to num
- where num = (ceiling (dist from to / rad) + 1) + slack
-
-linearFormIncl :: Float -> Position -> Position -> Int -> c -> R (Form c)
-linearFormIncl speed from to num ch = do
+linFormIncl :: Float -> Position -> Position -> Int -> c -> R (Form c)
+linFormIncl speed from to num ch = do
   let poss = fromTo from to num
   vels <- randomVs speed num
   pure $ mconcat $ zipWith (toBallForm ch) poss vels
@@ -45,8 +38,8 @@ linearFormIncl speed from to num ch = do
     toBallForm :: c -> Position -> Velocity -> Form c
     toBallForm ch p v = ballForm $ Ball (Point p v) ch
 
-linearFormExcl :: Float -> Position -> Position -> Int -> c -> R (Form c)
-linearFormExcl speed from to num ch = do
+linFormExcl :: Float -> Position -> Position -> Int -> c -> R (Form c)
+linFormExcl speed from to num ch = do
   let poss = fromTo from to num
   vels <- randomVs speed num
   let _:ballForms = take (num-1) $ zipWith (toBallForm ch) poss vels
@@ -63,3 +56,29 @@ arcFormIncl speed angle from to num ch = do
   where
     toBallForm :: c -> Position -> Velocity -> Form c
     toBallForm ch p v = ballForm $ Ball (Point p v) ch
+
+arcFormExcl :: Float -> Angle -> Position -> Position -> Int -> c -> R (Form c)
+arcFormExcl speed angle from to num ch = do
+  let poss = arcFromTo angle from to num
+  vels <- randomVs speed num
+  let _:ballForms = take (num-1) $ zipWith (toBallForm ch) poss vels
+  pure $ mconcat ballForms
+  where
+    toBallForm :: c -> Position -> Velocity -> Form c
+    toBallForm ch p v = ballForm $ Ball (Point p v) ch
+
+linChainFormIncl :: Radius -> Float -> Int -> Position -> Position -> c -> R (Form c)
+linChainFormIncl rad speed slack from to = linFormIncl speed from to num
+  where num = (ceiling (dist from to / rad) + 1) + slack
+
+linChainFormExcl :: Radius -> Float -> Int -> Position -> Position -> c -> R (Form c)
+linChainFormExcl rad speed slack from to = linFormExcl speed from to num
+  where num = (ceiling (dist from to / rad) + 1) + slack
+
+arcChainFormIncl :: Radius -> Float -> Angle -> Int -> Position -> Position -> c -> R (Form c)
+arcChainFormIncl rad speed a slack from to = arcFormIncl speed a from to num
+  where num = (ceiling (arcDist a from to / rad) + 1) + slack
+
+arcChainFormExcl :: Radius -> Float -> Angle -> Int -> Position -> Position -> c -> R (Form c)
+arcChainFormExcl rad speed a slack from to = arcFormExcl speed a from to num
+  where num = (ceiling (arcDist a from to / rad) + 1) + slack

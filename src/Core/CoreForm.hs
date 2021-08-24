@@ -21,9 +21,9 @@ gateForm speed slack c = do
   s1 <- ballFormAt speed in1V Active
   s2 <- ballFormAt speed in2V Active
   let signals = s1 <> s2
-  ch1 <- chainFormExcl rad speed slack in1V gateV Dormant
-  ch2 <- chainFormExcl rad speed slack in2V gateV Dormant
-  ch3 <- chainFormExcl rad speed slack outV gateV Dormant
+  ch1 <- linChainFormExcl rad speed slack in1V gateV Dormant
+  ch2 <- linChainFormExcl rad speed slack in2V gateV Dormant
+  ch3 <- linChainFormExcl rad speed slack outV gateV Dormant
   let chains = ch1 <> ch2 <> ch3
   gate <- ballFormAt speed gateV c
   pure $ rocks <> signals <> chains <> gate
@@ -53,6 +53,6 @@ chainsForm _ _ _ _ [] = do pure mempty
 chainsForm rad speed slack preBalls ((i,j):is) = do
   let (p1,_) = preBalls V.! i
   let (p2,_) = preBalls V.! j
-  cForm <- chainFormExcl rad speed slack p1 p2 Dormant
+  cForm <- linChainFormExcl rad speed slack p1 p2 Dormant
   csForms <- chainsForm rad speed slack preBalls is
   pure $ cForm <> csForms

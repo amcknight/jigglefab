@@ -24,7 +24,7 @@ genModel :: Radius -> R (Model Core)
 genModel rad = do
   let signal = ballForm $ Ball (Point (v1 |+ (4 |* gap)) (5 |* (-speed,-speed))) Active
   let sense = ballForm $ Ball (Point (v1 |+ gap) (pair 1)) Sensor
-  chain <- chainFormIncl rad speed 1 v1 v2 Dormant
+  chain <- linChainFormIncl rad speed 1 v1 v2 Dormant
   let gen = ballForm $ Ball (Point (v2 |- gap) (pair (-1))) Creator
   pure $ buildModel rad $ signal <> sense <> chain <> gen
   where
@@ -67,9 +67,9 @@ meshModel = do
     ]
   pure $ buildModel rad form
 
-arcModel :: Radius -> Float -> Angle -> Position -> Position -> Int -> R (Model Core)
-arcModel rad speed a p1 p2 num = do
+arcModel :: Radius -> Float -> Angle -> Position -> Position -> R (Model Core)
+arcModel rad speed a p1 p2 = do
   let walls = wallForm (Circle p1 (rad*2)) <> wallForm (Circle p2 (rad*2)) 
-  form <- arcFormIncl speed a p1 p2 num Dormant
+  form <- arcChainFormIncl rad speed a 2 p1 p2 Dormant
   pure $ buildModel rad (form <> walls)
   

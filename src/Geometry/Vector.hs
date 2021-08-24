@@ -10,6 +10,7 @@ module Geometry.Vector
 , (|.)
 , fromTo, arcFromTo
 , distSq, dist
+, arcDist
 , reflect
 ) where
 
@@ -102,11 +103,10 @@ arcFromTo _ _ v2 1 = [v2]
 arcFromTo _ v1 v2 2 = [v1, v2]
 arcFromTo a v1 v2 n = fmap (\i -> rotate (i*gap) c v1) [0..(fromIntegral (n-1))] 
   where
-    radSq = distSq v1 v2 / chord a ^ 2
     m = midPoint v1 v2
     v1m = 0.5 |* (v2 |- v1)
     v1mMagSq = magnitudeSq v1m
-    cmMagSq = radSq - v1mMagSq
+    cmMagSq = radSqFromArc a v1 v2 - v1mMagSq
     leftCM = (sqrt cmMagSq / sqrt v1mMagSq) |* negOpp v1m
     c = (if a < turn 0.5 then (m |+) else (m |-)) leftCM
     gap = a / fromIntegral (n-1)
@@ -121,8 +121,14 @@ distSq v1 v2 = magnitudeSq $ v2 |- v1
 dist :: Vector -> Vector -> Float
 dist v1 v2 = magnitude $ v2 |- v1
 
+arcDist :: Angle -> Vector -> Vector -> Float 
+arcDist a v1 v2 = a * sqrt (radSqFromArc a v1 v2)
+
 midPoint :: Vector -> Vector -> Vector
 midPoint v1 v2 = 0.5 |* (v2 |+ v1)
 
 negOpp :: Vector -> Vector
 negOpp (x,y) = (-y, x)
+
+radSqFromArc :: Angle -> Vector -> Vector -> Float 
+radSqFromArc a v1 v2 = distSq v1 v2 / chord a ^ 2

@@ -53,9 +53,9 @@ gateForm speed slack c = do
   s1 <- ballFormAt speed in1V $ Wire (On Red)
   s2 <- ballFormAt speed in2V $ Wire (On Blue)
   let signals = s1 <> s2
-  ch1 <- chainFormExcl rad speed slack in1V inPort1V $ Wire Off
-  ch2 <- chainFormExcl rad speed slack in2V inPort2V $ Wire Off
-  ch3 <- chainFormExcl rad speed slack outV outPortV $ Wire Off
+  ch1 <- linChainFormExcl rad speed slack in1V inPort1V $ Wire Off
+  ch2 <- linChainFormExcl rad speed slack in2V inPort2V $ Wire Off
+  ch3 <- linChainFormExcl rad speed slack outV outPortV $ Wire Off
   let chains = ch1 <> ch2 <> ch3
   gate <- ballFormAt speed gateV c
   in1 <- ballFormAt speed inPort1V $ Port In Off
