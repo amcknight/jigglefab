@@ -70,23 +70,28 @@ meshModel = do
 
 headModel :: R (Model Core)
 headModel = do
+  let speed = 100
   let rad = 30
   let space = rad-1
-  let speed = 100
+  let up = (0,space)
+  let right = (space,0)
   let tethSlack = 3
-  let toolLeft = (0,0)
-  let toolBottom = (0,0)
-  let toolRight = (0,0)
+  let toolLeft = zeroV
+  let toolRight = zeroV
+  let toolBottom = zeroV |- up
+  let toolTop = zeroV |+ up
   let leftPeg = (-500,0)
   let rightPeg = (500,0)
   let backPeg = (0,-1000)
   let sigs = [Wire (On Red), Wire (On Red), Wire (On Blue), Wire (On Red)]
-  let up = (0,space)
-  let sigTopPos = backPeg |+ (fromIntegral (length sigs -1) |* up)
+  let sigTopPos = backPeg |+ (fromIntegral (length sigs - 1) |* up)
   let pegs = wallForm (Circle leftPeg rad) <> wallForm (Circle rightPeg rad) <> wallForm (Circle backPeg rad)
-  port <- ballFormAt speed toolBottom Sensor
-  head <- ballFormAt speed (toolBottom |+ up) Creator
-  let tool = port <> head
+  inPort <- ballFormAt speed toolBottom (Port In Off)
+  outPort <- ballFormAt speed toolTop (Port Out Off)
+  let ports = inPort <> outPort
+  receiver <- ballFormAt speed zeroV (Wire Off)
+  tip <- linChainFormExcl rad speed 0 toolTop (toolTop |+ (3 |* up)) (Wire Off)
+  let tool = ports <> receiver <> tip
   leftTether <- linChainFormExcl rad speed tethSlack leftPeg toolLeft $ Wire Off
   rightTether <- linChainFormExcl rad speed tethSlack rightPeg toolRight $ Wire Off
   let tether = leftTether <> rightTether
