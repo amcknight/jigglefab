@@ -34,7 +34,7 @@ run = runSeeded =<< getStdGen
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
-  let (model, _) = runState (arcModel 50 1 (turn 0.75) (0,0) (300,300) 11) seed
+  let (model, _) = runState (arcModel 50 1 (turn 0.75) (300,300) (0,0) 10) seed
   trace (show seed) simulate
     FullScreen
     (greyN 0.2)

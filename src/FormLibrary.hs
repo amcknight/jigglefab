@@ -57,7 +57,7 @@ linearFormExcl speed from to num ch = do
 
 arcFormIncl :: Float -> Angle -> Position -> Position -> Int -> c -> R (Form c)
 arcFormIncl speed angle from to num ch = do
-  let poss = trace (show (arcFromTo angle from to num)) arcFromTo angle from to num
+  let poss = arcFromTo angle from to num
   vels <- randomVs speed num
   pure $ mconcat $ zipWith (toBallForm ch) poss vels
   where

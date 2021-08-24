@@ -20,6 +20,7 @@ import Control.Monad.State
 import Utils
 import Pair
 import Debug.Trace
+import Data.Tuple
 
 type Vector = P Float
 
@@ -28,12 +29,12 @@ instance Random Vector where
     where
       (x, g2) = randomR (x1, x2) g
       (y, g3) = randomR (y1, y2) g2
-  random g = (toVector theta, g2)
+  random g = (toUnit theta, g2)
     where
       (theta, g2) = randomR (-pi, pi) g
 
-toVector:: Angle -> Vector
-toVector a = (cos a, sin a)
+toUnit:: Angle -> Vector
+toUnit a = (cos a, sin a)
 
 zeroV :: Vector
 zeroV = (0,0)
@@ -41,15 +42,11 @@ zeroV = (0,0)
 unit :: Vector -> Vector
 unit v = (1 / magnitude v) |* v
 
-angle :: Vector -> Maybe Angle
-angle (0,y) = case compare y 0 of
-  LT -> Just down
-  EQ -> Nothing
-  GT -> Just up
-angle (x,y) = Just $ atan (y/x)
+angle :: Vector -> Angle
+angle (x,y) = atan2 y x
 
 magnitudeSq :: Vector -> Float
-magnitudeSq (x,y) = x^2 + y^2
+magnitudeSq v = v |. v
 
 magnitude :: Vector -> Float 
 magnitude = sqrt . magnitudeSq
@@ -80,7 +77,7 @@ reflect Vertical (x,y) = (-x,y)
 reflect Horizontal (x,y) = (x,-y)
 
 (|*) :: Float -> Vector -> Vector
-(|*) scale (x,y) = (scale * x, scale * y)
+(|*) scale = pmap (scale *)
 
 (|-) :: Vector -> Vector -> Vector
 (|-) (x1,y1) (x2,y2) = (x1-x2, y1-y2)
@@ -105,24 +102,20 @@ arcFromTo _ _ v2 1 = [v2]
 arcFromTo _ v1 v2 2 = [v1, v2]
 arcFromTo a v1 v2 n = fmap (\i -> rotate (i*gap) c v1) [0..(fromIntegral (n-1))] 
   where
-    chord = 2 * sin (a/2)
-    rad = dist v1 v2 / chord
-    mid = midPoint v1 v2
-    vToMid@(xa, ya) = 0.5 |* (v2 |- v1)
-    vToMidMag = magnitude vToMid
-    centerToMidMag = sqrt(rad^2 - vToMidMag^2)
-    centerToMid = (centerToMidMag/vToMidMag) |* (ya, -xa)
-    c1 = mid |+ centerToMid
-    c2 = mid |- centerToMid
-    c = if isLeft v1 v2 c1 then c1 else c2
-    gap = a / fromIntegral (n - 1)
+    radSq = distSq v1 v2 / chord a ^ 2
+    m = midPoint v1 v2
+    v1m = 0.5 |* (v2 |- v1)
+    v1mMagSq = magnitudeSq v1m
+    cmMagSq = radSq - v1mMagSq
+    leftCM = (sqrt cmMagSq / sqrt v1mMagSq) |* negOpp v1m
+    c = (if a < turn 0.5 then (m |+) else (m |-)) leftCM
+    gap = a / fromIntegral (n-1)
 
 rotate :: Angle -> Vector -> Vector -> Vector
-rotate a c v = let cv = v |- c in case angle cv of
-  Nothing -> undefined
-  Just va -> c |+ (magnitude cv |* toVector (a + va))
+rotate a c v = let cv = v |- c
+  in c |+ (magnitude cv |* toUnit (a + angle cv))
 
-distSq :: Vector -> Vector -> Float 
+distSq :: Vector -> Vector -> Float
 distSq v1 v2 = magnitudeSq $ v2 |- v1
 
 dist :: Vector -> Vector -> Float
@@ -131,10 +124,5 @@ dist v1 v2 = magnitude $ v2 |- v1
 midPoint :: Vector -> Vector -> Vector
 midPoint v1 v2 = 0.5 |* (v2 |+ v1)
 
-isLeft :: Vector -> Vector -> Vector -> Bool
-isLeft a b c = case compare (bax*cay) (bay*cax) of
-  GT -> True 
-  _ -> False
-  where
-    (bax, bay) = b |- a
-    (cax, cay) = c |- a
+negOpp :: Vector -> Vector
+negOpp (x,y) = (-y, x)
