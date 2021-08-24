@@ -14,6 +14,7 @@ import FormLibrary
 import qualified Data.Vector as V
 import Pair
 import Geometry.Space
+import Geometry.Angle
 
 gateForm :: Float -> Int -> Core -> R (Form Core)
 gateForm speed slack c = do
@@ -35,11 +36,12 @@ gateForm speed slack c = do
     d = 500
     rad = 50
 
-meshForm :: Radius -> Float -> Int -> [(Position, Core)] -> [P Int] -> R (Form Core)
-meshForm rad speed slack preBalls bbi = do
+meshForm :: Radius -> Float -> Int -> [(Position, Core)] -> [P Int] -> [(Angle, P Int)] -> R (Form Core)
+meshForm rad speed slack preBalls bbi abbi = do
   pegs <- scatterForm rad speed preBalls
-  chains <- chainsForm rad speed slack (V.fromList preBalls) bbi
-  pure $ pegs <> chains
+  linChains <- linChainsForm rad speed slack (V.fromList preBalls) bbi
+  arcChains <- arcChainsForm rad speed slack (V.fromList preBalls) abbi
+  pure $ pegs <> linChains <> arcChains
 
 scatterForm :: Radius -> Float -> [(Position, Core)] -> R (Form Core)
 scatterForm _ _ [] = do pure mempty
@@ -48,11 +50,20 @@ scatterForm rad speed ((p,c):bs) = do
   bsForms <- scatterForm rad speed bs
   pure $ bForm <> bsForms
 
-chainsForm :: Radius -> Float -> Int -> V.Vector (Position, Core) -> [P Int] -> R (Form Core)
-chainsForm _ _ _ _ [] = do pure mempty
-chainsForm rad speed slack preBalls ((i,j):is) = do
+linChainsForm :: Radius -> Float -> Int -> V.Vector (Position, Core) -> [P Int] -> R (Form Core)
+linChainsForm _ _ _ _ [] = do pure mempty
+linChainsForm rad speed slack preBalls ((i,j):is) = do
   let (p1,_) = preBalls V.! i
   let (p2,_) = preBalls V.! j
   cForm <- linChainFormExcl rad speed slack p1 p2 Dormant
-  csForms <- chainsForm rad speed slack preBalls is
+  csForms <- linChainsForm rad speed slack preBalls is
+  pure $ cForm <> csForms
+
+arcChainsForm :: Radius -> Float -> Int -> V.Vector (Position, Core) -> [(Angle, P Int)] -> R (Form Core)
+arcChainsForm _ _ _ _ [] = do pure mempty
+arcChainsForm rad speed slack preBalls ((a,(i,j)):is) = do
+  let (p1,_) = preBalls V.! i
+  let (p2,_) = preBalls V.! j
+  cForm <- arcChainFormExcl rad speed a slack p1 p2 Dormant
+  csForms <- arcChainsForm rad speed slack preBalls is
   pure $ cForm <> csForms

@@ -47,23 +47,24 @@ andGateModel rad = do
 meshModel :: R (Model Core)
 meshModel = do
   let rad = 25
-  form <- meshForm rad 100 1
+  form <- meshForm rad 200 1
     [ ((   0,  0), Active)
     , ((-400,200), Active)
     , ((-600,200), Active)
     , ((-400,300), Active)
     , ((-200,600), Active)
-    , ((-400,700), Active)
+    , ((-200,700), Active)
     , (( 300,400), Active)
     ]
     [ (0,1)
-    , (0,6)
     , (1,2)
     , (1,3)
-    , (3,6)
-    , (3,4)
     , (4,5)
-    , (4,6)
+    ]
+    [ (turn 0.25, (0,6))
+    , (turn 0.10, (3,6))
+    , (turn 0.15, (4,3))
+    , (turn 0.20, (6,4))
     ]
   pure $ buildModel rad form
 
