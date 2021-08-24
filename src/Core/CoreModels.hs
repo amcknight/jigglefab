@@ -3,7 +3,6 @@ module Core.CoreModels
 , innerBumpModel
 , andGateModel
 , meshModel
-, arcModel
 ) where
 
 import Utils
@@ -67,10 +66,3 @@ meshModel = do
     , (turn 0.20, (6,4))
     ]
   pure $ buildModel rad form
-
-arcModel :: Radius -> Float -> Angle -> Position -> Position -> R (Model Core)
-arcModel rad speed a p1 p2 = do
-  let walls = wallForm (Circle p1 (rad*2)) <> wallForm (Circle p2 (rad*2)) 
-  form <- arcChainFormIncl rad speed a 2 p1 p2 Dormant
-  pure $ buildModel rad (form <> walls)
-  
