@@ -20,7 +20,7 @@ import Valence.ValenceForms
 
 ballWall :: Model Valence
 ballWall = buildModel 200 $
-  box (-500,-500) (-500,-500) <>
+  box (-500,-500) (500, 500) <>
   ballForm (Ball (Point zeroV (120, 40)) (vale 1))
 
 twoBallModel :: Model Valence
