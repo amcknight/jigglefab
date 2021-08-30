@@ -5,13 +5,13 @@ module Gate.Gate
 ) where
 
 import Chem
-import Pallet
 import Form
 import Utils
 import Model
 import Geometry.Space
 import Wall
 import FormLibrary
+import Color
 
 data Sig = Red | Blue deriving (Show, Eq, Ord)
 data Active = Off | On Sig deriving (Show, Eq, Ord)
@@ -27,13 +27,13 @@ logic log newS oldS = case log of
 data Gate = Wire Active | Port Side Active | Gate Part Logic deriving (Show, Eq, Ord)
 
 instance Chem Gate where
-  chemColor (Wire (On Red)) = getHot
-  chemColor (Wire (On Blue)) = getCold
-  chemColor (Port In (On Red)) = getWarm
-  chemColor (Port In (On Blue)) = getCool
-  chemColor (Port Out (On Red)) = getWarm
-  chemColor (Port Out (On Blue)) = getCool
-  chemColor _ = getNeutral
+  chemColor (Wire (On Red)) = red
+  chemColor (Wire (On Blue)) = cyan
+  chemColor (Port In (On Red)) = light red
+  chemColor (Port In (On Blue)) = light cyan
+  chemColor (Port Out (On Red)) = dark red
+  chemColor (Port Out (On Blue)) = dark cyan
+  chemColor _ = Grey 0.5
 
 instance InnerChem Gate where
   innerReact (Wire Off, Wire a) = InExchange (Wire a, Wire Off)

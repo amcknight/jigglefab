@@ -4,6 +4,8 @@ module Geometry.Vector
 ( Vector
 , zeroV
 , unit
+, upV, downV, rightV, leftV
+, upRightV, upLeftV, downRightV, downLeftV
 , magnitudeSq
 , randomV, randomVs, randomVIn
 , (|*), (|+), (|-)
@@ -37,11 +39,27 @@ instance Random Vector where
 toUnit:: Angle -> Vector
 toUnit a = (cos a, sin a)
 
-zeroV :: Vector
-zeroV = (0,0)
-
 unit :: Vector -> Vector
 unit v = (1 / magnitude v) |* v
+
+zeroV :: Vector
+zeroV = (0,0)
+upV :: Vector
+upV = (0,1)
+downV :: Vector
+downV = (0,-1)
+rightV :: Vector
+rightV = (1,0)
+leftV :: Vector
+leftV = (-1,0)
+upRightV :: Vector
+upRightV = (1,1)
+upLeftV :: Vector
+upLeftV = (-1,1)
+downRightV :: Vector
+downRightV = (1,-1)
+downLeftV :: Vector
+downLeftV = (-1,-1)
 
 angle :: Vector -> Angle
 angle (x,y) = atan2 y x
@@ -104,7 +122,7 @@ arcFromTo _ v1 v2 2 = [v1, v2]
 arcFromTo a v1 v2 n = fmap (\i -> rotate (i*gap) c v1) [0..(fromIntegral (n-1))] 
   where
     m = midPoint v1 v2
-    v1m = 0.5 |* (v2 |- v1)
+    v1m = 0.5 |* v2 |- v1
     v1mMagSq = magnitudeSq v1m
     cmMagSq = radSqFromArc a v1 v2 - v1mMagSq
     leftCM = (sqrt cmMagSq / sqrt v1mMagSq) |* negOpp v1m
@@ -125,10 +143,10 @@ arcDist :: Angle -> Vector -> Vector -> Float
 arcDist a v1 v2 = a * sqrt (radSqFromArc a v1 v2)
 
 midPoint :: Vector -> Vector -> Vector
-midPoint v1 v2 = 0.5 |* (v2 |+ v1)
+midPoint v1 v2 = 0.5 |* v2 |+ v1
 
 negOpp :: Vector -> Vector
 negOpp (x,y) = (-y, x)
 
-radSqFromArc :: Angle -> Vector -> Vector -> Float 
+radSqFromArc :: Angle -> Vector -> Vector -> Float
 radSqFromArc a v1 v2 = distSq v1 v2 / chord a ^ 2

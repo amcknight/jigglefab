@@ -3,14 +3,14 @@ module Electro.Electro
 ) where
 
 import Chem
-import Pallet
+import Color
 
 data Electro = Dormant | Active | Tired Int deriving (Show, Eq, Ord)
 
 instance Chem Electro where
-  chemColor Dormant = getNeutral
-  chemColor Active = getHot
-  chemColor (Tired n) = getCool
+  chemColor Dormant = Grey 0.5
+  chemColor Active = red
+  chemColor (Tired n) = blue
 
 instance InnerChem Electro where
   innerReact (Dormant, Active) = InExchange (Active, Tired 3)

@@ -29,6 +29,7 @@ library
       Gate.Gate
       Ball
       Chem
+      Color
       Core.Core
       Core.CoreForm
       Core.CoreModels
@@ -45,7 +46,6 @@ library
       Model
       ModelLibrary
       Pair
-      Pallet
       Point
       Simulation
       Time

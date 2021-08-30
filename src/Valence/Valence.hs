@@ -11,8 +11,7 @@ module Valence.Valence
 import Chem
 import Geometry.Space
 import Pair
-import Graphics.Gloss
-import Pallet
+import Color
 
 data Valence = Valence
   { wants :: Int 
@@ -28,10 +27,10 @@ instance Chem Valence where
     | otherwise    = Exchange (cs, Out)
   prereact (cs, In) = tie cs
   prereact (cs, Out) = cs
-  chemColor ch p = case desire ch of
-    EQ -> getNeutral p
-    GT -> getCool p
-    LT -> getWarm p
+  chemColor ch = case desire ch of
+    EQ -> Grey 0.5
+    GT -> red
+    LT -> blue
 
 vale :: Int -> Valence
 vale w = Valence w 0

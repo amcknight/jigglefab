@@ -2,7 +2,6 @@ module Simulation
 ( run
 ) where
 
-import Graphics.Gloss hiding (Vector)
 import Graphics.Gloss.Data.ViewPort (ViewPort)
 import Data.Vector (toList)
 import System.Random (getStdGen, StdGen)
@@ -18,7 +17,6 @@ import Form
 import Control.Monad.State
 import Chem
 import Electro.ElectroModels
-import Pallet
 import Valence.Valence
 import Core.CoreModels
 import Gate.Gate
@@ -26,8 +24,8 @@ import Valence.ValenceModels
 import Core.Core
 import Debug.Trace
 import Geometry.Angle
-
-pallet = nicePallet
+import qualified Color as C
+import Graphics.Gloss
 
 run :: IO ()
 run = runSeeded =<< getStdGen
@@ -50,13 +48,13 @@ drawForm :: Chem c => Radius -> Form c -> [Picture]
 drawForm rad f = ws ++ bodies ++ centres
   where
     (bodies, centres) = unzip $ fmap (drawBall rad) (toList (balls f))
-    ws = toList $ fmap (drawWall (getCold pallet)) (walls f) 
+    ws = toList $ fmap (drawWall yellow) (walls f) 
 
 update :: Chem c => ViewPort -> Duration -> Model c -> Model c
 update vp = step
 
 drawBall :: Chem c => Radius -> Ball c -> P Picture
-drawBall rad (Ball (Point (x,y) _) chem) = pmap (translate x y) (body (chemColor chem pallet) rad, innerPoint)
+drawBall rad (Ball (Point (x,y) _) chem) = pmap (translate x y) (body (C.toGlossColor (chemColor chem)) rad, innerPoint)
 
 drawWall :: Color -> Wall -> Picture
 drawWall color (HLine y) = Color color $ line [(-3000, y), (3000, y)]

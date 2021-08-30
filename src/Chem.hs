@@ -8,11 +8,10 @@ module Chem
 ) where
 
 import Geometry.Space
-import Graphics.Gloss
-import Pallet
 import Pair
 import Debug.Trace
 import Data.Tuple
+import Color
 
 data Reactant c = LeftOnly c | RightOnly c | Exchange (Sided c) | Birth (Sided c) c
 
@@ -50,7 +49,7 @@ class Chem c where
   default prereact :: Sided c -> P c
   prereact (es, _) = es
 
-  chemColor :: c -> Pallet -> Color
+  chemColor :: c -> Color
 
 class Chem c => InnerChem c where
   innerReact :: P c -> InReactant c

@@ -54,7 +54,7 @@ bounce (p1, p2) = (p3, p4)
     to2 = velTransferTo p1 (pos p2)
 
 velTransferTo :: Point -> Position -> Velocity
-velTransferTo (Point p1 v1) p2 = closestPointOnLine (0,0) (p1 |- p2) v1
+velTransferTo (Point p1 v1) p2 = closestPointOnLine zeroV (p1 |- p2) v1
 
 birthPoint :: Point -> Point -> Point
 birthPoint (Point p1 v1) (Point p2 v2) = Point newP newV

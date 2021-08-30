@@ -70,26 +70,28 @@ meshModel = do
 
 headModel :: R (Model Core)
 headModel = do
-  let speed = 100
-  let rad = 30
-  let space = rad-1
-  let up = (0,space)
-  let right = (space,0)
-  let tethSlack = 3
-  let toolLeft = zeroV
-  let toolRight = zeroV
-  let toolBottom = zeroV |- up
-  let toolTop = zeroV |+ up
-  let leftPeg = (-500,0)
-  let rightPeg = (500,0)
-  let backPeg = (0,-1000)
+  let speed = 200
+  let boxRad = 600
+  let rad = 99
+  let space = 0.95 * rad
+  let up = space |* upV
+  let right = space |* rightV
+  let tethSlack = 1
+  let toolMid = boxRad |* upV
+  let toolLeft = toolMid
+  let toolRight = toolMid
+  let toolBottom = toolMid |- up
+  let toolTop = toolMid |+ up
+  let leftPeg  = boxRad |* upLeftV
+  let rightPeg = boxRad |* upRightV
+  let backPeg = boxRad |* downV
   let sigs = [Wire (On Red), Wire (On Red), Wire (On Blue), Wire (On Red)]
   let sigTopPos = backPeg |+ (fromIntegral (length sigs - 1) |* up)
-  let pegs = wallForm (Circle leftPeg rad) <> wallForm (Circle rightPeg rad) <> wallForm (Circle backPeg rad)
-  inPort <- ballFormAt speed toolBottom (Port In Off)
-  outPort <- ballFormAt speed toolTop (Port Out Off)
+  let pegs = mconcat $ fmap (\peg -> wallForm (Circle peg rad)) [leftPeg, rightPeg, backPeg]
+  inPort <- ballFormAt speed toolBottom $ Port In Off
+  outPort <- ballFormAt speed toolTop $ Port Out Off
   let ports = inPort <> outPort
-  receiver <- ballFormAt speed zeroV (Wire Off)
+  receiver <- ballFormAt speed toolMid $ Wire Off
   tip <- linChainFormExcl rad speed 0 toolTop (toolTop |+ (3 |* up)) (Wire Off)
   let tool = ports <> receiver <> tip
   leftTether <- linChainFormExcl rad speed tethSlack leftPeg toolLeft $ Wire Off
