@@ -96,6 +96,20 @@ add b (Model r f@(Form ws bs) wbs bbs hs) = Model r newF newWbs newBbs newHs
     newBbs = M.union bbs $ M.fromList $ fmap (\(bi, b2) -> (sortP (bi, i), side r (point b, point b2))) ballsWithI
     newHs = L.sort $ hs ++ hitsFromIps r newF (fmap (\bi -> sortP (bi, i)) bis)
 
+addIn :: Ball c -> [Int] -> Model c -> Model c
+addIn b bIns (Model r f@(Form ws bs) wbs bbs hs) = Model r newF newWbs newBbs newHs
+  where
+    i = length bs
+    wis = [0..length ws - 1]
+    bis = [0..length bs - 1] -- Doesn't include new ball index i
+    wallsWithI = zip wis $ V.toList ws
+
+    newF = addBall f b
+    newWbs = M.union wbs $ M.fromList $ fmap (\(wi, w) -> ((wi, i), wSide w (pos (point b)))) wallsWithI
+    newBbs = M.union bbs $ M.fromList $ fmap (\j -> (sortP (i, j), if j `elem` bIns then In else Out)) bis
+    newHs = L.sort $ hs ++ hitsFromIps r newF (fmap (\bi -> sortP (bi, i)) bis)
+
+
 step :: Chem c => Duration -> Model c -> Model c
 step dt m = case (nextBonk m, nextBump m) of
   (Nothing, Nothing) -> move dt m
@@ -173,7 +187,7 @@ bounceModel s ip@(i1,i2) m = case react (cs, s) of
     in replacePair ip newS (buildBalls newPs newCs) m
   Birth (newCs, newS) newC ->
     let newPs = if s == newS then bounce ps else ps
-    in add (Ball (birthPoint p1 p2) newC) (replacePair ip newS (buildBalls newPs newCs) m)
+    in addIn (Ball (birthPoint p1 p2) newC) [i1, i2] (replacePair ip newS (buildBalls newPs newCs) m)
   where
     bs = pmap (ballI (form m)) ip
     ps@(p1, p2) = pmap point bs

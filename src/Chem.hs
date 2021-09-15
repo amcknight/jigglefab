@@ -59,7 +59,7 @@ class Chem c => InnerChem c where
   default innerReact :: P c -> InReactant c
   innerReact = InExchange
   allowThru :: Sided c -> Bool
-  default allowThru :: Sided c -> Bool 
+  default allowThru :: Sided c -> Bool
   allowThru _ = False
   thruReact :: P c -> P c
   default thruReact :: P c -> P c

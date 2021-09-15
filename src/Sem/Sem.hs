@@ -21,30 +21,30 @@ data Command = Hold Command | Act Do | DoThen Do Command | Send Command Command 
 data Sem = Wire Active | Port Side Active | Actor (Maybe Command) | Command Command deriving (Show, Eq, Ord)
 
 -- a - O - O
--- a (Send (Act Take) (Hold (Act Die))) - O - O
--- a - C (Send (Act Take) (Hold (Act Die))) - O
--- a - C (Hold (Act Die)) - C (Act Take)
--- a, C (Hold (Act Die)), O
--- a, C (Act Die), O
+-- a Send (Act Take) (Hold (Act Die)) - O - O
+-- a - Send (Act Take) (Hold (Act Die)) - O
+-- a - Hold (Act Die) - Act Take
+-- a, Hold (Act Die), O
+-- a, Act Die, O
 -- a - O
 
 -- a - O
--- a (C (DoThen Spawn (Act Drop))) - O
--- a - C (DoThen Spawn (Act Drop))
--- a, O, C (Act Drop)
+-- a DoThen Spawn (Act Drop) - O
+-- a - DoThen Spawn (Act Drop)
+-- a, O, Act Drop
 -- a - O - O
 
 instance Chem Sem where
   chemColor (Wire Off) = grey
-  chemColor (Wire On) = cyan
+  chemColor (Wire On) = light grey
   chemColor (Port Out Off) = magenta
-  chemColor (Port Out On) = mix cyan magenta
+  chemColor (Port Out On) = light magenta
   chemColor (Port In Off) = green
-  chemColor (Port In On) = mix cyan green
-  chemColor (Actor Nothing) = dark red
-  chemColor (Actor (Just _)) = red
-  chemColor (Command (Hold _)) = white 
-  chemColor (Command _) = black 
+  chemColor (Port In On) = light green
+  chemColor (Actor Nothing) = red
+  chemColor (Actor (Just _)) = light red
+  chemColor (Command (Hold _)) = light blue
+  chemColor (Command _) = blue
 
 instance InnerChem Sem where
   innerReact (Wire Off, Wire On) = InExchange (Wire On, Wire Off)
@@ -53,7 +53,8 @@ instance InnerChem Sem where
   innerReact (Wire Off, Command (Send send keep)) = InExchange (Command send, Command keep)
   innerReact (Wire Off, Actor (Just c)) = InExchange (Command c, Actor Nothing)
   innerReact (Wire On, Port In Off) = InExchange (Wire Off, Port In On)
-  innerReact (Port In On, Actor Nothing) = InExchange (Port In Off, Actor (Just (Send (Act Take) (Hold (Act Die))))) -- AUTO-encode
+  -- innerReact (Port In On, Actor Nothing) = InExchange (Port In Off, Actor (Just (Send (Act Take) (Hold (Act Die))))) -- AUTO-encode
+  innerReact (Port In On, Actor Nothing) = InExchange (Port In Off, Actor (Just (DoThen Spawn (Act Drop))))  -- AUTO-encode
   innerReact (Actor Nothing, Command (Act Die)) = InLeftOnly (Actor Nothing)
   innerReact (Actor Nothing, Command (Act Spawn)) = InBirth (Actor Nothing, Wire Off) (Wire Off)
   innerReact (Actor Nothing, Command (DoThen Die c)) = InLeftOnly (Actor Nothing) -- Kinda weird to Die with more commands underneath
@@ -75,13 +76,13 @@ instance InnerChem Sem where
 turnbuckleCrazyModel :: R (Model Sem)
 turnbuckleCrazyModel = do
   let rad = 50
-  let speed = rad*4
-  let slack = 6
+  let speed = rad*2
+  let slack = 10
   let boxSize = 1000
   let bottom = boxSize |* leftV
   let top = boxSize |* rightV
   let mid = zeroV
-  let sigs = fmap Wire (replicate 1 On)
+  let sigs = fmap Wire (replicate 5 On)
   let walls = mconcat $ fmap (\p -> wallForm (Circle p rad)) [bottom, top]
   prechain <- cappedLinChainFormExcl rad speed slack bottom mid sigs (Wire Off) [Port In Off]
   postchain <- linChainFormExcl rad speed slack mid top $ Wire Off
