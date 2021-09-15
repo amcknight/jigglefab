@@ -14,77 +14,64 @@ import Form
 import Wall
 import FormLibrary
 
-data Active = Off | On deriving (Show, Eq, Ord)
-
-data Do = Take | Drop | Die | Spawn deriving (Show, Eq, Ord)
-data Command = Hold Command | Act Do | DoThen Do Command | Send Command Command deriving (Show, Eq, Ord)
-data Sem = Wire Active | Port Side Active | Actor (Maybe Command) | Command Command deriving (Show, Eq, Ord)
-
--- a - O - O
--- a Send (Act Take) (Hold (Act Die)) - O - O
--- a - Send (Act Take) (Hold (Act Die)) - O
--- a - Hold (Act Die) - Act Take
--- a, Hold (Act Die), O
--- a, Act Die, O
--- a - O
-
--- a - O
--- a DoThen Spawn (Act Drop) - O
--- a - DoThen Spawn (Act Drop)
--- a, O, Act Drop
--- a - O - O
+data Active = Open | Full | Closed deriving (Show, Eq, Ord)
+data Act = Sig   -- Signal transfers freely to empty Wires
+         | Apply -- Applies Actions (Take, Drop, Die, Spawn)
+         | Done  -- Used by Port to move from Closed -> Open
+         | Wait  -- Used by Port to block back-signals when Full
+         | Take  -- Join Applier with Taker
+         | Drop  -- Separate Applier and Dropper
+         | Die   -- Applier kills the Dier
+         | Spawn -- Applier and Spawner create an empty Wire
+         | Hold  -- Does nothing until reacted with an empty Wire
+         | Send [Act] -- Puts actions on empty Wire
+         deriving (Show, Eq, Ord)
+data Sem = Wire [Act] | Port Active deriving (Show, Eq, Ord)
 
 instance Chem Sem where
-  chemColor (Wire Off) = grey
-  chemColor (Wire On) = light grey
-  chemColor (Port Out Off) = magenta
-  chemColor (Port Out On) = light magenta
-  chemColor (Port In Off) = green
-  chemColor (Port In On) = light green
-  chemColor (Actor Nothing) = red
-  chemColor (Actor (Just _)) = light red
-  chemColor (Command (Hold _)) = light blue
-  chemColor (Command _) = blue
+  chemColor (Wire []) = grey
+  chemColor (Wire (Sig:_)) = light grey
+  chemColor (Wire (Apply:_)) = blue
+  chemColor (Wire (Hold:_)) = dark grey
+  chemColor (Wire (Wait:_)) = dark grey
+  chemColor (Wire _) = red
+  chemColor (Port Open) = magenta
+  chemColor (Port Full) = light magenta
+  chemColor (Port Closed) = dark magenta
 
 instance InnerChem Sem where
-  innerReact (Wire Off, Wire On) = InExchange (Wire On, Wire Off)
-  innerReact (Wire Off, Port Out On) = InExchange (Wire On, Port Out Off)
-  innerReact (Wire Off, Command (Hold c)) = InExchange (Wire Off, Command c)
-  innerReact (Wire Off, Command (Send send keep)) = InExchange (Command send, Command keep)
-  innerReact (Wire Off, Actor (Just c)) = InExchange (Command c, Actor Nothing)
-  innerReact (Wire On, Port In Off) = InExchange (Wire Off, Port In On)
-  -- innerReact (Port In On, Actor Nothing) = InExchange (Port In Off, Actor (Just (Send (Act Take) (Hold (Act Die))))) -- AUTO-encode
-  innerReact (Port In On, Actor Nothing) = InExchange (Port In Off, Actor (Just (DoThen Spawn (Act Drop))))  -- AUTO-encode
-  innerReact (Actor Nothing, Command (Act Die)) = InLeftOnly (Actor Nothing)
-  innerReact (Actor Nothing, Command (Act Spawn)) = InBirth (Actor Nothing, Wire Off) (Wire Off)
-  innerReact (Actor Nothing, Command (DoThen Die c)) = InLeftOnly (Actor Nothing) -- Kinda weird to Die with more commands underneath
-  innerReact (Actor Nothing, Command (DoThen Spawn c)) = InBirth (Actor Nothing, Command c) (Wire Off)
+  innerReact (Wire [], Wire (Sig:as)) = InExchange (Wire [Sig], Wire as)
+  innerReact (Wire [], Wire (Hold:as)) = InExchange (Wire [], Wire as)
+  innerReact (Wire [], Wire ((Send send):as)) = InExchange (Wire send, Wire as)
+  innerReact (Wire (Apply:as), Wire (Die:_)) = InLeftOnly (Wire as) -- Kinda weird to Die with more commands underneath
+  innerReact (Wire (Apply:as1), Wire (Spawn:as2)) = InBirth (Wire as1, Wire as2) (Wire [])
+  -- innerReact (Wire [], Port Full) = InExchange (Wire [Send [Send [Take], Hold, Die], Apply, Apply, Done], Port Closed) -- AUTO-encode
+  innerReact (Wire [], Port Full) = InExchange (Wire [Send [Spawn, Drop], Apply, Apply, Done], Port Closed)  -- AUTO-encode
+  innerReact (Wire (Sig:as), Port Open) = InExchange (Wire (Wait:as), Port Full)
+  innerReact (Wire (Done:as), Port Closed) = InExchange (Wire as, Port Open)
+  innerReact (Wire (Wait:as), Port Closed) = InExchange (Wire as, Port Closed)
   innerReact cs = InExchange cs
 
-  allowThru ((Actor Nothing, Command (Act Take)), Out) = True
-  allowThru ((Actor Nothing, Command (Act Drop)), In) = True
-  allowThru ((Actor Nothing, Command (DoThen Take _)), Out) = True
-  allowThru ((Actor Nothing, Command (DoThen Drop _)), In) = True
+  allowThru ((Wire (Apply:_), Wire (Take:_)), Out) = True
+  allowThru ((Wire (Apply:_), Wire (Drop:_)), In) = True
   allowThru _ = False 
 
-  thruReact (Actor Nothing, Command (Act Take)) = (Actor Nothing, Wire Off)
-  thruReact (Actor Nothing, Command (Act Drop)) = (Actor Nothing, Wire Off)
-  thruReact (Actor Nothing, Command (DoThen Take c)) = (Actor Nothing, Command c)
-  thruReact (Actor Nothing, Command (DoThen Drop c)) = (Actor Nothing, Command c)
+  thruReact (Wire (Apply:as1), Wire (Take:as2)) = (Wire as1, Wire as2)
+  thruReact (Wire (Apply:as1), Wire (Drop:as2)) = (Wire as1, Wire as2)
   thruReact c = c
 
 turnbuckleCrazyModel :: R (Model Sem)
 turnbuckleCrazyModel = do
-  let rad = 50
+  let rad = 100
   let speed = rad*2
-  let slack = 10
-  let boxSize = 1000
+  let slack = 4
+  let boxSize = 500
   let bottom = boxSize |* leftV
   let top = boxSize |* rightV
   let mid = zeroV
-  let sigs = fmap Wire (replicate 5 On)
+  let sigs = fmap Wire (replicate 5 [Sig])
   let walls = mconcat $ fmap (\p -> wallForm (Circle p rad)) [bottom, top]
-  prechain <- cappedLinChainFormExcl rad speed slack bottom mid sigs (Wire Off) [Port In Off]
-  postchain <- linChainFormExcl rad speed slack mid top $ Wire Off
-  buckle <- ballFormAt speed mid $ Actor Nothing
+  prechain <- cappedLinChainFormExcl rad speed slack bottom mid sigs (Wire []) [Port Open]
+  postchain <- linChainFormExcl rad speed slack mid top $ Wire []
+  buckle <- ballFormAt speed mid $ Wire []
   pure $ buildModel rad $ walls <> prechain <> buckle <> postchain
