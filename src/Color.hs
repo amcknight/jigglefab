@@ -2,7 +2,7 @@ module Color
 ( Color(..)
 , toGlossColor
 , mix
-, black, white
+, black, grey, white
 , dark, light
 , red, green, blue
 , cyan, yellow, magenta
@@ -26,6 +26,8 @@ data Color = Grey Float | Color
 
 black :: Color
 black = Grey 0
+grey :: Color
+grey = Grey 0.5
 white :: Color
 white = Grey 1
 

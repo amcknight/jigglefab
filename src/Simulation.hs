@@ -26,13 +26,17 @@ import Debug.Trace
 import Geometry.Angle
 import qualified Color as C
 import Graphics.Gloss
+import Buckle.Buckle
+import Peano.Peano
+import Stripe.Stripe
+import Sem.Sem
 
 run :: IO ()
 run = runSeeded =<< getStdGen
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
-  let (model, _) = runState headModel seed
+  let (model, _) = runState turnbuckleCrazyModel seed
   trace (show seed) simulate
     FullScreen
     (greyN 0.2)

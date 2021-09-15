@@ -4,7 +4,7 @@ module Chem
 ( Reactant(..)
 , InReactant(..)
 , Chem, react, prereact, chemColor
-, InnerChem, innerReact, allowThru
+, InnerChem, innerReact, allowThru, thruReact
 ) where
 
 import Geometry.Space
@@ -16,9 +16,10 @@ import Color
 data Reactant c = LeftOnly c | RightOnly c | Exchange (Sided c) | Birth (Sided c) c
 
 swapChems :: Reactant c -> Reactant c
+swapChems (LeftOnly c) = RightOnly c
+swapChems (RightOnly c) = LeftOnly c
 swapChems (Exchange (cs, s)) = Exchange (swap cs, s)
 swapChems (Birth (cs, s) c) = Birth (swap cs, s) c
-swapChems r = r
 
 data InReactant c = InLeftOnly c | InRightOnly c | InExchange (P c) | InBirth (P c) c
 toReactant :: InReactant c -> Reactant c
@@ -31,7 +32,9 @@ class Chem c where
   react :: Sided c -> Reactant c
   default react :: (Ord c, InnerChem c) => Sided c -> Reactant c
   react sc = if allowedThru
-    then Exchange $ flipSided sc
+    then case compare c1 c2 of
+      GT -> swapChems $ Exchange (thruReact (swap cs), flipSide s)
+      _ -> Exchange (thruReact cs, flipSide s)
     else case s of
       Out -> Exchange sc
       In -> reactant
@@ -53,4 +56,11 @@ class Chem c where
 
 class Chem c => InnerChem c where
   innerReact :: P c -> InReactant c
+  default innerReact :: P c -> InReactant c
+  innerReact = InExchange
   allowThru :: Sided c -> Bool
+  default allowThru :: Sided c -> Bool 
+  allowThru _ = False
+  thruReact :: P c -> P c
+  default thruReact :: P c -> P c
+  thruReact = id

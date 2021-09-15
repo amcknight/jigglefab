@@ -113,21 +113,22 @@ fromTo v1 _ 1 = [v1]
 fromTo v1 v2 n = v1 : fromTo (v1 |+ hop) v2 (n-1)
   where
     numHops = fromIntegral n - 1
-    hop = pmap (/ numHops) (v2 |- v1)
+    hop = (1/numHops) |* (v2 |- v1)
 
 arcFromTo :: Angle -> Vector -> Vector -> Int -> [Vector]
 arcFromTo _ _ _ 0 = []
 arcFromTo _ _ v2 1 = [v2]
 arcFromTo _ v1 v2 2 = [v1, v2]
-arcFromTo a v1 v2 n = fmap (\i -> rotate (i*gap) c v1) [0..(fromIntegral (n-1))] 
+arcFromTo a v1 v2 n = fmap (\i -> rotate (i*gap) c v1) [0..numHops] 
   where
+    numHops = fromIntegral $ n - 1
     m = midPoint v1 v2
     v1m = 0.5 |* v2 |- v1
     v1mMagSq = magnitudeSq v1m
     cmMagSq = radSqFromArc a v1 v2 - v1mMagSq
     leftCM = (sqrt cmMagSq / sqrt v1mMagSq) |* negOpp v1m
     c = (if a < turn 0.5 then (m |+) else (m |-)) leftCM
-    gap = a / fromIntegral (n-1)
+    gap = a / numHops
 
 rotate :: Angle -> Vector -> Vector -> Vector
 rotate a c v = let cv = v |- c

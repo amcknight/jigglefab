@@ -28,6 +28,7 @@ library
   exposed-modules:
       Gate.Gate
       Ball
+      Buckle.Buckle
       Chem
       Color
       Core.Core
@@ -46,8 +47,11 @@ library
       Model
       ModelLibrary
       Pair
+      Peano.Peano
       Point
+      Sem.Sem
       Simulation
+      Stripe.Stripe
       Time
       Utils
       Valence.Valence
