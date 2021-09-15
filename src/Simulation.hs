@@ -36,7 +36,7 @@ run = runSeeded =<< getStdGen
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
-  let (model, _) = runState turnbuckleCrazyModel seed
+  let (model, _) = runState movingToolModel seed
   trace (show seed) simulate
     FullScreen
     (greyN 0.2)

@@ -1,7 +1,7 @@
 module Sem.Sem
 ( Sem (..)
 , Active (..)
-, turnbuckleCrazyModel
+, movingToolModel
 ) where
 
 import Chem
@@ -14,8 +14,9 @@ import Form
 import Wall
 import FormLibrary
 
-data Active = Open | Full | Closed deriving (Show, Eq, Ord)
-data Act = Sig   -- Signal transfers freely to empty Wires
+data Sig = Red | Blue deriving (Show, Eq, Ord)
+data Active = Open | Closed | Full Sig deriving (Show, Eq, Ord)
+data Act = Sig Sig  -- Signal transfers freely to empty Wires
          | Apply -- Applies Actions (Take, Drop, Die, Spawn)
          | Done  -- Used by Port to move from Closed -> Open
          | Wait  -- Used by Port to block back-signals when Full
@@ -30,24 +31,31 @@ data Sem = Wire [Act] | Port Active deriving (Show, Eq, Ord)
 
 instance Chem Sem where
   chemColor (Wire []) = grey
-  chemColor (Wire (Sig:_)) = light grey
-  chemColor (Wire (Apply:_)) = blue
-  chemColor (Wire (Hold:_)) = dark grey
+  chemColor (Wire ((Sig Red):_)) = mix red (light grey)
+  chemColor (Wire ((Sig Blue):_)) = mix cyan (light grey)
+  chemColor (Wire (Apply:_)) = yellow
+  chemColor (Wire (Done:_)) = mix yellow red
   chemColor (Wire (Wait:_)) = dark grey
-  chemColor (Wire _) = red
+  chemColor (Wire (Take:_)) = white
+  chemColor (Wire (Drop:_)) = white
+  chemColor (Wire (Die:_)) = black
+  chemColor (Wire (Spawn:_)) = green
+  chemColor (Wire (Hold:_)) = dark grey
+  chemColor (Wire ((Send _):_)) = red
   chemColor (Port Open) = magenta
-  chemColor (Port Full) = light magenta
   chemColor (Port Closed) = dark magenta
+  chemColor (Port (Full Red)) = mix (light magenta) red
+  chemColor (Port (Full Blue)) = mix (light magenta) cyan
 
 instance InnerChem Sem where
-  innerReact (Wire [], Wire (Sig:as)) = InExchange (Wire [Sig], Wire as)
+  innerReact (Wire [], Wire ((Sig s):as)) = InExchange (Wire [Sig s], Wire as)
   innerReact (Wire [], Wire (Hold:as)) = InExchange (Wire [], Wire as)
   innerReact (Wire [], Wire ((Send send):as)) = InExchange (Wire send, Wire as)
   innerReact (Wire (Apply:as), Wire (Die:_)) = InLeftOnly (Wire as) -- Kinda weird to Die with more commands underneath
   innerReact (Wire (Apply:as1), Wire (Spawn:as2)) = InBirth (Wire as1, Wire as2) (Wire [])
-  -- innerReact (Wire [], Port Full) = InExchange (Wire [Send [Send [Take], Hold, Die], Apply, Apply, Done], Port Closed) -- AUTO-encode
-  innerReact (Wire [], Port Full) = InExchange (Wire [Send [Spawn, Drop], Apply, Apply, Done], Port Closed)  -- AUTO-encode
-  innerReact (Wire (Sig:as), Port Open) = InExchange (Wire (Wait:as), Port Full)
+  innerReact (Wire [], Port (Full Red)) = InExchange (Wire [Send [Send [Take], Hold, Die], Apply, Apply, Done], Port Closed) -- AUTO-encode
+  innerReact (Wire [], Port (Full Blue)) = InExchange (Wire [Send [Spawn, Drop], Apply, Apply, Done], Port Closed)  -- AUTO-encode
+  innerReact (Wire ((Sig s):as), Port Open) = InExchange (Wire (Wait:as), Port (Full s))
   innerReact (Wire (Done:as), Port Closed) = InExchange (Wire as, Port Open)
   innerReact (Wire (Wait:as), Port Closed) = InExchange (Wire as, Port Closed)
   innerReact cs = InExchange cs
@@ -60,18 +68,38 @@ instance InnerChem Sem where
   thruReact (Wire (Apply:as1), Wire (Drop:as2)) = (Wire as1, Wire as2)
   thruReact c = c
 
-turnbuckleCrazyModel :: R (Model Sem)
-turnbuckleCrazyModel = do
-  let rad = 100
-  let speed = rad*2
-  let slack = 4
-  let boxSize = 500
-  let bottom = boxSize |* leftV
-  let top = boxSize |* rightV
-  let mid = zeroV
-  let sigs = fmap Wire (replicate 5 [Sig])
-  let walls = mconcat $ fmap (\p -> wallForm (Circle p rad)) [bottom, top]
-  prechain <- cappedLinChainFormExcl rad speed slack bottom mid sigs (Wire []) [Port Open]
-  postchain <- linChainFormExcl rad speed slack mid top $ Wire []
-  buckle <- ballFormAt speed mid $ Wire []
-  pure $ buildModel rad $ walls <> prechain <> buckle <> postchain
+-- TODO
+sigNotForm :: R (Form Sem)
+sigNotForm = undefined
+sigSplitForm :: R (Form Sem)
+sigSplitForm = undefined
+
+
+movingToolModel :: R (Model Sem)
+movingToolModel = do
+  let rad = 60
+  let speed = rad*1
+  let slack = 3
+  let boxSize = 800
+  let numSigs = 1
+  let mid = boxSize |* upV
+  let bottom = boxSize |* downV
+  let left = boxSize |* upLeftV
+  let right = boxSize |* upRightV
+  let midLeft = 0.5 |* (left |+ mid)
+  let midRight = 0.5 |* (right |+ mid)
+  let midBottom = 0.5 |* (bottom |+ mid)
+  let sigs = fmap (\s -> Wire [Sig s]) [Blue, Red, Red, Red, Red, Blue, Blue, Blue, Blue, Blue, Blue, Blue]
+  let walls = mconcat $ fmap (\p -> wallForm (Circle p rad)) [left, right, bottom]
+  leftPrechain <- linChainFormExcl rad speed slack left midLeft $ Wire []
+  leftPostchain <- linChainFormExcl rad speed slack midLeft mid $ Wire []
+  rightPrechain <- linChainFormExcl rad speed slack right midRight $ Wire []
+  rightPostchain <- linChainFormExcl rad speed slack midRight mid $ Wire []
+  bottomPrechain <- cappedLinChainFormExcl rad speed slack bottom midBottom sigs (Wire []) []
+  let chains = leftPrechain <> leftPostchain <> rightPrechain <> rightPostchain <> bottomPrechain
+  leftBuckle <- ballFormAt speed midLeft $ Port Open
+  rightBuckle <- ballFormAt speed midRight $ Port Open
+  let buckles = leftBuckle <> rightBuckle
+  tool <- ballFormAt speed mid $ Wire [Wait]
+  pure $ buildModel rad $ walls <> chains <> buckles <> tool
+

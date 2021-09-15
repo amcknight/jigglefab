@@ -74,7 +74,7 @@ linFormIncl speed from to num ch = cappedLinFormIncl speed from to num [] ch []
 
 linFormExcl :: Speed -> Position -> Position -> Int -> c -> R (Form c)
 linFormExcl speed from to num = linFormIncl speed (from |+ step) (to |- step) (num-2)
-  where step = (1/fromIntegral (num-1)) |* to |- from
+  where step = (1/fromIntegral (num-1)) |* (to |- from)
 
 arcFormIncl :: Speed -> Angle -> Position -> Position -> Int -> c -> R (Form c)
 arcFormIncl speed angle from to num ch = cappedArcFormIncl speed angle from to num [] ch []
