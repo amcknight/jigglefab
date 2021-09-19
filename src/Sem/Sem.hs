@@ -27,7 +27,7 @@ data Act = Sig Sig  -- Signal transfers freely to empty Wires
          | Hold  -- Does nothing until reacted with an empty Wire
          | Send [Act] -- Puts actions on empty Wire
          deriving (Show, Eq, Ord)
-data Sem = Wire [Act] | Port Active deriving (Show, Eq, Ord)
+data Sem = Wire [Act] | Port Active | Port2 Active deriving (Show, Eq, Ord)
 
 instance Chem Sem where
   chemColor (Wire []) = grey
@@ -46,6 +46,10 @@ instance Chem Sem where
   chemColor (Port Closed) = dark magenta
   chemColor (Port (Full Red)) = mix (light magenta) red
   chemColor (Port (Full Blue)) = mix (light magenta) cyan
+  chemColor (Port2 Open) = magenta
+  chemColor (Port2 Closed) = dark magenta
+  chemColor (Port2 (Full Red)) = mix (light magenta) red
+  chemColor (Port2 (Full Blue)) = mix (light magenta) cyan
 
 instance InnerChem Sem where
   innerReact (Wire [], Wire ((Sig s):as)) = InExchange (Wire [Sig s], Wire as)
@@ -53,22 +57,25 @@ instance InnerChem Sem where
   innerReact (Wire [], Wire ((Send send):as)) = InExchange (Wire send, Wire as)
   innerReact (Wire (Apply:as), Wire (Die:_)) = InLeftOnly (Wire as) -- Kinda weird to Die with more commands underneath
   innerReact (Wire (Apply:as1), Wire (Spawn:as2)) = InBirth (Wire as1, Wire as2) (Wire [])
-  innerReact (Wire [], Port (Full Red)) = InExchange (Wire [Send [Send [Take], Hold, Die], Apply, Apply, Done], Port Closed) -- AUTO-encode
-  innerReact (Wire [], Port (Full Blue)) = InExchange (Wire [Send [Spawn, Drop], Apply, Apply, Done], Port Closed)  -- AUTO-encode
+  innerReact (Wire [], Port (Full Red)) = InExchange (Wire [Send [Send [Take], Hold, Die], Apply, Apply, Done], Port Closed) -- AUTO-load
+  innerReact (Wire [], Port (Full Blue)) = InExchange (Wire [Send [Spawn, Drop], Apply, Apply, Done], Port Closed)  -- AUTO-load
+  innerReact (Wire [], Port2 (Full s)) = InExchange (Wire [Sig s, Sig s, Done], Port2 Closed)  -- AUTO-load
   innerReact (Wire ((Sig s):as), Port Open) = InExchange (Wire (Wait:as), Port (Full s))
   innerReact (Wire (Done:as), Port Closed) = InExchange (Wire as, Port Open)
   innerReact (Wire (Wait:as), Port Closed) = InExchange (Wire as, Port Closed)
+  innerReact (Wire ((Sig s):as), Port2 Open) = InExchange (Wire (Wait:as), Port2 (Full s))
+  innerReact (Wire (Done:as), Port2 Closed) = InExchange (Wire as, Port2 Open)
+  innerReact (Wire (Wait:as), Port2 Closed) = InExchange (Wire as, Port2 Closed)
   innerReact cs = InExchange cs
 
   allowThru ((Wire (Apply:_), Wire (Take:_)), Out) = True
   allowThru ((Wire (Apply:_), Wire (Drop:_)), In) = True
-  allowThru _ = False 
+  allowThru _ = False
 
   thruReact (Wire (Apply:as1), Wire (Take:as2)) = (Wire as1, Wire as2)
   thruReact (Wire (Apply:as1), Wire (Drop:as2)) = (Wire as1, Wire as2)
   thruReact c = c
 
--- TODO
 sigNotForm :: R (Form Sem)
 sigNotForm = undefined
 sigSplitForm :: R (Form Sem)
@@ -95,11 +102,13 @@ movingToolModel = do
   leftPostchain <- linChainFormExcl rad speed slack midLeft mid $ Wire []
   rightPrechain <- linChainFormExcl rad speed slack right midRight $ Wire []
   rightPostchain <- linChainFormExcl rad speed slack midRight mid $ Wire []
-  bottomPrechain <- cappedLinChainFormExcl rad speed slack bottom midBottom sigs (Wire []) []
-  let chains = leftPrechain <> leftPostchain <> rightPrechain <> rightPostchain <> bottomPrechain
+  bottomPrechain <- cappedLinChainFormExcl rad speed slack bottom midBottom sigs (Wire []) [Port2 Open]
+  leftBottomPostChain <- arcChainFormExcl rad speed 0.25 slack left midBottom $ Wire []
+  rightBottomPostChain <- arcChainFormExcl rad speed 0.25 slack midBottom right $ Wire []
+  let chains = leftPrechain <> leftPostchain <> rightPrechain <> rightPostchain <> bottomPrechain <> leftBottomPostChain <> rightBottomPostChain
   leftBuckle <- ballFormAt speed midLeft $ Port Open
   rightBuckle <- ballFormAt speed midRight $ Port Open
   let buckles = leftBuckle <> rightBuckle
   tool <- ballFormAt speed mid $ Wire [Wait]
-  pure $ buildModel rad $ walls <> chains <> buckles <> tool
-
+  gate <- ballFormAt speed midBottom $ Wire []
+  pure $ buildModel rad $ walls <> chains <> buckles <> tool <> gate

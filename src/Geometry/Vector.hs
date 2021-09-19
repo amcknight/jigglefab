@@ -123,7 +123,7 @@ arcFromTo a v1 v2 n = fmap (\i -> rotate (i*gap) c v1) [0..numHops]
   where
     numHops = fromIntegral $ n - 1
     m = midPoint v1 v2
-    v1m = 0.5 |* v2 |- v1
+    v1m = 0.5 |* (v2 |- v1)
     v1mMagSq = magnitudeSq v1m
     cmMagSq = radSqFromArc a v1 v2 - v1mMagSq
     leftCM = (sqrt cmMagSq / sqrt v1mMagSq) |* negOpp v1m
@@ -144,7 +144,7 @@ arcDist :: Angle -> Vector -> Vector -> Float
 arcDist a v1 v2 = a * sqrt (radSqFromArc a v1 v2)
 
 midPoint :: Vector -> Vector -> Vector
-midPoint v1 v2 = 0.5 |* v2 |+ v1
+midPoint v1 v2 = 0.5 |* (v2 |+ v1)
 
 negOpp :: Vector -> Vector
 negOpp (x,y) = (-y, x)
