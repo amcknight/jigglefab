@@ -30,13 +30,14 @@ import Buckle.Buckle
 import Peano.Peano
 import Stripe.Stripe
 import Sem.Sem
+import Encode.Encode
 
 run :: IO ()
 run = runSeeded =<< getStdGen
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
-  let (model, _) = runState movingToolModel seed
+  let (model, _) = runState encodeModel seed
   trace (show seed) simulate
     FullScreen
     (greyN 0.2)

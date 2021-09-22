@@ -37,6 +37,7 @@ library
       Electro.Electro
       Electro.ElectroForm
       Electro.ElectroModels
+      Encode.Encode
       Form
       FormLibrary
       Geometry.Angle

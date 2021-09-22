@@ -12,6 +12,7 @@ import Geometry.Space
 import Wall
 import FormLibrary
 import Color
+import Geometry.Vector
 
 data Sig = Red | Blue deriving (Show, Eq, Ord)
 data Active = Off | On Sig deriving (Show, Eq, Ord)

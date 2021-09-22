@@ -78,14 +78,15 @@ instance InnerChem Sem where
 
 sigNotForm :: R (Form Sem)
 sigNotForm = undefined
-sigSplitForm :: R (Form Sem)
-sigSplitForm = undefined
 
+-- sigSplitForm :: R (Form Sem)
+-- sigSplitForm = do
+--   pure $ 
 
 movingToolModel :: R (Model Sem)
 movingToolModel = do
   let rad = 60
-  let speed = rad*1
+  let speed = rad*0.03
   let slack = 3
   let boxSize = 800
   let numSigs = 1
