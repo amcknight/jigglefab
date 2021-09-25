@@ -62,7 +62,8 @@ instance InnerChem Encode where
 
 loopForm :: Radius -> Speed -> Int -> Position -> [Sig] -> R (Form Encode)
 loopForm rad speed size pos sigs = do
-  let [s1,s2,s3,s4,s5] = sigs
+  -- TODO this is all terribly hardcoded
+  let [s1,s2,s3,s4] = sigs
   let stepFactor = 0.9
   let adjacentStep = rad*stepFactor
   let diagStep = sqrt ((adjacentStep^2)/2)
@@ -87,7 +88,7 @@ loopForm rad speed size pos sigs = do
   loop2 <- ballFormAt speed lp2 $ Wire $ On s2
   loop3 <- ballFormAt speed lp3 $ Wire $ On s3
   loop4 <- ballFormAt speed lp4 $ Wire $ On s4
-  loop5 <- ballFormAt speed lp5 $ Wire $ On s5
+  loop5 <- ballFormAt speed lp5 $ Wire Off
   loop6 <- ballFormAt speed lp6 $ Wire Off
   loop7 <- ballFormAt speed lp7 $ Wire Off
   loop8 <- ballFormAt speed lp8 $ Wire Off
@@ -136,15 +137,35 @@ splitForm rad speed pos = do
   botOutP <- ballFormAt speed (pos |+ (5|*right) |+ diagDown) (Port Out Off)
   pure $ mconcat [inP, dup, outP, bridge, rightInP, topS, botS, topOutP, botOutP]
 
+dupKForm :: Radius -> Speed -> Position -> Int -> R (Form Encode)
+dupKForm rad speed pos num = do
+  let adjacentStep = 0.95*rad
+  let right = adjacentStep |* rightV
+
+  pure $ mconcat []
+
+dupSeqForm :: Radius -> Speed -> Position -> Int -> R (Form Encode)
+dupSeqForm _ _ _ 0 = do pure mempty
+dupSeqForm rad speed pos num = do
+  let step = 0.95*rad
+  let right = step |* rightV
+  inP <-    ballFormAt speed (pos |+ (0|*right)) $ Port In Off
+  dup <-    ballFormAt speed (pos |+ (1|*right)) $ Dup Ready
+  outP <-   ballFormAt speed (pos |+ (2|*right)) $ Port In Off
+  bridge <- ballFormAt speed (pos |+ (3|*right)) $ Wire Off
+  tail <- dupSeqForm rad speed (pos |+ (4|*right)) (num-1)
+  pure $ mconcat [inP, dup, outP, bridge, tail]
+
 encodeModel :: R (Model Encode)
 encodeModel = do
   let rad = 50
-  let speed = rad*5
+  let speed = rad*0.0005
   let slack = 3
   let boxSize = 1000
   let start = boxSize |* leftV
   let end = boxSize |* rightV
   let mid = 0.5 |* (start |+ end)
+  let midLeft = 0.5 |* (start |+ mid)
 
   let adjacentStep = 0.95*rad
   let diagStep = sqrt ((adjacentStep^2)/2)
@@ -153,17 +174,18 @@ encodeModel = do
   let diagUp = diagStep |* upRightV
   let diagDown = diagStep |* downRightV
 
+  prewire <- cappedLinChainFormExcl rad speed slack start midLeft (replicate 5 (Wire (On Blue))) (Wire Off) []
+  dup4 <- dupSeqForm rad speed midLeft 2
   blueAnd <- andForm rad speed mid Blue
-  prewire <- cappedLinChainFormExcl rad speed slack start mid (replicate 5 (Wire (On Blue))) (Wire Off) []
   encoderTip <- ballFormAt speed mid $ Wire Off
   let walls = wallForm (Circle start rad) <> wallForm (Circle end rad)
-  let sigs = [Red, Blue, Blue, Red, Blue]
-  let blueAndOutPos = mid |+ ((2*0.95*rad) |* upV) |+ ((1.5*0.95*rad) |* rightV)
-  bridge <- ballFormAt speed (blueAndOutPos |+ ((0.95*rad) |* rightV)) $ Wire Off
-  let bridgeOutPos = blueAndOutPos |+ ((2*0.95*rad) |* rightV)
+  let sigs = [Red, Blue, Blue, Red]
+  let blueAndOutPos = mid |+ ((2*adjacentStep) |* upV) |+ ((1.5*adjacentStep) |* rightV)
+  bridge <- ballFormAt speed (blueAndOutPos |+ (adjacentStep |* rightV)) $ Wire Off
+  let bridgeOutPos = blueAndOutPos |+ ((2*adjacentStep) |* rightV)
   split <- splitForm rad speed bridgeOutPos
   let splitOutTopPos = bridgeOutPos |+ (5|*right) |+ diagUp
   let splitOutBotPos = bridgeOutPos |+ (5|*right) |+ diagDown
   loop <- loopForm rad speed 5 splitOutTopPos sigs
   postwire <- linChainFormExcl rad speed slack splitOutBotPos end $ Wire Off
-  pure $ buildModel rad $ walls <> prewire <> blueAnd <> bridge <> split <> loop <> postwire
+  pure $ buildModel rad $ walls <> prewire <> dup4 <> blueAnd <> bridge <> split <> loop <> postwire
