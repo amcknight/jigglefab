@@ -81,6 +81,6 @@ turnbuckleModel = do
   let sigs = fmap (Wire . On) (replicate 1 Red) --[Red, Red, Red, Blue, Blue, Blue, Blue, Blue, Red, Red, Red]
   let walls = mconcat $ fmap (\p -> wallForm (Circle p rad)) [bottom, top]
   prechain <- cappedLinChainFormExcl rad speed slack bottom mid sigs (Wire Off) [Port In Off]
-  postchain <- linChainFormExcl rad speed slack mid top $ Wire Off
   buckle <- ballFormAt speed mid $ Actor Off
+  postchain <- linChainFormExcl rad speed slack mid top $ Wire Off
   pure $ buildModel rad $ walls <> prechain <> buckle <> postchain
