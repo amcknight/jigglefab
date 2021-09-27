@@ -31,13 +31,14 @@ import Peano.Peano
 import Stripe.Stripe
 import Sem.Sem
 import Encode.Encode
+import Load.Load
 
 run :: IO ()
 run = runSeeded =<< getStdGen
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
-  let (model, _) = runState encodeModel seed
+  let (model, _) = runState loadModel seed
   trace (show seed) simulate
     FullScreen
     (greyN 0.2)
@@ -53,7 +54,7 @@ drawForm :: Chem c => Radius -> Form c -> [Picture]
 drawForm rad f = ws ++ bodies ++ centres
   where
     (bodies, centres) = unzip $ fmap (drawBall rad) (toList (balls f))
-    ws = toList $ fmap (drawWall yellow) (walls f) 
+    ws = toList $ fmap (drawWall yellow) (walls f)
 
 update :: Chem c => ViewPort -> Duration -> Model c -> Model c
 update vp = step

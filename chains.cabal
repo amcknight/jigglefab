@@ -45,6 +45,7 @@ library
       Geometry.Vector
       Hit
       HitTime
+      Load.Load
       Model
       ModelLibrary
       Pair
