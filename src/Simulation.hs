@@ -38,7 +38,7 @@ run = runSeeded =<< getStdGen
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
-  let (model, _) = runState turnbuckleModel seed
+  let (model, _) = runState movingToolModel seed
   trace (show seed) simulate
     FullScreen
     (greyN 0.2)
@@ -63,8 +63,8 @@ drawBall :: Chem c => Radius -> Ball c -> P Picture
 drawBall rad (Ball (Point (x,y) _) chem) = pmap (translate x y) (body (C.toGlossColor (chemColor chem)) rad, innerPoint)
 
 drawWall :: Color -> Wall -> Picture
-drawWall color (HLine y) = Color color $ line [(-3000, y), (3000, y)]
-drawWall color (VLine x) = Color color $ line [(x, -3000), (x, 3000)]
+drawWall color (HLine y) = Color color $ line [(-1000000, y), (1000000, y)]
+drawWall color (VLine x) = Color color $ line [(x, -1000000), (x, 1000000)]
 drawWall color (Wall.Circle (x,y) rad) = Color color $ translate x y $ circle rad
 
 drawBond :: Model c -> P Int -> Picture

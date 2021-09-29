@@ -27,7 +27,7 @@ data Act = Sig Sig  -- Signal transfers freely to empty Wires
          | Hold  -- Does nothing until reacted with an empty Wire
          | Send [Act] -- Puts actions on empty Wire
          deriving (Show, Eq, Ord)
-data Sem = Wire [Act] | Port Active | Port2 Active deriving (Show, Eq, Ord)
+data Sem = Wire [Act] | Port Active deriving (Show, Eq, Ord)
 
 instance Chem Sem where
   chemColor (Wire []) = grey
@@ -46,10 +46,6 @@ instance Chem Sem where
   chemColor (Port Closed) = dark magenta
   chemColor (Port (Full Red)) = mix (light magenta) red
   chemColor (Port (Full Blue)) = mix (light magenta) cyan
-  chemColor (Port2 Open) = magenta
-  chemColor (Port2 Closed) = dark magenta
-  chemColor (Port2 (Full Red)) = mix (light magenta) red
-  chemColor (Port2 (Full Blue)) = mix (light magenta) cyan
 
 instance InnerChem Sem where
   innerReact (Wire [], Wire ((Sig s):as)) = InExchange (Wire [Sig s], Wire as)
@@ -59,13 +55,9 @@ instance InnerChem Sem where
   innerReact (Wire (Apply:as1), Wire (Spawn:as2)) = InBirth (Wire as1, Wire as2) (Wire [])
   innerReact (Wire [], Port (Full Red)) = InExchange (Wire [Send [Send [Take], Hold, Die], Apply, Apply, Done], Port Closed) -- AUTO-load
   innerReact (Wire [], Port (Full Blue)) = InExchange (Wire [Send [Spawn, Drop], Apply, Apply, Done], Port Closed)  -- AUTO-load
-  innerReact (Wire [], Port2 (Full s)) = InExchange (Wire [Sig s, Sig s, Done], Port2 Closed)  -- AUTO-load
   innerReact (Wire ((Sig s):as), Port Open) = InExchange (Wire (Wait:as), Port (Full s))
   innerReact (Wire (Done:as), Port Closed) = InExchange (Wire as, Port Open)
   innerReact (Wire (Wait:as), Port Closed) = InExchange (Wire as, Port Closed)
-  innerReact (Wire ((Sig s):as), Port2 Open) = InExchange (Wire (Wait:as), Port2 (Full s))
-  innerReact (Wire (Done:as), Port2 Closed) = InExchange (Wire as, Port2 Open)
-  innerReact (Wire (Wait:as), Port2 Closed) = InExchange (Wire as, Port2 Closed)
   innerReact cs = InExchange cs
 
   allowThru ((Wire (Apply:_), Wire (Take:_)), Out) = True
@@ -86,7 +78,7 @@ sigNotForm = undefined
 movingToolModel :: R (Model Sem)
 movingToolModel = do
   let rad = 60
-  let speed = rad*0.03
+  let speed = rad*3
   let slack = 3
   let boxSize = 800
   let numSigs = 1
@@ -103,7 +95,7 @@ movingToolModel = do
   leftPostchain <- linChainFormExcl rad speed slack midLeft mid $ Wire []
   rightPrechain <- linChainFormExcl rad speed slack right midRight $ Wire []
   rightPostchain <- linChainFormExcl rad speed slack midRight mid $ Wire []
-  bottomPrechain <- cappedLinChainFormExcl rad speed slack bottom midBottom sigs (Wire []) [Port2 Open]
+  bottomPrechain <- cappedLinChainFormExcl rad speed slack bottom midBottom sigs (Wire []) [Wire []]
   leftBottomPostChain <- arcChainFormExcl rad speed 0.25 slack left midBottom $ Wire []
   rightBottomPostChain <- arcChainFormExcl rad speed 0.25 slack midBottom right $ Wire []
   let chains = leftPrechain <> leftPostchain <> rightPrechain <> rightPostchain <> bottomPrechain <> leftBottomPostChain <> rightBottomPostChain
