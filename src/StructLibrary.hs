@@ -13,14 +13,9 @@ module StructLibrary
 import Point
 import Geometry.Angle
 import Geometry.Vector
-import Geometry.Space
 import Orb
 import Wall
-import Utils
-import Time
-import Debug.Trace
 import Struct
-import Chem
 
 box :: Vector -> Vector -> Struct c
 box (x1,y1) (x2,y2) =

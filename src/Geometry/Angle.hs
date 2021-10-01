@@ -10,6 +10,7 @@ module Geometry.Angle
 ) where
 
 import Data.Fixed (mod')
+
 type Angle = Float -- From 0 to 1
 data TurnDirection = Clockwise | CounterClockwise
 

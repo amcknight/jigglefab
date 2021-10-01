@@ -20,7 +20,6 @@ import Wall
 import Geometry.Vector
 import Form
 import Chem
-import Debug.Trace
 import Data.Bifunctor
 import HitTime
 import Struct

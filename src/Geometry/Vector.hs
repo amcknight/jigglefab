@@ -23,8 +23,6 @@ import Geometry.Angle
 import Geometry.Space
 import Utils
 import Pair
-import Debug.Trace
-import Data.Tuple
 
 type Vector = P Float
 type Position = Vector

@@ -16,11 +16,9 @@ import Form
 import Control.Monad.State
 import Chem
 import Debug.Trace
-import Geometry.Angle
 import qualified Color as C
 import Graphics.Gloss
 import Graphics.Gloss.Interface.IO.Interact
-import StructLibrary
 import View
 import Geometry.Vector
 import Struct
@@ -70,10 +68,10 @@ drawStruct :: Chem c => Struct c -> Picture
 drawStruct (Struct ws os) = Pictures $ fmap (drawWall yellow) ws ++ fmap drawOrb os
 
 drawModel :: Chem c => Model c -> Picture
-drawModel m = Pictures (drawForm (form m)) <> Pictures (fmap (drawBond (form m)) (innerIps m))
+drawModel m = drawForm (form m) <> Pictures (fmap (drawBond (form m)) (innerIps m))
 
-drawForm :: Chem c => Form c -> [Picture]
-drawForm f = ws ++ bs
+drawForm :: Chem c => Form c -> Picture
+drawForm f = Pictures $ ws ++ bs
   where
     ws = toList $ fmap (drawWall yellow) (walls f)
     bs = fmap drawBall (toList (balls f))

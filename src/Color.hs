@@ -9,8 +9,8 @@ module Color
 ) where
 
 import Data.Fixed (mod')
-import Geometry.Angle
 import qualified Graphics.Gloss.Data.Color as C
+import Geometry.Angle
 
 data RGB = RGB
   { r::Int

@@ -9,7 +9,6 @@ module Chem
 
 import Geometry.Space
 import Pair
-import Debug.Trace
 import Data.Tuple
 import Color
 
