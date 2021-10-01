@@ -4,16 +4,17 @@ module Encode.Encode
 ) where
 
 import Chem
-import Form
 import Utils
 import Model
 import Geometry.Space
 import Wall
-import FormLibrary
+import StructLibrary
 import Color
 import Geometry.Vector
 import Point
 import Time
+import Struct
+import Orb
 
 data Sig = Red | Blue deriving (Show, Eq, Ord)
 data Active = Off | On Sig deriving (Show, Eq, Ord)
@@ -60,106 +61,84 @@ instance InnerChem Encode where
   innerReact cs = InExchange cs
   allowThru sc = False
 
-loopForm :: Radius -> Speed -> Int -> Position -> [Sig] -> R (Form Encode)
-loopForm rad speed size pos sigs = do
-  -- TODO this is all terribly hardcoded
-  let [s1,s2,s3,s4] = sigs
-  let stepFactor = 0.9
-  let adjacentStep = rad*stepFactor
-  let diagStep = sqrt ((adjacentStep^2)/2)
-  let up = adjacentStep |* upV
-  let down = adjacentStep |* downV
-  let left = adjacentStep |* leftV
-  let lp1 = pos |+ up
-  let lp2 = lp1 |+ (diagStep |* upLeftV)
-  let lp3 = lp2 |+ (diagStep |* upLeftV)
-  let lp4 = lp3 |+ (diagStep |* upLeftV)
-  let lp5 = lp4 |+ left
-  let lp6 = lp5 |+ left
-  let lp7 = lp6 |+ left
-  let lp8 = lp7 |+ left
-  let lp9 = lp8 |+ left
-  let lp10 = lp9 |+ (diagStep |* downLeftV)
-  let lp11 = lp10 |+ (diagStep |* downLeftV)
-  let lp12 = lp11 |+ (diagStep |* downLeftV)
-  let lp13 = lp12 |+ down
-  -- let lp14 = lp13 |+ (diagStep |* downLeftV)
-  loop1 <- ballFormAt speed lp1 $ Wire $ On s1
-  loop2 <- ballFormAt speed lp2 $ Wire $ On s2
-  loop3 <- ballFormAt speed lp3 $ Wire $ On s3
-  loop4 <- ballFormAt speed lp4 $ Wire $ On s4
-  loop5 <- ballFormAt speed lp5 $ Wire Off
-  loop6 <- ballFormAt speed lp6 $ Wire Off
-  loop7 <- ballFormAt speed lp7 $ Wire Off
-  loop8 <- ballFormAt speed lp8 $ Wire Off
-  loop9 <- ballFormAt speed lp9 $ Wire Off
-  loop10 <- ballFormAt speed lp10 $ Wire Off
-  loop11 <- ballFormAt speed lp11 $ Wire Off
-  loop12 <- ballFormAt speed lp12 $ Wire Off
-  loop13 <- ballFormAt speed lp13 $ Wire Off
-  -- loop14 <- ballFormAt speed lp14 $ Wire Off
-  pure $ mconcat [loop1, loop2, loop3, loop4, loop5, loop6, loop7, loop8, loop9, loop10, loop11, loop12, loop13]
+-- TODO this is all terribly hardcoded
+loopStruct :: Int -> Position -> [Active] -> Struct Encode
+loopStruct size pos sigs = mconcat loops
+  where
+    adjacentStep = 0.9
+    diagStep = sqrt ((adjacentStep^2)/2)
+    up = adjacentStep |* upV
+    down = adjacentStep |* downV
+    left = adjacentStep |* leftV
+    lp1 = pos |+ up
+    lp2 = lp1 |+ (diagStep |* upLeftV)
+    lp3 = lp2 |+ (diagStep |* upLeftV)
+    lp4 = lp3 |+ (diagStep |* upLeftV)
+    lp5 = lp4 |+ left
+    lp6 = lp5 |+ left
+    lp7 = lp6 |+ left
+    lp8 = lp7 |+ left
+    lp9 = lp8 |+ left
+    lp10 = lp9 |+ (diagStep |* downLeftV)
+    lp11 = lp10 |+ (diagStep |* downLeftV)
+    lp12 = lp11 |+ (diagStep |* downLeftV)
+    lp13 = lp12 |+ down
+    lps = [lp1, lp2, lp3, lp4, lp5, lp6, lp7, lp8, lp9, lp10, lp11, lp12, lp13]
+    actives = sigs ++ replicate (13 - length sigs) Off
+    loops = fmap (\(pos, a) -> orbStruct (Orb pos (Wire a))) (zip lps actives)
 
-andForm :: Radius -> Speed -> Position -> Sig -> R (Form Encode)
-andForm rad speed pos sig = do
-  let adjacentStep = 0.95*rad
-  let up = adjacentStep |* upV
-  let right = adjacentStep |* rightV
-  botInP <- ballFormAt speed pos $ Port In Off
-  topInP <- ballFormAt speed (pos |+ (2 |* up)) $ Port In Off
-  botOutP <- ballFormAt speed (pos |+ (1.5 |* right)) $ Port Out Off
-  topOutP <- ballFormAt speed (pos |+ (2 |* up) |+ (1.5 |* right)) $ Port Out Off
-  let ports = [botInP, topInP, botOutP, topOutP]
-  botSync <- ballFormAt speed (pos |+ (0.5 |* up) |+ (0.75 |* right)) $ Sync Open
-  topSync <- ballFormAt speed (pos |+ (1.5 |* up) |+ (0.75 |* right)) $ Sync Open
-  let syncs = [botSync, topSync]
-  garbage <- ballFormAt speed (pos |+ (2.25 |* right)) $ Wire Off
-  eat <- ballFormAt speed (pos |+ (3 |* right)) Eat
-  pure $ mconcat $ ports ++ syncs ++ [garbage, eat]
+andForm :: Position -> Sig -> Struct Encode
+andForm pos sig = mconcat $ ports ++ syncs ++ [garbage, eat]
+  where
+    adjacentStep = 0.95
+    up = adjacentStep |* upV
+    right = adjacentStep |* rightV
+    botInP = orbStruct $ Orb pos $ Port In Off
+    topInP = orbStruct $ Orb  (pos |+ (2 |* up)) $ Port In Off
+    botOutP = orbStruct $ Orb (pos |+ (1.5 |* right)) $ Port Out Off
+    topOutP = orbStruct $ Orb (pos |+ (2 |* up) |+ (1.5 |* right)) $ Port Out Off
+    ports = [botInP, topInP, botOutP, topOutP]
+    botSync = orbStruct $ Orb (pos |+ (0.5 |* up) |+ (0.75 |* right)) $ Sync Open
+    topSync = orbStruct $ Orb (pos |+ (1.5 |* up) |+ (0.75 |* right)) $ Sync Open
+    syncs = [botSync, topSync]
+    garbage = orbStruct $ Orb (pos |+ (2.25 |* right)) $ Wire Off
+    eat = orbStruct $ Orb (pos |+ (3 |* right)) Eat
 
-splitForm :: Radius -> Speed -> Position -> R (Form Encode)
-splitForm rad speed pos = do
-  let adjacentStep = 0.95*rad
-  let diagStep = sqrt ((adjacentStep^2)/2)
-  let right = adjacentStep |* rightV
-  let up = adjacentStep |* upV
-  let down = adjacentStep |* downV
-  let diagUp = diagStep |* upRightV
-  let diagDown = diagStep |* downRightV
-  inP <- ballFormAt speed pos $ Port In Off
-  dup <- ballFormAt speed (pos |+ right) $ Dup Ready
-  outP <- ballFormAt speed (pos |+ (2|*right)) $ Port Out Off
-  bridge <- ballFormAt speed (pos |+ (3|*right)) $ Wire Off
-  rightInP <- ballFormAt speed (pos |+ (4|*right)) (Port In Off)
-  topS <- ballFormAt speed (pos |+ (4|*right) |+ diagUp |+ (0.2 |* down)) (Sync Open)
-  botS <- ballFormAt speed (pos |+ (4|*right) |+ diagDown |+ (0.2 |* up)) (Sync Open)
-  topOutP <- ballFormAt speed (pos |+ (5|*right) |+ diagUp) (Port Out Off)
-  botOutP <- ballFormAt speed (pos |+ (5|*right) |+ diagDown) (Port Out Off)
-  pure $ mconcat [inP, dup, outP, bridge, rightInP, topS, botS, topOutP, botOutP]
+splitForm :: Position -> Struct Encode
+splitForm pos = mconcat [inP, dup, outP, bridge, rightInP, topS, botS, topOutP, botOutP]
+  where
+    adjacentStep = 0.95
+    diagStep = sqrt ((adjacentStep^2)/2)
+    right = adjacentStep |* rightV
+    up = adjacentStep |* upV
+    down = adjacentStep |* downV
+    diagUp = diagStep |* upRightV
+    diagDown = diagStep |* downRightV
+    inP = orbStruct $ Orb pos $ Port In Off
+    dup = orbStruct $ Orb (pos |+ right) $ Dup Ready
+    outP = orbStruct $ Orb (pos |+ (2|*right)) $ Port Out Off
+    bridge = orbStruct $ Orb (pos |+ (3|*right)) $ Wire Off
+    rightInP = orbStruct $ Orb (pos |+ (4|*right)) (Port In Off)
+    topS = orbStruct $ Orb (pos |+ (4|*right) |+ diagUp |+ (0.2 |* down)) (Sync Open)
+    botS = orbStruct $ Orb (pos |+ (4|*right) |+ diagDown |+ (0.2 |* up)) (Sync Open)
+    topOutP = orbStruct $ Orb (pos |+ (5|*right) |+ diagUp) (Port Out Off)
+    botOutP = orbStruct $ Orb (pos |+ (5|*right) |+ diagDown) (Port Out Off)
 
-dupKForm :: Radius -> Speed -> Position -> Int -> R (Form Encode)
-dupKForm rad speed pos num = do
-  let adjacentStep = 0.95*rad
-  let right = adjacentStep |* rightV
-
-  pure $ mconcat []
-
-dupSeqForm :: Radius -> Speed -> Position -> Int -> R (Form Encode)
-dupSeqForm _ _ _ 0 = do pure mempty
-dupSeqForm rad speed pos num = do
-  let step = 0.95*rad
-  let right = step |* rightV
-  inP <-    ballFormAt speed (pos |+ (0|*right)) $ Port In Off
-  dup <-    ballFormAt speed (pos |+ (1|*right)) $ Dup Ready
-  outP <-   ballFormAt speed (pos |+ (2|*right)) $ Port Out Off
-  bridge <- ballFormAt speed (pos |+ (3|*right)) $ Wire Off
-  tail <- dupSeqForm rad speed (pos |+ (4|*right)) (num-1)
-  pure $ mconcat [inP, dup, outP, bridge, tail]
+dupSeqForm :: Position -> Int -> Struct Encode
+dupSeqForm _ 0 = mempty
+dupSeqForm pos num = mconcat [inP, dup, outP, bridge, tail]
+  where
+    step = 0.95
+    right = step |* rightV
+    inP =    orbStruct $ Orb (pos |+ (0|*right)) $ Port In Off
+    dup =    orbStruct $ Orb (pos |+ (1|*right)) $ Dup Ready
+    outP =   orbStruct $ Orb (pos |+ (2|*right)) $ Port Out Off
+    bridge = orbStruct $ Orb (pos |+ (3|*right)) $ Wire Off
+    tail = dupSeqForm (pos |+ (4|*right)) (num-1)
 
 encodeModel :: R (Model Encode)
 encodeModel = do
-  let rad = 50
-  let speed = rad*5
+  let speed = 5
   let slack = 3
   let boxSize = 1000
   let start = boxSize |* leftV
@@ -167,26 +146,26 @@ encodeModel = do
   let mid = 0.5 |* (start |+ end)
   let midLeft = 0.5 |* (start |+ mid)
 
-  let adjacentStep = 0.95*rad
+  let adjacentStep = 0.95
   let diagStep = sqrt ((adjacentStep^2)/2)
   let up = adjacentStep |* upV
   let right = adjacentStep |* rightV
   let diagUp = diagStep |* upRightV
   let diagDown = diagStep |* downRightV
 
-  prewire <- cappedLinChainFormExcl rad speed slack start midLeft (replicate 3 (Wire (On Blue))) (Wire Off) []
-  dup4 <- dupSeqForm rad speed midLeft 2
-  postdupWire <- linChainFormExcl rad speed 1 (mid |- (4 |* right)) mid $ Wire Off
-  blueAnd <- andForm rad speed mid Blue
-  encoderTip <- ballFormAt speed mid $ Wire Off
-  let walls = wallForm (Circle start rad) <> wallForm (Circle end rad)
+  let prewire = cappedLinChainExcl slack start midLeft (replicate 3 (Wire (On Blue))) (Wire Off) []
+  let dup4 = dupSeqForm midLeft 2
+  let postdupWire = linChainExcl 1 (mid |- (4 |* right)) mid $ Wire Off
+  let blueAnd = andForm mid Blue
+  let encoderTip = orbStruct $ Orb mid $ Wire Off
+  let walls = wallStruct (Circle start 1) <> wallStruct (Circle end 1)
   let sigs = [Red, Blue, Blue, Red]
   let blueAndOutPos = mid |+ ((2*adjacentStep) |* upV) |+ ((1.5*adjacentStep) |* rightV)
-  bridge <- ballFormAt speed (blueAndOutPos |+ (adjacentStep |* rightV)) $ Wire Off
+  let bridge = orbStruct $ Orb (blueAndOutPos |+ (adjacentStep |* rightV)) $ Wire Off
   let bridgeOutPos = blueAndOutPos |+ ((2*adjacentStep) |* rightV)
-  split <- splitForm rad speed bridgeOutPos
+  let split = splitForm bridgeOutPos
   let splitOutTopPos = bridgeOutPos |+ (5|*right) |+ diagUp
   let splitOutBotPos = bridgeOutPos |+ (5|*right) |+ diagDown
-  loop <- loopForm rad speed 5 splitOutTopPos sigs
-  postwire <- linChainFormExcl rad speed slack splitOutBotPos end $ Wire Off
-  pure $ buildModel rad $ walls <> prewire <> dup4 <> postdupWire <> blueAnd <> bridge <> split <> loop <> postwire
+  let loop = loopStruct 5 splitOutTopPos $ fmap On sigs
+  let postwire = linChainExcl slack splitOutBotPos end $ Wire Off
+  buildModel speed $ walls <> prewire <> dup4 <> postdupWire <> blueAnd <> bridge <> split <> loop <> postwire

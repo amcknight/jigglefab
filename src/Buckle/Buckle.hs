@@ -13,7 +13,9 @@ import Utils
 import Geometry.Vector
 import Form
 import Wall
-import FormLibrary
+import StructLibrary
+import Struct
+import Orb
 
 data Sig = Red | Blue deriving (Show, Eq, Ord)
 data Active a = Off | On a deriving (Show, Eq, Ord)
@@ -71,16 +73,15 @@ instance InnerChem Buckle where
 
 turnbuckleModel :: R (Model Buckle)
 turnbuckleModel = do
-  let rad = 50
-  let speed = rad*4
   let slack = 6
-  let boxSize = 1000
+  let boxSize = 20
   let bottom = boxSize |* leftV
   let top = boxSize |* rightV
   let mid = zeroV
   let sigs = fmap (Wire . On) (replicate 1 Red) --[Red, Red, Red, Blue, Blue, Blue, Blue, Blue, Red, Red, Red]
-  let walls = mconcat $ fmap (\p -> wallForm (Circle p rad)) [bottom, top]
-  prechain <- cappedLinChainFormExcl rad speed slack bottom mid sigs (Wire Off) [Port In Off]
-  buckle <- ballFormAt speed mid $ Actor Off
-  postchain <- linChainFormExcl rad speed slack mid top $ Wire Off
-  pure $ buildModel rad $ walls <> prechain <> buckle <> postchain
+
+  let walls = mconcat $ fmap (\p -> wallStruct (Circle p 1)) [bottom, top]
+  let prechain = cappedLinChainExcl slack bottom mid sigs (Wire Off) [Port In Off]
+  let buckle = orbStruct $ Orb mid $ Actor Off
+  let postchain = linChainExcl slack mid top $ Wire Off
+  buildModel 4 $ walls <> prechain <> buckle <> postchain

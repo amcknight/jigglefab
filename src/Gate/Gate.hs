@@ -10,9 +10,11 @@ import Utils
 import Model
 import Geometry.Space
 import Wall
-import FormLibrary
+import StructLibrary
 import Color
 import Geometry.Vector
+import Struct
+import Orb
 
 data Sig = Red | Blue deriving (Show, Eq, Ord)
 data Active = Off | On Sig deriving (Show, Eq, Ord)
@@ -48,35 +50,34 @@ instance InnerChem Gate where
   innerReact cs = InExchange cs
   allowThru sc = False
 
-gateForm :: Float -> Int -> Gate -> R (Form Gate)
-gateForm speed slack c = do
-  let rocks = wallForm (Circle in1V rad) <> wallForm (Circle in2V rad) <> wallForm (Circle outV rad)
-  s1 <- ballFormAt speed in1V $ Wire (On Red)
-  s2 <- ballFormAt speed in2V $ Wire (On Blue)
-  let signals = s1 <> s2
-  ch1 <- linChainFormExcl rad speed slack in1V inPort1V $ Wire Off
-  ch2 <- linChainFormExcl rad speed slack in2V inPort2V $ Wire Off
-  ch3 <- linChainFormExcl rad speed slack outV outPortV $ Wire Off
-  let chains = ch1 <> ch2 <> ch3
-  gate <- ballFormAt speed gateV c
-  in1 <- ballFormAt speed inPort1V $ Port In Off
-  in2 <- ballFormAt speed inPort2V $ Port In Off
-  out <- ballFormAt speed outPortV $ Port Out Off
-  let ports = in1 <> in2 <> out
-  pure $ rocks <> signals <> chains <> ports <> gate
+gateStruct :: Int -> Gate -> Struct Gate
+gateStruct slack c = rocks <> signals <> chains <> ports <> gate
   where
+    d = 10
     in1V = (-d,-d)
     in2V = (d,-d)
+    gateV = (0, 0)
+    outV = (0, d)
+    gap = 1/2
     inPort1V = (-gap,-gap)
     inPort2V = ( gap,-gap)
     outPortV = (0, gap)
-    gap = rad/2
-    gateV = (0, 0)
-    outV = (0, d)
-    d = 500
-    rad = 50
 
-gateModel :: Radius -> Logic -> R (Model Gate)
-gateModel rad log = do
-  andGate <- gateForm 100 6 $ Gate (Wait Off) log
-  pure $ buildModel rad andGate
+    rocks = wallStruct (Circle in1V 1) <> wallStruct (Circle in2V 1) <> wallStruct (Circle outV 1)
+    s1 = orbStruct $ Orb in1V $ Wire (On Red)
+    s2 = orbStruct $ Orb in2V $ Wire (On Blue)
+    signals = s1 <> s2
+    ch1 = linChainExcl slack in1V inPort1V $ Wire Off
+    ch2 = linChainExcl slack in2V inPort2V $ Wire Off
+    ch3 = linChainExcl slack outV outPortV $ Wire Off
+    chains = ch1 <> ch2 <> ch3
+    gate = orbStruct $ Orb gateV c
+    in1 = orbStruct $ Orb inPort1V $ Port In Off
+    in2 = orbStruct $ Orb inPort2V $ Port In Off
+    out = orbStruct $ Orb outPortV $ Port Out Off
+    ports = in1 <> in2 <> out
+
+gateModel :: Logic -> R (Model Gate)
+gateModel log = do
+  let andGate = gateStruct 6 $ Gate (Wait Off) log
+  buildModel 3 andGate

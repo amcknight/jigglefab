@@ -11,8 +11,8 @@ module Geometry.Space
 
 import Pair
 import Data.Tuple
-type Radius = Float
 
+type Radius = Float
 data Ortho = Vertical | Horizontal deriving (Eq, Show)
 data Side = Out | In deriving (Show, Eq, Ord)
 

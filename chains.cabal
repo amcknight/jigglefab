@@ -32,14 +32,11 @@ library
       Chem
       Color
       Core.Core
-      Core.CoreForm
+      Core.CoreStruct
       Core.CoreModels
       Electro.Electro
-      Electro.ElectroForm
-      Electro.ElectroModels
       Encode.Encode
       Form
-      FormLibrary
       Geometry.Angle
       Geometry.Space
       Geometry.Vector
@@ -48,17 +45,20 @@ library
       Load.Load
       Model
       ModelLibrary
+      Orb
       Pair
       Peano.Peano
       Point
       Sem.Sem
       Simulation
       Stripe.Stripe
+      Struct
+      StructLibrary
       Time
       Utils
       Valence.Valence
-      Valence.ValenceForms
       Valence.ValenceModels
+      View
       Wall
   other-modules:
       Paths_chains

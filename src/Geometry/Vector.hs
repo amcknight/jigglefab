@@ -2,6 +2,7 @@
 
 module Geometry.Vector
 ( Vector
+, Position, Velocity
 , zeroV
 , unit
 , upV, downV, rightV, leftV
@@ -26,6 +27,8 @@ import Debug.Trace
 import Data.Tuple
 
 type Vector = P Float
+type Position = Vector
+type Velocity = Vector
 
 instance Random Vector where
   randomR ((x1,y1),(x2,y2)) g = ((x,y), g3)

@@ -15,8 +15,6 @@ import Geometry.Space
 import Pair
 import Graphics.Gloss.Geometry.Line (closestPointOnLine)
 
-type Position = Vector
-type Velocity = Vector
 data Point = Point
   { pos :: Position
   , vel :: Velocity
@@ -28,8 +26,8 @@ instance Mover Point where
 minus :: P Point -> Point
 minus (Point p1 v1, Point p2 v2) = Point (p1 |- p2) (v1 |- v2)
 
-side :: Radius -> P Point -> Side
-side rad ps = if furtherThan rad ps then Out else In
+side :: P Point -> Side
+side ps = if furtherThan 1 ps then Out else In
 
 furtherThan :: Float -> P Point -> Bool
 furtherThan d ps

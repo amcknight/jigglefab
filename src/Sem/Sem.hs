@@ -12,7 +12,9 @@ import Utils
 import Geometry.Vector
 import Form
 import Wall
-import FormLibrary
+import StructLibrary
+import Struct
+import Orb
 
 data Sig = Red | Blue deriving (Show, Eq, Ord)
 data Active = Open | Closed | Full Sig deriving (Show, Eq, Ord)
@@ -68,19 +70,11 @@ instance InnerChem Sem where
   thruReact (Wire (Apply:as1), Wire (Drop:as2)) = (Wire as1, Wire as2)
   thruReact c = c
 
-sigNotForm :: R (Form Sem)
-sigNotForm = undefined
-
--- sigSplitForm :: R (Form Sem)
--- sigSplitForm = do
---   pure $ 
-
 movingToolModel :: R (Model Sem)
 movingToolModel = do
-  let rad = 60
-  let speed = rad*3
+  let speed = 3
   let slack = 3
-  let boxSize = 800
+  let boxSize = 13.333
   let numSigs = 1
   let mid = boxSize |* upV
   let bottom = boxSize |* downV
@@ -90,18 +84,18 @@ movingToolModel = do
   let midRight = 0.5 |* (right |+ mid)
   let midBottom = 0.5 |* (bottom |+ mid)
   let sigs = fmap (\s -> Wire [Sig s]) [Blue, Red, Red, Red, Red, Blue, Blue, Blue, Blue, Blue, Blue, Blue]
-  let walls = mconcat $ fmap (\p -> wallForm (Circle p rad)) [left, right, bottom]
-  leftPrechain <- linChainFormExcl rad speed slack left midLeft $ Wire []
-  leftPostchain <- linChainFormExcl rad speed slack midLeft mid $ Wire []
-  rightPrechain <- linChainFormExcl rad speed slack right midRight $ Wire []
-  rightPostchain <- linChainFormExcl rad speed slack midRight mid $ Wire []
-  bottomPrechain <- cappedLinChainFormExcl rad speed slack bottom midBottom sigs (Wire []) [Wire []]
-  leftBottomPostChain <- arcChainFormExcl rad speed 0.25 slack left midBottom $ Wire []
-  rightBottomPostChain <- arcChainFormExcl rad speed 0.25 slack midBottom right $ Wire []
+  let walls = mconcat $ fmap (\p -> wallStruct (Circle p 1)) [left, right, bottom]
+  let leftPrechain = linChainExcl slack left midLeft $ Wire []
+  let leftPostchain = linChainExcl slack midLeft mid $ Wire []
+  let rightPrechain = linChainExcl slack right midRight $ Wire []
+  let rightPostchain = linChainExcl slack midRight mid $ Wire []
+  let bottomPrechain = cappedLinChainExcl slack bottom midBottom sigs (Wire []) [Wire []]
+  let leftBottomPostChain = arcChainExcl 0.25 slack left midBottom $ Wire []
+  let rightBottomPostChain = arcChainExcl 0.25 slack midBottom right $ Wire []
   let chains = leftPrechain <> leftPostchain <> rightPrechain <> rightPostchain <> bottomPrechain <> leftBottomPostChain <> rightBottomPostChain
-  leftBuckle <- ballFormAt speed midLeft $ Port Open
-  rightBuckle <- ballFormAt speed midRight $ Port Open
+  let leftBuckle = orbStruct $ Orb midLeft $ Port Open
+  let rightBuckle = orbStruct $ Orb midRight $ Port Open
   let buckles = leftBuckle <> rightBuckle
-  tool <- ballFormAt speed mid $ Wire [Wait]
-  gate <- ballFormAt speed midBottom $ Wire []
-  pure $ buildModel rad $ walls <> chains <> buckles <> tool <> gate
+  let tool = orbStruct $ Orb mid $ Wire [Wait]
+  let gate = orbStruct $ Orb midBottom $ Wire []
+  buildModel speed $ walls <> chains <> buckles <> tool <> gate

@@ -4,16 +4,16 @@ module Load.Load
 ) where
 
 import Chem
-import Form
 import Utils
 import Model
 import Geometry.Space
 import Wall
-import FormLibrary
+import StructLibrary
 import Color
 import Geometry.Vector
 import Point
 import Time
+import Struct
 
 data Sig = Blue | Red deriving (Show, Eq, Ord)
 data Active = Off | On Sig deriving (Show, Eq, Ord)
@@ -56,21 +56,20 @@ instance InnerChem Load where
 
 loadModel :: R (Model Load)
 loadModel = do
-  let rad = 50
-  let speed = rad*2
+  let speed = 2
   let slack = 3
-  let boxSize = 300
+  let boxSize = 6
   let start = boxSize |* leftV
   let end = boxSize |* rightV
   let mid = 0.5 |* (start |+ end)
 
-  let adjacentStep = 0.95*rad
+  let adjacentStep = 0.95
   let diagStep = sqrt ((adjacentStep^2)/2)
 
-  let walls = wallForm (Circle start rad) -- <> wallForm (Circle end rad)
+  let walls = wallStruct (Circle start 1) -- <> wallStruct (Circle end 1)
 
   let sigs = [Red, Blue, Blue, Red]
 
-  wire <- cappedLinChainFormExcl rad speed slack start end (fmap (Wire . On) sigs) (Wire Off) [Load Stem, Port In Off]
-  -- ribo <- ballFormAt speed end $ Load Stem
-  pure $ buildModel rad $ walls <> wire -- <> ribo
+  let wire = cappedLinChainExcl slack start end (fmap (Wire . On) sigs) (Wire Off) [Load Stem, Port In Off]
+  -- let ribo = orbStruct $ Orb end $ Load Stem
+  buildModel speed $ walls <> wire -- <> ribo

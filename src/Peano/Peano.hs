@@ -9,8 +9,8 @@ import Model
 import Utils
 import Geometry.Vector
 import Wall
-import Form
-import FormLibrary
+import StructLibrary
+import Struct
 
 data Peano = No | Yes | Tail | Wrap Peano deriving (Show, Eq, Ord)
 
@@ -32,13 +32,12 @@ instance InnerChem Peano where
 
 placementModel :: R (Model Peano)
 placementModel = do
-  let size = 1000
-  let rad = 15
-  let speed = rad*3
+  let size = 66.666
+  let speed = 3
   let slack = 30
   let left = size |* leftV
   let right = size |* rightV
   let sig = wrap 50 Yes
-  string <- cappedLinChainFormExcl rad speed slack left right [sig] No []
-  let walls = mconcat $ fmap (\p -> wallForm (Circle p rad)) [left, right]
-  pure $ buildModel rad $ string <> walls
+  let string = cappedLinChainExcl slack left right [sig] No []
+  let walls = mconcat $ fmap (\p -> wallStruct (Circle p 1)) [left, right]
+  buildModel speed $ string <> walls

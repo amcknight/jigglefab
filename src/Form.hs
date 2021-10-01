@@ -1,7 +1,7 @@
 module Form
-( Form (Form)
-, walls, balls
-, wallForm, ballForm
+( Form (..)
+, buildForm
+-- , wallForm, ballForm
 , wallI, ballI
 , wbSide, bbSide
 , replaceBall
@@ -22,6 +22,9 @@ import HitTime
 import Geometry.Space
 import Point
 import Geometry.Vector
+import Struct
+import Utils
+import Orb
 
 data Form c = Form
   { walls :: V.Vector Wall
@@ -35,6 +38,18 @@ instance Semigroup (Form c) where
   (<>) (Form w1 b1) (Form w2 b2) = Form (w1 <> w2) (b1 <> b2)
 instance Monoid (Form c) where
   mempty = Form V.empty V.empty 
+
+buildForm :: Speed -> Struct c -> R (Form c)
+buildForm sp (Struct ws os) = do
+  bs <- buildBallsForm sp os
+  pure $ Form (V.fromList ws) (V.fromList []) <> bs
+  where
+    buildBallsForm :: Speed -> [Orb c] -> R (Form c)
+    buildBallsForm _ [] = do pure mempty
+    buildBallsForm sp (o:os) = do
+      b <- buildBall sp o
+      rest <- buildBallsForm sp os
+      pure $ ballForm b <> rest
 
 wallForm :: Wall -> Form c
 wallForm w = Form (V.fromList [w]) V.empty 
@@ -57,8 +72,8 @@ removeBall (Form ws bs) i = Form ws (V.take i bs V.++ V.drop (i+1) bs)
 wbSide :: Form c -> P Int -> Sided Int
 wbSide f wbi@(wi, bi) = (wbi, wSide (wallI f wi) (pos (point (ballI f bi))))
 
-bbSide :: Radius -> Form c -> P Int -> Sided Int 
-bbSide rad f bbi = (bbi, side rad (pmap (point . ballI f) bbi))
+bbSide :: Form c -> P Int -> Sided Int 
+bbSide f bbi = (bbi, side (pmap (point . ballI f) bbi))
 
 replaceBall :: Int -> Ball c -> Form c -> Form c
 replaceBall i b (Form ws bs) = Form ws $ bs V.// [(i, b)]

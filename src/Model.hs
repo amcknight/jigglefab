@@ -1,8 +1,9 @@
 module Model
-( Model (rad, form)
+( Model (speed, form)
 , buildModel
 , step
 , innerIps
+, add
 ) where
 
 import Data.Maybe (mapMaybe)
@@ -22,10 +23,12 @@ import Chem
 import Debug.Trace
 import Data.Bifunctor
 import HitTime
+import Struct
+import Utils
 
 type SideMap = M.Map (P Int) Side
 data Model c = Model
-  { rad :: Radius
+  { speed :: Speed
   , form :: Form c
   , wbSides :: SideMap
   , bbSides :: SideMap
@@ -33,16 +36,18 @@ data Model c = Model
   } deriving Show
 
 instance Mover (Model c) where
-  move dt (Model r f wss hss hs) = Model r (move dt f) wss hss (fmap (move dt) hs)
+  move dt (Model sp f wss hss hs) = Model sp (move dt f) wss hss (fmap (move dt) hs)
 
-buildModel :: Chem c => Radius -> Form c -> Model c
-buildModel rad f = prereactAll $ populateHits $ Model rad f wss hss []
+buildModel :: Chem c => Speed -> Struct c -> R (Model c)
+buildModel sp st = do
+  f <- buildForm sp st
+  let wss = M.fromList $ wbSide f <$> bonkIndices f
+  let hss = M.fromList $ bbSide f <$> bounceIndices f
+
+  pure $ prereactAll $ populateHits $ Model sp f wss hss []
   where
-    wss = M.fromList $ wbSide f <$> bonkIndices f
-    hss = M.fromList $ bbSide rad f <$> bounceIndices f
-    
     populateHits :: Model c -> Model c
-    populateHits (Model r f wss hss _) = Model r f wss hss $ L.sort $ hitsFromIps r f $ bounceIndices f
+    populateHits (Model sp f wss hss _) = Model sp f wss hss $ L.sort $ hitsFromIps f $ bounceIndices f
 
     prereactAll :: Chem c => Model c -> Model c
     prereactAll m = foldr prereactPair m (innerIps m)
@@ -93,8 +98,8 @@ add b (Model r f@(Form ws bs) wbs bbs hs) = Model r newF newWbs newBbs newHs
 
     newF = addBall f b
     newWbs = M.union wbs $ M.fromList $ fmap (\(wi, w) -> ((wi, i), wSide w (pos (point b)))) wallsWithI
-    newBbs = M.union bbs $ M.fromList $ fmap (\(bi, b2) -> (sortP (bi, i), side r (point b, point b2))) ballsWithI
-    newHs = L.sort $ hs ++ hitsFromIps r newF (fmap (\bi -> sortP (bi, i)) bis)
+    newBbs = M.union bbs $ M.fromList $ fmap (\(bi, b2) -> (sortP (bi, i), side (point b, point b2))) ballsWithI
+    newHs = L.sort $ hs ++ hitsFromIps newF (fmap (\bi -> sortP (bi, i)) bis)
 
 addIn :: Ball c -> [Int] -> Model c -> Model c
 addIn b bIns (Model r f@(Form ws bs) wbs bbs hs) = Model r newF newWbs newBbs newHs
@@ -107,8 +112,7 @@ addIn b bIns (Model r f@(Form ws bs) wbs bbs hs) = Model r newF newWbs newBbs ne
     newF = addBall f b
     newWbs = M.union wbs $ M.fromList $ fmap (\(wi, w) -> ((wi, i), wSide w (pos (point b)))) wallsWithI
     newBbs = M.union bbs $ M.fromList $ fmap (\j -> (sortP (i, j), if j `elem` bIns then In else Out)) bis
-    newHs = L.sort $ hs ++ hitsFromIps r newF (fmap (\bi -> sortP (bi, i)) bis)
-
+    newHs = L.sort $ hs ++ hitsFromIps newF (fmap (\bi -> sortP (bi, i)) bis)
 
 step :: Chem c => Duration -> Model c -> Model c
 step dt m = case (nextBonk m, nextBump m) of
@@ -150,7 +154,7 @@ updateBumps1 :: Radius -> Form c -> Int -> [Hit] -> [Hit]
 updateBumps1 r f i hs = L.sort $ keep ++ newHits
   where
     keep = filter (uneffected i) hs
-    newHits = hitsFromIps r f $ pairsOfTo1 (length (balls f)) i
+    newHits = hitsFromIps f $ pairsOfTo1 (length (balls f)) i
 
     uneffected :: Int -> Hit -> Bool
     uneffected i h = not $ (overlaps1 i . ixPair) h
@@ -159,16 +163,16 @@ updateBumps2 :: Radius -> Form c -> P Int -> [Hit] -> [Hit]
 updateBumps2 r f ip hs = L.sort $ keep ++ newHits
   where
     keep = filter (uneffected ip) hs
-    newHits = hitsFromIps r f $ pairsOfTo2 (length (balls f)) ip
+    newHits = hitsFromIps f $ pairsOfTo2 (length (balls f)) ip
 
     uneffected :: P Int -> Hit -> Bool
     uneffected ip h = not $ (overlaps2 ip . ixPair) h
 
-hitsFromIps :: Radius -> Form c -> [P Int] -> [Hit]
-hitsFromIps r f = concatMap (times r f)
+hitsFromIps :: Form c -> [P Int] -> [Hit]
+hitsFromIps f = concatMap (times f)
   where
-    times :: Radius -> Form c -> P Int -> [Hit]
-    times r f ip = fmap (toHit ip) (toList (hitTimes r (pmap (point . ballI f) ip)))
+    times :: Form c -> P Int -> [Hit]
+    times f ip = fmap (toHit ip) (toList (hitTimes 1 (pmap (point . ballI f) ip)))
     toHit :: P Int -> (Time, Side) -> Hit
     toHit ip (t, s) = Hit t s ip
 
