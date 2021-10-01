@@ -1,18 +1,14 @@
-module Load.Load
+module Chem.Load
 ( Load (..)
-, loadModel
+, load
 ) where
 
 import Chem
-import Utils
-import Model
 import Geometry.Space
 import Wall
 import StructLibrary
 import Color
 import Geometry.Vector
-import Point
-import Time
 import Struct
 
 data Sig = Blue | Red deriving (Show, Eq, Ord)
@@ -54,22 +50,18 @@ instance InnerChem Load where
   allowThru ((Load _, Womb _), In) = True
   allowThru sc = False
 
-loadModel :: R (Model Load)
-loadModel = do
-  let speed = 2
-  let slack = 3
-  let boxSize = 6
-  let start = boxSize |* leftV
-  let end = boxSize |* rightV
-  let mid = 0.5 |* (start |+ end)
+load :: Struct Load
+load = walls <> wire -- <> ribo
+  where
+    slack = 3
+    boxSize = 6
+    start = boxSize |* leftV
+    end = boxSize |* rightV
+    mid = 0.5 |* (start |+ end)
+    adjacentStep = 0.95
+    diagStep = sqrt ((adjacentStep^2)/2)
 
-  let adjacentStep = 0.95
-  let diagStep = sqrt ((adjacentStep^2)/2)
-
-  let walls = wallStruct (Circle start 1) -- <> wallStruct (Circle end 1)
-
-  let sigs = [Red, Blue, Blue, Red]
-
-  let wire = cappedLinChainExcl slack start end (fmap (Wire . On) sigs) (Wire Off) [Load Stem, Port In Off]
-  -- let ribo = orbStruct $ Orb end $ Load Stem
-  buildModel speed $ walls <> wire -- <> ribo
+    walls = wallStruct (Circle start 1) -- <> wallStruct (Circle end 1)
+    sigs = [Red, Blue, Blue, Red]
+    wire = cappedLinChainExcl slack start end (fmap (Wire . On) sigs) (Wire Off) [Load Stem, Port In Off]
+    -- ribo = orbStruct $ Orb end $ Load Stem

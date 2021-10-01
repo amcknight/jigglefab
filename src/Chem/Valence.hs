@@ -1,4 +1,4 @@
-module Valence.Valence
+module Chem.Valence
 ( Valence (Valence)
 , vale
 , hasUp, hasDown
@@ -12,6 +12,11 @@ import Chem
 import Geometry.Space
 import Pair
 import Color
+import Struct
+import Orb
+import Geometry.Vector
+import StructLibrary
+import Wall
 
 data Valence = Valence
   { wants :: Int 
@@ -28,7 +33,7 @@ instance Chem Valence where
   prereact (cs, In) = tie cs
   prereact (cs, Out) = cs
   chemColor ch = case desire ch of
-    EQ -> Grey 0.5
+    EQ -> grey
     GT -> red
     LT -> blue
 
@@ -60,3 +65,33 @@ tie = pmap hasUp
 
 untie :: P Valence -> P Valence
 untie = pmap hasDown
+
+---------------
+
+ballWall :: Struct Valence
+ballWall = box (-10,-10) (10, 10) <> orbStruct (Orb zeroV (vale 1))
+
+twoBall :: Struct Valence
+twoBall =
+  orbStruct (Orb zeroV (vale 1)) <>
+  orbStruct (Orb (20, 0.6) (vale 1))
+
+twoBallInner :: Struct Valence
+twoBallInner = 
+  wallStruct (VLine 0) <>
+  orbStruct (Orb zeroV (vale 1)) <>
+  orbStruct (Orb (0.2, 0.6) (vale 1))
+
+threeBall :: Struct Valence
+threeBall =
+  wallStruct (VLine 1200) <>
+  orbStruct (Orb (0,-2) (vale 1)) <>
+  orbStruct (Orb (20,-3) (vale 1)) <>
+  orbStruct (Orb (10, 20) (vale 1))
+
+fourBall :: Struct Valence
+fourBall =
+  orbStruct (Orb (0,-2) (vale 1)) <>
+  orbStruct (Orb (20,-3) (vale 1)) <>
+  orbStruct (Orb (10, 20) (vale 1)) <>
+  orbStruct (Orb (14, 20) (vale 1))

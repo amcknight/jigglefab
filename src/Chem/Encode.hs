@@ -1,18 +1,14 @@
-module Encode.Encode
+module Chem.Encode
 ( Encode (..)
-, encodeModel
+, encoder
 ) where
 
 import Chem
-import Utils
-import Model
 import Geometry.Space
 import Wall
 import StructLibrary
 import Color
 import Geometry.Vector
-import Point
-import Time
 import Struct
 import Orb
 
@@ -23,9 +19,9 @@ data Dup = Ready | Once Sig | Twice Sig deriving (Show, Eq, Ord)
 data Encode = Wire Active | Port Side Active | Eat | Sync Sync | Dup Dup deriving (Show, Eq, Ord)
 
 instance Chem Encode where
-  chemColor (Wire Off) = Grey 0.5
-  chemColor (Wire (On Red)) = mix red $ Grey 0.5
-  chemColor (Wire (On Blue)) = mix cyan $ Grey 0.5
+  chemColor (Wire Off) = grey
+  chemColor (Wire (On Red)) = mix red $ grey
+  chemColor (Wire (On Blue)) = mix cyan $ grey
   chemColor (Port _ Off) = green
   chemColor (Port _ (On Red)) = mix red green
   chemColor (Port _ (On Blue)) = mix cyan green
@@ -87,8 +83,8 @@ loopStruct size pos sigs = mconcat loops
     actives = sigs ++ replicate (13 - length sigs) Off
     loops = fmap (\(pos, a) -> orbStruct (Orb pos (Wire a))) (zip lps actives)
 
-andForm :: Position -> Sig -> Struct Encode
-andForm pos sig = mconcat $ ports ++ syncs ++ [garbage, eat]
+andStruct :: Position -> Sig -> Struct Encode
+andStruct pos sig = mconcat $ ports ++ syncs ++ [garbage, eat]
   where
     adjacentStep = 0.95
     up = adjacentStep |* upV
@@ -104,8 +100,8 @@ andForm pos sig = mconcat $ ports ++ syncs ++ [garbage, eat]
     garbage = orbStruct $ Orb (pos |+ (2.25 |* right)) $ Wire Off
     eat = orbStruct $ Orb (pos |+ (3 |* right)) Eat
 
-splitForm :: Position -> Struct Encode
-splitForm pos = mconcat [inP, dup, outP, bridge, rightInP, topS, botS, topOutP, botOutP]
+splitStruct :: Position -> Struct Encode
+splitStruct pos = mconcat [inP, dup, outP, bridge, rightInP, topS, botS, topOutP, botOutP]
   where
     adjacentStep = 0.95
     diagStep = sqrt ((adjacentStep^2)/2)
@@ -124,9 +120,9 @@ splitForm pos = mconcat [inP, dup, outP, bridge, rightInP, topS, botS, topOutP, 
     topOutP = orbStruct $ Orb (pos |+ (5|*right) |+ diagUp) (Port Out Off)
     botOutP = orbStruct $ Orb (pos |+ (5|*right) |+ diagDown) (Port Out Off)
 
-dupSeqForm :: Position -> Int -> Struct Encode
-dupSeqForm _ 0 = mempty
-dupSeqForm pos num = mconcat [inP, dup, outP, bridge, tail]
+dupSeqStruct :: Position -> Int -> Struct Encode
+dupSeqStruct _ 0 = mempty
+dupSeqStruct pos num = mconcat [inP, dup, outP, bridge, tail]
   where
     step = 0.95
     right = step |* rightV
@@ -134,38 +130,38 @@ dupSeqForm pos num = mconcat [inP, dup, outP, bridge, tail]
     dup =    orbStruct $ Orb (pos |+ (1|*right)) $ Dup Ready
     outP =   orbStruct $ Orb (pos |+ (2|*right)) $ Port Out Off
     bridge = orbStruct $ Orb (pos |+ (3|*right)) $ Wire Off
-    tail = dupSeqForm (pos |+ (4|*right)) (num-1)
+    tail = dupSeqStruct (pos |+ (4|*right)) (num-1)
 
-encodeModel :: R (Model Encode)
-encodeModel = do
-  let speed = 5
-  let slack = 3
-  let boxSize = 1000
-  let start = boxSize |* leftV
-  let end = boxSize |* rightV
-  let mid = 0.5 |* (start |+ end)
-  let midLeft = 0.5 |* (start |+ mid)
+encoder :: Struct Encode
+encoder = walls <> prewire <> dup4 <> postdupWire <> blueAnd <> bridge <> split <> loop <> postwire
+  where
+    speed = 5
+    slack = 3
+    boxSize = 1000
+    start = boxSize |* leftV
+    end = boxSize |* rightV
+    mid = 0.5 |* (start |+ end)
+    midLeft = 0.5 |* (start |+ mid)
 
-  let adjacentStep = 0.95
-  let diagStep = sqrt ((adjacentStep^2)/2)
-  let up = adjacentStep |* upV
-  let right = adjacentStep |* rightV
-  let diagUp = diagStep |* upRightV
-  let diagDown = diagStep |* downRightV
+    adjacentStep = 0.95
+    diagStep = sqrt ((adjacentStep^2)/2)
+    up = adjacentStep |* upV
+    right = adjacentStep |* rightV
+    diagUp = diagStep |* upRightV
+    diagDown = diagStep |* downRightV
 
-  let prewire = cappedLinChainExcl slack start midLeft (replicate 3 (Wire (On Blue))) (Wire Off) []
-  let dup4 = dupSeqForm midLeft 2
-  let postdupWire = linChainExcl 1 (mid |- (4 |* right)) mid $ Wire Off
-  let blueAnd = andForm mid Blue
-  let encoderTip = orbStruct $ Orb mid $ Wire Off
-  let walls = wallStruct (Circle start 1) <> wallStruct (Circle end 1)
-  let sigs = [Red, Blue, Blue, Red]
-  let blueAndOutPos = mid |+ ((2*adjacentStep) |* upV) |+ ((1.5*adjacentStep) |* rightV)
-  let bridge = orbStruct $ Orb (blueAndOutPos |+ (adjacentStep |* rightV)) $ Wire Off
-  let bridgeOutPos = blueAndOutPos |+ ((2*adjacentStep) |* rightV)
-  let split = splitForm bridgeOutPos
-  let splitOutTopPos = bridgeOutPos |+ (5|*right) |+ diagUp
-  let splitOutBotPos = bridgeOutPos |+ (5|*right) |+ diagDown
-  let loop = loopStruct 5 splitOutTopPos $ fmap On sigs
-  let postwire = linChainExcl slack splitOutBotPos end $ Wire Off
-  buildModel speed $ walls <> prewire <> dup4 <> postdupWire <> blueAnd <> bridge <> split <> loop <> postwire
+    prewire = cappedLinChainExcl slack start midLeft (replicate 3 (Wire (On Blue))) (Wire Off) []
+    dup4 = dupSeqStruct midLeft 2
+    postdupWire = linChainExcl 1 (mid |- (4 |* right)) mid $ Wire Off
+    blueAnd = andStruct mid Blue
+    encoderTip = orbStruct $ Orb mid $ Wire Off
+    walls = wallStruct (Circle start 1) <> wallStruct (Circle end 1)
+    sigs = [Red, Blue, Blue, Red]
+    blueAndOutPos = mid |+ ((2*adjacentStep) |* upV) |+ ((1.5*adjacentStep) |* rightV)
+    bridge = orbStruct $ Orb (blueAndOutPos |+ (adjacentStep |* rightV)) $ Wire Off
+    bridgeOutPos = blueAndOutPos |+ ((2*adjacentStep) |* rightV)
+    split = splitStruct bridgeOutPos
+    splitOutTopPos = bridgeOutPos |+ (5|*right) |+ diagUp
+    splitOutBotPos = bridgeOutPos |+ (5|*right) |+ diagDown
+    loop = loopStruct 5 splitOutTopPos $ fmap On sigs
+    postwire = linChainExcl slack splitOutBotPos end $ Wire Off

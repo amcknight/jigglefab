@@ -1,7 +1,7 @@
 module Form
 ( Form (..)
 , buildForm
--- , wallForm, ballForm
+, wallForm, ballForm
 , wallI, ballI
 , wbSide, bbSide
 , replaceBall
@@ -52,7 +52,7 @@ buildForm sp (Struct ws os) = do
       pure $ ballForm b <> rest
 
 wallForm :: Wall -> Form c
-wallForm w = Form (V.fromList [w]) V.empty 
+wallForm w = Form (V.fromList [w]) V.empty
 
 ballForm :: Ball c -> Form c
 ballForm b = Form V.empty (V.fromList [b])

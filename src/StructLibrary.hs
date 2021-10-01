@@ -20,6 +20,7 @@ import Utils
 import Time
 import Debug.Trace
 import Struct
+import Chem
 
 box :: Vector -> Vector -> Struct c
 box (x1,y1) (x2,y2) =

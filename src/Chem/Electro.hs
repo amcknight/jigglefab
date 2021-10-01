@@ -1,13 +1,13 @@
-module Electro.Electro
+module Chem.Electro
 ( Electro (Dormant, Active)
 ) where
 
 import Chem
+    ( Chem(chemColor),
+      InReactant(InExchange),
+      InnerChem(innerReact, allowThru) )
 import Color
 import Struct
-import Geometry.Vector
-import Model
-import Utils
 import Orb
 import Wall
 import StructLibrary
@@ -15,7 +15,7 @@ import StructLibrary
 data Electro = Dormant | Active | Tired Int deriving (Show, Eq, Ord)
 
 instance Chem Electro where
-  chemColor Dormant = Grey 0.5
+  chemColor Dormant = grey
   chemColor Active = red
   chemColor (Tired n) = blue
 
@@ -29,8 +29,8 @@ instance InnerChem Electro where
   innerReact es = InExchange es
   allowThru _ = False
 
-wireModel :: R (Model Electro)
-wireModel = buildModel 3 $ walls <> chain <> signal
+wireStruct :: Struct Electro
+wireStruct = walls <> chain <> signal
   where
     walls = wallStruct (Circle v1 20) <> wallStruct (Circle v2 20)
     chain = linChainIncl 20 v1 v2 Dormant

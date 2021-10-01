@@ -11,39 +11,30 @@ import Point
 import Ball
 import Pair
 import Model
-import ModelLibrary
 import Wall
 import Form
 import Control.Monad.State
 import Chem
-import Electro.Electro
-import Valence.Valence
-import Core.CoreModels
-import Gate.Gate
-import Valence.ValenceModels
-import Core.Core
 import Debug.Trace
 import Geometry.Angle
 import qualified Color as C
 import Graphics.Gloss
-import Buckle.Buckle
-import Peano.Peano
-import Stripe.Stripe
-import Sem.Sem
-import Encode.Encode
-import Load.Load
 import Graphics.Gloss.Interface.IO.Interact
 import StructLibrary
 import View
 import Geometry.Vector
+import Struct
+import Orb
+import Chem.Sem
 
 run :: IO ()
 run = runSeeded =<< getStdGen
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
-  let (model, _) = runState movingToolModel seed
-  let view = View model zeroV 50
+  let struct = movingTool
+  let (model, _) = runState (buildModel 3 struct) seed
+  let view = View (Right model) zeroV 50
   trace (show seed) play
     FullScreen
     (greyN 0.2)
@@ -54,10 +45,32 @@ runSeeded seed = do
     update
 
 draw :: Chem c => View c -> Picture
-draw v = scale z z (Pictures (drawForm (form m)) <> Pictures (fmap (drawBond (form m)) (innerIps m)))
+draw v = translate x y $ scale z z $ case m of
+  Left s -> drawStruct s
+  Right s -> drawSim s
   where
     m = model v
     z = zoom v
+    (x, y) = center v
+
+event :: Event -> View Sem -> View Sem
+event e v = trace (show e) $ case e of
+  EventKey (MouseButton LeftButton) Down _ pos -> v --{  model = add (buildBall (speed m) (Orb pos (Sem.Sem.Wire []))) (model v)} -- TODO Should be random velocity and work with Orbs
+  EventKey {} -> v
+  EventMotion pos -> v
+  EventResize _ -> v
+
+update :: Duration -> View Sem -> View Sem
+update dt v = v { model = case m of
+   Left s -> Left s
+   Right s -> Right $ step dt s }
+  where m = model v
+
+drawStruct :: Chem c => Struct c -> Picture
+drawStruct (Struct ws os) = Pictures $ fmap (drawWall yellow) ws ++ fmap drawOrb os
+
+drawSim :: Chem c => Model c -> Picture
+drawSim s = Pictures (drawForm (form s)) <> Pictures (fmap (drawBond (form s)) (innerIps s))
 
 drawForm :: Chem c => Form c -> [Picture]
 drawForm f = ws ++ bs
@@ -65,19 +78,11 @@ drawForm f = ws ++ bs
     ws = toList $ fmap (drawWall yellow) (walls f)
     bs = fmap drawBall (toList (balls f))
 
-event :: Event -> View Sem -> View Sem
-event e v = trace (show e) $ case e of
-  EventKey key ks mod pos -> case (key, ks) of
-    (MouseButton LeftButton, Down) -> v { model = add (Ball (Point pos (1,1)) (Sem.Sem.Wire [])) (model v) } -- TODO Should be random velocity and work with Orbs
-    _ -> v
-  EventMotion pos -> v
-  EventResize _ -> v
-
-update :: Duration -> View Sem -> View Sem 
-update dt v = v { model = step dt (model v) }    
-
 drawBall :: Chem c => Ball c -> Picture
-drawBall (Ball (Point (x,y) _) chem) = translate x y $ body (C.toGlossColor (chemColor chem)) 1
+drawBall (Ball (Point p _) c) = drawOrb $ Orb p c
+
+drawOrb :: Chem c => Orb c -> Picture
+drawOrb (Orb (x,y) chem) = translate x y $ body (C.toGlossColor (chemColor chem)) 1
 
 drawWall :: Color -> Wall -> Picture
 drawWall color (HLine y) = Color color $ line [(-1000000, y), (1000000, y)]

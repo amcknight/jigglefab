@@ -1,17 +1,14 @@
-module Buckle.Buckle
+module Chem.Buckle
 ( Buckle (..)
 , Sig (..)
 , Active (..)
-, turnbuckleModel
+, turnbuckle
 ) where
 
 import Chem
 import Geometry.Space
 import Color
-import Model
-import Utils
 import Geometry.Vector
-import Form
 import Wall
 import StructLibrary
 import Struct
@@ -71,17 +68,17 @@ instance InnerChem Buckle where
   thruReact (Wire Off, Sense _) = (Wire Off, Actor Off)
   thruReact c = c
 
-turnbuckleModel :: R (Model Buckle)
-turnbuckleModel = do
-  let slack = 6
-  let boxSize = 20
-  let bottom = boxSize |* leftV
-  let top = boxSize |* rightV
-  let mid = zeroV
-  let sigs = fmap (Wire . On) (replicate 1 Red) --[Red, Red, Red, Blue, Blue, Blue, Blue, Blue, Red, Red, Red]
+turnbuckle :: Struct Buckle
+turnbuckle = walls <> prechain <> buckle <> postchain
+  where
+    slack = 6
+    boxSize = 20
+    bottom = boxSize |* leftV
+    top = boxSize |* rightV
+    mid = zeroV
+    sigs = fmap (Wire . On) (replicate 1 Red) --[Red, Red, Red, Blue, Blue, Blue, Blue, Blue, Red, Red, Red]
 
-  let walls = mconcat $ fmap (\p -> wallStruct (Circle p 1)) [bottom, top]
-  let prechain = cappedLinChainExcl slack bottom mid sigs (Wire Off) [Port In Off]
-  let buckle = orbStruct $ Orb mid $ Actor Off
-  let postchain = linChainExcl slack mid top $ Wire Off
-  buildModel 4 $ walls <> prechain <> buckle <> postchain
+    walls = mconcat $ fmap (\p -> wallStruct (Circle p 1)) [bottom, top]
+    prechain = cappedLinChainExcl slack bottom mid sigs (Wire Off) [Port In Off]
+    buckle = orbStruct $ Orb mid $ Actor Off
+    postchain = linChainExcl slack mid top $ Wire Off

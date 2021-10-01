@@ -1,16 +1,13 @@
-module Sem.Sem
+module Chem.Sem
 ( Sem (..)
 , Active (..)
-, movingToolModel
+, movingTool
 ) where
 
 import Chem
 import Geometry.Space
 import Color
-import Model
-import Utils
 import Geometry.Vector
-import Form
 import Wall
 import StructLibrary
 import Struct
@@ -70,32 +67,31 @@ instance InnerChem Sem where
   thruReact (Wire (Apply:as1), Wire (Drop:as2)) = (Wire as1, Wire as2)
   thruReact c = c
 
-movingToolModel :: R (Model Sem)
-movingToolModel = do
-  let speed = 3
-  let slack = 3
-  let boxSize = 13.333
-  let numSigs = 1
-  let mid = boxSize |* upV
-  let bottom = boxSize |* downV
-  let left = boxSize |* upLeftV
-  let right = boxSize |* upRightV
-  let midLeft = 0.5 |* (left |+ mid)
-  let midRight = 0.5 |* (right |+ mid)
-  let midBottom = 0.5 |* (bottom |+ mid)
-  let sigs = fmap (\s -> Wire [Sig s]) [Blue, Red, Red, Red, Red, Blue, Blue, Blue, Blue, Blue, Blue, Blue]
-  let walls = mconcat $ fmap (\p -> wallStruct (Circle p 1)) [left, right, bottom]
-  let leftPrechain = linChainExcl slack left midLeft $ Wire []
-  let leftPostchain = linChainExcl slack midLeft mid $ Wire []
-  let rightPrechain = linChainExcl slack right midRight $ Wire []
-  let rightPostchain = linChainExcl slack midRight mid $ Wire []
-  let bottomPrechain = cappedLinChainExcl slack bottom midBottom sigs (Wire []) [Wire []]
-  let leftBottomPostChain = arcChainExcl 0.25 slack left midBottom $ Wire []
-  let rightBottomPostChain = arcChainExcl 0.25 slack midBottom right $ Wire []
-  let chains = leftPrechain <> leftPostchain <> rightPrechain <> rightPostchain <> bottomPrechain <> leftBottomPostChain <> rightBottomPostChain
-  let leftBuckle = orbStruct $ Orb midLeft $ Port Open
-  let rightBuckle = orbStruct $ Orb midRight $ Port Open
-  let buckles = leftBuckle <> rightBuckle
-  let tool = orbStruct $ Orb mid $ Wire [Wait]
-  let gate = orbStruct $ Orb midBottom $ Wire []
-  buildModel speed $ walls <> chains <> buckles <> tool <> gate
+movingTool :: Struct Sem
+movingTool = walls <> chains <> buckles <> tool <> gate
+  where
+    slack = 3
+    boxSize = 13.333
+    numSigs = 1
+    mid = boxSize |* upV
+    bottom = boxSize |* downV
+    left = boxSize |* upLeftV
+    right = boxSize |* upRightV
+    midLeft = 0.5 |* (left |+ mid)
+    midRight = 0.5 |* (right |+ mid)
+    midBottom = 0.5 |* (bottom |+ mid)
+    sigs = fmap (\s -> Wire [Sig s]) [Blue, Red, Red, Red, Red, Blue, Blue, Blue, Blue, Blue, Blue, Blue]
+    walls = mconcat $ fmap (\p -> wallStruct (Circle p 1)) [left, right, bottom]
+    leftPrechain = linChainExcl slack left midLeft $ Wire []
+    leftPostchain = linChainExcl slack midLeft mid $ Wire []
+    rightPrechain = linChainExcl slack right midRight $ Wire []
+    rightPostchain = linChainExcl slack midRight mid $ Wire []
+    bottomPrechain = cappedLinChainExcl slack bottom midBottom sigs (Wire []) [Wire []]
+    leftBottomPostChain = arcChainExcl 0.25 slack left midBottom $ Wire []
+    rightBottomPostChain = arcChainExcl 0.25 slack midBottom right $ Wire []
+    chains = leftPrechain <> leftPostchain <> rightPrechain <> rightPostchain <> bottomPrechain <> leftBottomPostChain <> rightBottomPostChain
+    leftBuckle = orbStruct $ Orb midLeft $ Port Open
+    rightBuckle = orbStruct $ Orb midRight $ Port Open
+    buckles = leftBuckle <> rightBuckle
+    tool = orbStruct $ Orb mid $ Wire [Wait]
+    gate = orbStruct $ Orb midBottom $ Wire []

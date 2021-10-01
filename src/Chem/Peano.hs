@@ -1,12 +1,10 @@
-module Peano.Peano
+module Chem.Peano
 ( Peano (..)
-, placementModel
+, placement
 ) where
 
 import Chem
 import Color
-import Model
-import Utils
 import Geometry.Vector
 import Wall
 import StructLibrary
@@ -30,14 +28,13 @@ instance InnerChem Peano where
   innerReact (No, Wrap c) = InExchange (c, Tail)
   innerReact cs = InExchange cs
 
-placementModel :: R (Model Peano)
-placementModel = do
-  let size = 66.666
-  let speed = 3
-  let slack = 30
-  let left = size |* leftV
-  let right = size |* rightV
-  let sig = wrap 50 Yes
-  let string = cappedLinChainExcl slack left right [sig] No []
-  let walls = mconcat $ fmap (\p -> wallStruct (Circle p 1)) [left, right]
-  buildModel speed $ string <> walls
+placement :: Struct Peano
+placement = string <> walls
+  where
+    size = 66.666
+    slack = 30
+    left = size |* leftV
+    right = size |* rightV
+    sig = wrap 50 Yes
+    string = cappedLinChainExcl slack left right [sig] No []
+    walls = mconcat $ fmap (\p -> wallStruct (Circle p 1)) [left, right]

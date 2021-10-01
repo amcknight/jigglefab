@@ -27,7 +27,9 @@ library:
   dependencies:
     - gloss
     - containers
+    - mtl
     - random
+    - vector
 
 executables:
   chains-exe:
@@ -39,9 +41,6 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - chains
-    - heap
-    - vector
-    - mtl
 
 tests:
   chains-test:

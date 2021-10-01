@@ -1,18 +1,14 @@
-module Gate.Gate
+module Chem.Gate
 ( Gate (..)
 , Logic (..)
-, gateModel
+, gate
 ) where
 
 import Chem
-import Form
-import Utils
-import Model
 import Geometry.Space
 import Wall
 import StructLibrary
 import Color
-import Geometry.Vector
 import Struct
 import Orb
 
@@ -36,7 +32,7 @@ instance Chem Gate where
   chemColor (Port In (On Blue)) = light cyan
   chemColor (Port Out (On Red)) = dark red
   chemColor (Port Out (On Blue)) = dark cyan
-  chemColor _ = Grey 0.5
+  chemColor _ = grey
 
 instance InnerChem Gate where
   innerReact (Wire Off, Wire a) = InExchange (Wire a, Wire Off)
@@ -77,7 +73,7 @@ gateStruct slack c = rocks <> signals <> chains <> ports <> gate
     out = orbStruct $ Orb outPortV $ Port Out Off
     ports = in1 <> in2 <> out
 
-gateModel :: Logic -> R (Model Gate)
-gateModel log = do
-  let andGate = gateStruct 6 $ Gate (Wait Off) log
-  buildModel 3 andGate
+-------
+
+gate :: Logic -> Struct Gate
+gate = gateStruct 6 . Gate (Wait Off)

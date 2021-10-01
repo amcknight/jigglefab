@@ -17,10 +17,10 @@ module Geometry.Vector
 , reflect
 ) where
 
+import Control.Monad.State
 import System.Random as R
 import Geometry.Angle
 import Geometry.Space
-import Control.Monad.State
 import Utils
 import Pair
 import Debug.Trace
