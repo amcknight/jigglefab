@@ -45,32 +45,32 @@ runSeeded seed = do
     update
 
 draw :: Chem c => View c -> Picture
-draw v = translate x y $ scale z z $ case m of
+draw v = translate x y $ scale z z $ case sm of
   Left s -> drawStruct s
-  Right s -> drawSim s
+  Right m -> drawModel m
   where
-    m = model v
+    sm = structOrModel v
     z = zoom v
     (x, y) = center v
 
 event :: Event -> View Sem -> View Sem
 event e v = trace (show e) $ case e of
-  EventKey (MouseButton LeftButton) Down _ pos -> v --{  model = add (buildBall (speed m) (Orb pos (Sem.Sem.Wire []))) (model v)} -- TODO Should be random velocity and work with Orbs
+  EventKey (MouseButton LeftButton) Down _ pos -> v
   EventKey {} -> v
   EventMotion pos -> v
   EventResize _ -> v
 
 update :: Duration -> View Sem -> View Sem
-update dt v = v { model = case m of
+update dt v = v { structOrModel = case m of
    Left s -> Left s
    Right s -> Right $ step dt s }
-  where m = model v
+  where m = structOrModel v
 
 drawStruct :: Chem c => Struct c -> Picture
 drawStruct (Struct ws os) = Pictures $ fmap (drawWall yellow) ws ++ fmap drawOrb os
 
-drawSim :: Chem c => Model c -> Picture
-drawSim s = Pictures (drawForm (form s)) <> Pictures (fmap (drawBond (form s)) (innerIps s))
+drawModel :: Chem c => Model c -> Picture
+drawModel m = Pictures (drawForm (form m)) <> Pictures (fmap (drawBond (form m)) (innerIps m))
 
 drawForm :: Chem c => Form c -> [Picture]
 drawForm f = ws ++ bs
