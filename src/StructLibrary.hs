@@ -45,10 +45,10 @@ cappedLinExcl from to num = cappedLinIncl (from |+ step) (to |- step) (num-2)
     numHops = fromIntegral $ num - 1
     step = (1/numHops) |* (to |- from)
 
-cappedArcIncl :: Angle -> Position -> Position -> Int -> [c] -> c -> [c] -> Struct c
-cappedArcIncl angle from to num fromCh ch toCh = Struct [] $ zipWith Orb poss chems
+cappedArcIncl :: Radian -> Position -> Position -> Int -> [c] -> c -> [c] -> Struct c
+cappedArcIncl a from to num fromCh ch toCh = Struct [] $ zipWith Orb poss chems
   where
-    poss = arcFromTo angle from to num
+    poss = arcFromTo a from to num
     chems = fromCh ++ replicate (num - length fromCh - length toCh) ch ++ reverse toCh
 
 linIncl :: Position -> Position -> Int -> c -> Struct c
@@ -58,10 +58,10 @@ linExcl :: Position -> Position -> Int -> c -> Struct c
 linExcl from to num = linIncl (from |+ step) (to |- step) (num-2)
   where step = (1/fromIntegral (num-1)) |* (to |- from)
 
-arcIncl :: Angle -> Position -> Position -> Int -> c -> Struct c
+arcIncl :: Radian -> Position -> Position -> Int -> c -> Struct c
 arcIncl angle from to num ch = cappedArcIncl angle from to num [] ch []
 
-arcExcl :: Angle -> Position -> Position -> Int -> c -> Struct c
+arcExcl :: Radian -> Position -> Position -> Int -> c -> Struct c
 arcExcl angle from to num ch = Struct [] orbStructs
   where
     poss = arcFromTo angle from to num
@@ -82,10 +82,10 @@ linChainExcl :: Int -> Position -> Position -> c -> Struct c
 linChainExcl slack from to = linExcl from to num
   where num = (ceiling (dist from to) + 1) + slack
 
-arcChainIncl :: Angle -> Int -> Position -> Position -> c -> Struct c
+arcChainIncl :: Radian -> Int -> Position -> Position -> c -> Struct c
 arcChainIncl a slack from to = arcIncl a from to num
   where num = (ceiling (arcDist a from to) + 1) + slack
 
-arcChainExcl :: Angle -> Int -> Position -> Position -> c -> Struct c
+arcChainExcl :: Radian -> Int -> Position -> Position -> c -> Struct c
 arcChainExcl a slack from to = arcExcl a from to num
   where num = (ceiling (arcDist a from to) + 1) + slack

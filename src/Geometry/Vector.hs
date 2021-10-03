@@ -4,9 +4,10 @@ module Geometry.Vector
 ( Vector
 , Position, Velocity
 , zeroV
-, unit
+, unit, direction, radians
 , upV, downV, rightV, leftV
 , upRightV, upLeftV, downRightV, downLeftV
+, toUnit
 , magnitudeSq
 , randomV, randomVs, randomVIn
 , (|*), (|+), (|-)
@@ -15,6 +16,7 @@ module Geometry.Vector
 , distSq, dist
 , arcDist
 , reflect
+, squashTurn
 ) where
 
 import Control.Monad.State
@@ -37,7 +39,7 @@ instance Random Vector where
     where
       (theta, g2) = randomR (-pi, pi) g
 
-toUnit:: Angle -> Vector
+toUnit:: Radian -> Vector
 toUnit a = (cos a, sin a)
 
 unit :: Vector -> Vector
@@ -62,8 +64,11 @@ downRightV = (1,-1)
 downLeftV :: Vector
 downLeftV = (-1,-1)
 
-angle :: Vector -> Angle
-angle (x,y) = atan2 y x
+direction :: Vector -> Turn 
+direction = toTurn . radians
+
+radians :: Vector -> Radian
+radians (x,y) = atan2 y x
 
 magnitudeSq :: Vector -> Float
 magnitudeSq v = v |. v
@@ -116,7 +121,7 @@ fromTo v1 v2 n = v1 : fromTo (v1 |+ hop) v2 (n-1)
     numHops = fromIntegral n - 1
     hop = (1/numHops) |* (v2 |- v1)
 
-arcFromTo :: Angle -> Vector -> Vector -> Int -> [Vector]
+arcFromTo :: Radian -> Vector -> Vector -> Int -> [Vector]
 arcFromTo _ _ _ 0 = []
 arcFromTo _ _ v2 1 = [v2]
 arcFromTo _ v1 v2 2 = [v1, v2]
@@ -128,12 +133,12 @@ arcFromTo a v1 v2 n = fmap (\i -> rotate (i*gap) c v1) [0..numHops]
     v1mMagSq = magnitudeSq v1m
     cmMagSq = radSqFromArc a v1 v2 - v1mMagSq
     leftCM = (sqrt cmMagSq / sqrt v1mMagSq) |* negOpp v1m
-    c = (if a < turn 0.5 then (m |+) else (m |-)) leftCM
+    c = (if a < toRadian 0.5 then (m |+) else (m |-)) leftCM
     gap = a / numHops
 
-rotate :: Angle -> Vector -> Vector -> Vector
+rotate :: Radian -> Vector -> Vector -> Vector
 rotate a c v = let cv = v |- c
-  in c |+ (magnitude cv |* toUnit (a + angle cv))
+  in c |+ (magnitude cv |* toUnit (a + radians cv))
 
 distSq :: Vector -> Vector -> Float
 distSq v1 v2 = magnitudeSq $ v2 |- v1
@@ -141,7 +146,7 @@ distSq v1 v2 = magnitudeSq $ v2 |- v1
 dist :: Vector -> Vector -> Float
 dist v1 v2 = magnitude $ v2 |- v1
 
-arcDist :: Angle -> Vector -> Vector -> Float 
+arcDist :: Radian -> Vector -> Vector -> Float 
 arcDist a v1 v2 = a * sqrt (radSqFromArc a v1 v2)
 
 midPoint :: Vector -> Vector -> Vector
@@ -150,5 +155,9 @@ midPoint v1 v2 = 0.5 |* (v2 |+ v1)
 negOpp :: Vector -> Vector
 negOpp (x,y) = (-y, x)
 
-radSqFromArc :: Angle -> Vector -> Vector -> Float
+radSqFromArc :: Radian -> Vector -> Vector -> Float
 radSqFromArc a v1 v2 = distSq v1 v2 / chord a ^ 2
+
+squashTurn :: Radius -> Vector -> Vector -> Turn
+squashTurn rad v1 v2 = if 2*rad <= d then 0 else toTurn (acos ((d/2)/rad))
+  where d = dist v1 v2

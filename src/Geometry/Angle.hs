@@ -1,45 +1,54 @@
 module Geometry.Angle
-( Angle
+( Turn
+, Radian
 , TurnDirection (..)
 , tau
-, turn, unturn
+, toRadian, toTurn
 , degrees, undegrees
 , right, left, up, down
 , pole
 , chord
+, simple
 ) where
 
 import Data.Fixed (mod')
 
-type Angle = Float -- From 0 to 1
+type Turn = Float -- From 0 to 1
+type Radian = Float -- From -pi to pi
 data TurnDirection = Clockwise | CounterClockwise
 
 tau :: Float
 tau = 2*pi
 
-turn :: Float -> Angle
-turn = (tau*)
+toRadian :: Turn -> Radian
+toRadian = (tau*)
 
-unturn :: Angle -> Float 
-unturn = (/tau)
+toTurn :: Radian -> Turn
+toTurn = (/tau)
 
-degrees :: Angle -> Float 
+degrees :: Turn -> Float 
 degrees = (360*)
 
-undegrees :: Float -> Angle
+undegrees :: Float -> Turn
 undegrees = (/360)
 
-pole :: Angle -> Angle
+pole :: Turn -> Turn
 pole = (`mod'` 1) . (0.5+)
 
-right :: Angle
+right :: Turn
 right = 0.0
-left :: Angle
-left = turn 0.5
-up :: Angle
-up = turn 0.25
-down :: Angle
-down = turn 0.75
+left :: Turn
+left = 0.5
+up :: Turn
+up = 0.25
+down :: Turn
+down = 0.75
 
-chord :: Angle -> Float 
+chord :: Radian -> Float 
 chord = (2*) . sin . (/2)
+
+simple :: Turn -> Turn
+simple t = case compare t' 0 of
+  LT -> t'+1
+  _ -> t'
+  where t' = t `mod'` 1

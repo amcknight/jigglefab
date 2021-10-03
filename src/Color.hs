@@ -19,7 +19,7 @@ data RGB = RGB
   }
 
 data Color = Grey Float | Color
-  { h::Angle
+  { h::Turn
   , s::Float 
   , v::Float
   }
@@ -56,7 +56,7 @@ mix g@(Grey v) c = mix c g
 mix c@(Color h s v1) (Grey v2) = mix c (Color h 0 v2)
 mix (Color h1 s1 v1) (Color h2 s2 v2) = Color (mixHue h1 h2) (avg s1 s2) (avg v1 v2)
 
-mixHue :: Angle -> Angle -> Angle
+mixHue :: Turn -> Turn -> Turn
 mixHue h1 h2 = case compare (abs (h1 - h2)) 0.5 of
   LT -> a
   EQ -> if h1 < h2 then a else pole a

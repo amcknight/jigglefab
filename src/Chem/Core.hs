@@ -68,7 +68,7 @@ gateStruct slack c = rocks <> signals <> chains <> gate
     d = 500
     rad = 50
 
-meshStruct :: Int -> [(Position, Core)] -> [P Int] -> [(Angle, P Int)] -> Struct Core
+meshStruct :: Int -> [(Position, Core)] -> [P Int] -> [(Radian, P Int)] -> Struct Core
 meshStruct slack preBalls bbi abbi = pegs <> linCs <> arcCs
   where
     pegs = scatterStruct preBalls
@@ -88,7 +88,7 @@ linChainsStruct slack preBalls ((i,j):is) = c <> cs
     c = linChainExcl slack p1 p2 $ Wire Off
     cs = linChainsStruct slack preBalls is
 
-arcChainsStruct :: Int -> V.Vector (Position, Core) -> [(Angle, P Int)] -> Struct Core
+arcChainsStruct :: Int -> V.Vector (Position, Core) -> [(Radian, P Int)] -> Struct Core
 arcChainsStruct _ _ [] = mempty
 arcChainsStruct slack preBalls ((a,(i,j)):is) = c <> cs
   where
@@ -134,10 +134,10 @@ mesh = meshStruct 1
   , (1,3)
   , (4,5)
   ]
-  [ (turn 0.25, (0,6))
-  , (turn 0.10, (3,6))
-  , (turn 0.15, (4,3))
-  , (turn 0.20, (6,4))
+  [ (toRadian 0.25, (0,6))
+  , (toRadian 0.10, (3,6))
+  , (toRadian 0.15, (4,3))
+  , (toRadian 0.20, (6,4))
   ]
 
 headStruct :: Struct Core

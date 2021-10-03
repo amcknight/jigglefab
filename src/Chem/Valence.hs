@@ -4,8 +4,12 @@ module Chem.Valence
 , hasUp, hasDown
 , valence
 , desire
-, tie
-, untie
+, tie, untie
+, ballWall
+, twoBall
+, twoBallInner
+, threeBall
+, fourBall
 ) where
 
 import Chem

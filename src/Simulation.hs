@@ -15,6 +15,7 @@ import Wall
 import Form
 import Control.Monad.State
 import Chem
+import Chem.Valence
 import Debug.Trace
 import qualified Color as C
 import Graphics.Gloss
@@ -24,6 +25,8 @@ import Geometry.Vector
 import Struct
 import Orb
 import Chem.Sem
+import Geometry.Angle
+import Data.Fixed (mod')
 
 run :: IO ()
 run = runSeeded =<< getStdGen
@@ -32,33 +35,95 @@ runSeeded :: StdGen -> IO ()
 runSeeded seed = do
   let struct = movingTool
   let (model, _) = runState (buildModel 3 struct) seed
-  let view = View (Right model) zeroV 50
+  let view = View (Left ballWall) zeroV 250
+  let frameRate = 30
   trace (show seed) play
     FullScreen
     (greyN 0.2)
-    30
+    frameRate
     view
     draw
     event
     update
 
 draw :: Chem c => View c -> Picture
-draw v = translate x y $ scale z z $ case sm of
-  Left s -> drawStruct s
-  Right m -> drawModel m
+draw v = trace (show (fmap simple [turnP1, turnP2, turnQ1, turnQ2])) $ Pictures $ zipWith Color colors arcs <> zipWith Color colors tris
   where
-    sm = structOrModel v
-    z = zoom v
-    (x, y) = center v
+    rad = 400
+    p = (0, 100)
+    q = (0,-100)
+    r = (50,  0)
+    squashPQ = squashTurn rad p q
+    squashPR = squashTurn rad p r
+    squashQR = squashTurn rad q r
+    dirPQ = direction (q |- p)
+    dirPR = direction (r |- p)
+    dirQR = direction (r |- q)
+    turnPQ1 = dirPQ + squashPQ
+    turnPQ2 = dirPQ - squashPQ
+    turnQP1 = pole dirPQ + squashPQ
+    turnQP2 = pole dirPQ - squashPQ
+    turnPR1 = dirPR + squashPQ
+    turnPR2 = dirPR - squashPQ
+    turnRP1 = pole dirPR + squashPR
+    turnRP2 = pole dirPR - squashPR
+    turnQR1 = dirPR + squashPR
+    turnQR2 = dirPR - squashPR
+    turnRQ1 = pole dirQR + squashQR
+    turnRQ2 = pole dirQR - squashQR
+    radianPQ1 = toRadian turnPQ1
+    radianPQ2 = toRadian turnPQ2
+    radianQP1 = toRadian turnQP1
+    radianQP2 = toRadian turnQP2
+    radianPR1 = toRadian turnPR1
+    radianPR2 = toRadian turnPR2
+    radianRP1 = toRadian turnRP1
+    radianRP2 = toRadian turnRP2
+    radianQR1 = toRadian turnQR1
+    radianQR2 = toRadian turnQR2
+    radianRQ1 = toRadian turnRQ1
+    radianRQ2 = toRadian turnRQ2
+    posPQ1 = (rad |* toUnit radianPQ1) |+ p
+    posPQ2 = (rad |* toUnit radianPQ2) |+ p
+    posQP1 = (rad |* toUnit radianQP1) |+ q
+    posQP2 = (rad |* toUnit radianQP2) |+ q
+    posPR1 = (rad |* toUnit radianPR1) |+ p
+    posPR2 = (rad |* toUnit radianPR2) |+ p
+    posRP1 = (rad |* toUnit radianRP1) |+ r
+    posRP2 = (rad |* toUnit radianRP2) |+ r
+    posQR1 = (rad |* toUnit radianQR1) |+ q
+    posQR2 = (rad |* toUnit radianQR2) |+ q
+    posRQ1 = (rad |* toUnit radianRQ1) |+ r
+    posRQ2 = (rad |* toUnit radianRQ2) |+ r
+    colors = [red, green, blue]
+    [pa, pt] = drawBlob rad [(simple turnPQ1, simple turnPQ2)]
+    [qa, qt] = drawBlob rad [(simple turnQP1, simple turnQP2)]
+    arcs = [uncurry translate p pa, uncurry translate q qa]
+    tris = [uncurry translate p pt, uncurry translate q qt]
+-- draw v = translate x y $ scale z z $ case sm of
+--   Left s -> drawStruct s
+--   Right m -> drawModel m
+--   where
+--     sm = structOrModel v
+--     z = zoom v
+--     (x, y) = center v
 
-event :: Event -> View Sem -> View Sem
+drawBlob :: Radius -> [(Turn,Turn)] -> [Picture]
+drawBlob rad fromTos = [
+  case compare from to of
+    GT -> arcSolid (degrees from) 360 rad <> arcSolid 0 (degrees to) rad
+    _ -> arcSolid (degrees from) (degrees to) rad
+  , polygon [zeroV, rad |* toUnit (toRadian from), rad |* toUnit (toRadian to)]
+  ]
+
+event :: Event -> View c -> View c
 event e v = trace (show e) $ case e of
   EventKey (MouseButton LeftButton) Down _ pos -> v
   EventKey {} -> v
   EventMotion pos -> v
   EventResize _ -> v
 
-update :: Duration -> View Sem -> View Sem
+update :: Chem c => Duration -> View c -> View c
 update dt v = v { structOrModel = case m of
    Left s -> Left s
    Right s -> Right $ step dt s }
@@ -80,7 +145,7 @@ drawBall :: Chem c => Ball c -> Picture
 drawBall (Ball (Point p _) c) = drawOrb $ Orb p c
 
 drawOrb :: Chem c => Orb c -> Picture
-drawOrb (Orb (x,y) chem) = translate x y $ body (C.toGlossColor (chemColor chem)) 1
+drawOrb (Orb (x,y) chem) = translate x y $ drawCircle (C.toGlossColor (chemColor chem)) 1
 
 drawWall :: Color -> Wall -> Picture
 drawWall color (HLine y) = Color color $ line [(-1000000, y), (1000000, y)]
@@ -91,5 +156,5 @@ drawBond :: Form c -> P Int -> Picture
 drawBond f ip = Color white $ line [p1, p2]
   where (p1, p2) = pmap (pos . point . ballI f) ip
 
-body :: Color -> Radius -> Picture
-body color rad = Color color $ circleSolid rad
+drawCircle :: Color -> Radius -> Picture
+drawCircle color = Color color . circleSolid
