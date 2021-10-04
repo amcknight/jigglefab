@@ -35,11 +35,11 @@ run = runSeeded =<< getStdGen
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
-  let struct = movingTool
+  let struct = twoBallInner
   let (model, _) = runState (buildModel 3 struct) seed
-  let view = View (Left ballWall) zeroV 250
+  let view = View (Left struct) zeroV 250
   let frameRate = 30
-  trace (show seed) play
+  play
     FullScreen
     (greyN 0.2)
     frameRate
@@ -57,7 +57,7 @@ draw v = translate x y $ scale z z $ case sm of
     z = zoom v
     (x, y) = center v
 
--- draw v = trace (show (fmap simple [turnP1, turnP2, turnQ1, turnQ2])) $ Pictures $ zipWith Color colors arcs <> zipWith Color colors tris
+-- draw v = Pictures $ zipWith Color colors arcs <> zipWith Color colors tris
 --   where
 --     rad = 400
 --     p = (0, 100)
@@ -120,7 +120,7 @@ draw v = translate x y $ scale z z $ case sm of
 --   ]
 
 event :: Event -> View c -> View c
-event e v = trace (show e) $ case e of
+event e v = case e of
   EventKey (MouseButton LeftButton) Down _ pos -> v
   EventKey {} -> v
   EventMotion pos -> v
@@ -133,14 +133,27 @@ update dt v = v { structOrModel = case m of
   where m = structOrModel v
 
 drawStruct :: Chem c => Struct c -> Picture
-drawStruct (Struct ws os) = Pictures (fmap (drawWall yellow) ws) <> drawVoronoi (voronoi vs) --fmap drawOrb os
+drawStruct (Struct ws os) = Pictures (fmap (drawWall yellow) ws) <> drawVoronoi (voronoi ps)
   where
-    colorI :: c -> Int
-    colorI ch = 1
-    vs = sortBy (\((_,y1),_) ((_,y2),_) -> compare y1 y2) $ fmap (\(Orb p c) -> (p, colorI c)) os
+    -- Sorted High Y to Low Y
+    ps = sortBy (\((_,y1),_) ((_,y2),_) -> compare y2 y1) $ fmap (\(Orb p c) -> (p, chemColor c)) os
 
 drawVoronoi :: Voronoi -> Picture
-drawVoronoi v = blank
+drawVoronoi v = Pictures $ fmap drawArc (arcs v) <> fmap drawTri (tris v)
+
+drawArc :: Arc -> Picture
+drawArc (Geometry.Tiling.Arc p from to c) = uncurry translate p $ Color (C.toGlossColor c) $ circleSolid 1
+
+drawTri :: Tri -> Picture
+drawTri (Tri (a,b,c) i) = polygon [a, b, c]
+
+-- drawBlob :: Radius -> [(Turn,Turn)] -> [Picture]
+-- drawBlob rad fromTos = [
+--   case compare from to of
+--     GT -> arcSolid (degrees from) 360 rad <> arcSolid 0 (degrees to) rad
+--     _ -> arcSolid (degrees from) (degrees to) rad
+--   , polygon [zeroV, rad |* toUnit (toRadian from), rad |* toUnit (toRadian to)]
+--   ]
 
 drawModel :: Chem c => Model c -> Picture
 drawModel m = drawForm (form m) <> Pictures (fmap (drawBond (form m)) (innerIps m))

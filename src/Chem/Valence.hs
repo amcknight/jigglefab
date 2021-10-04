@@ -36,10 +36,15 @@ instance Chem Valence where
     | otherwise    = Exchange (cs, Out)
   prereact (cs, In) = tie cs
   prereact (cs, Out) = cs
-  chemColor ch = case desire ch of
-    EQ -> grey
-    GT -> red
-    LT -> blue
+  chemColor (Valence w _)
+    | w == 0 = blue 
+    | w == 1 = red 
+    | w == 2 = green 
+    | otherwise = yellow
+  -- chemColor ch = case desire ch of
+  --   EQ -> grey
+  --   GT -> red
+  --   LT -> blue
 
 vale :: Int -> Valence
 vale w = Valence w 0
@@ -82,9 +87,9 @@ twoBall =
 
 twoBallInner :: Struct Valence
 twoBallInner = 
-  wallStruct (VLine 0) <>
+  -- wallStruct (VLine 0) <>
   orbStruct (Orb zeroV (vale 1)) <>
-  orbStruct (Orb (0.2, 0.6) (vale 1))
+  orbStruct (Orb (0.2, 0.6) (vale 2))
 
 threeBall :: Struct Valence
 threeBall =

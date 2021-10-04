@@ -16,13 +16,13 @@ data RGB = RGB
   { r::Int
   , g::Int
   , b::Int
-  }
+  } deriving (Show, Eq)
 
 data Color = Grey Float | Color
   { h::Turn
   , s::Float 
   , v::Float
-  }
+  } deriving (Show, Eq)
 
 black :: Color
 black = Grey 0
