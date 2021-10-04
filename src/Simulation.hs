@@ -27,6 +27,8 @@ import Orb
 import Chem.Sem
 import Geometry.Angle
 import Data.Fixed (mod')
+import Geometry.Tiling
+import Data.List (sortBy)
 
 run :: IO ()
 run = runSeeded =<< getStdGen
@@ -47,74 +49,75 @@ runSeeded seed = do
     update
 
 draw :: Chem c => View c -> Picture
-draw v = trace (show (fmap simple [turnP1, turnP2, turnQ1, turnQ2])) $ Pictures $ zipWith Color colors arcs <> zipWith Color colors tris
+draw v = translate x y $ scale z z $ case sm of
+  Left s -> drawStruct s
+  Right m -> drawModel m
   where
-    rad = 400
-    p = (0, 100)
-    q = (0,-100)
-    r = (50,  0)
-    squashPQ = squashTurn rad p q
-    squashPR = squashTurn rad p r
-    squashQR = squashTurn rad q r
-    dirPQ = direction (q |- p)
-    dirPR = direction (r |- p)
-    dirQR = direction (r |- q)
-    turnPQ1 = dirPQ + squashPQ
-    turnPQ2 = dirPQ - squashPQ
-    turnQP1 = pole dirPQ + squashPQ
-    turnQP2 = pole dirPQ - squashPQ
-    turnPR1 = dirPR + squashPQ
-    turnPR2 = dirPR - squashPQ
-    turnRP1 = pole dirPR + squashPR
-    turnRP2 = pole dirPR - squashPR
-    turnQR1 = dirPR + squashPR
-    turnQR2 = dirPR - squashPR
-    turnRQ1 = pole dirQR + squashQR
-    turnRQ2 = pole dirQR - squashQR
-    radianPQ1 = toRadian turnPQ1
-    radianPQ2 = toRadian turnPQ2
-    radianQP1 = toRadian turnQP1
-    radianQP2 = toRadian turnQP2
-    radianPR1 = toRadian turnPR1
-    radianPR2 = toRadian turnPR2
-    radianRP1 = toRadian turnRP1
-    radianRP2 = toRadian turnRP2
-    radianQR1 = toRadian turnQR1
-    radianQR2 = toRadian turnQR2
-    radianRQ1 = toRadian turnRQ1
-    radianRQ2 = toRadian turnRQ2
-    posPQ1 = (rad |* toUnit radianPQ1) |+ p
-    posPQ2 = (rad |* toUnit radianPQ2) |+ p
-    posQP1 = (rad |* toUnit radianQP1) |+ q
-    posQP2 = (rad |* toUnit radianQP2) |+ q
-    posPR1 = (rad |* toUnit radianPR1) |+ p
-    posPR2 = (rad |* toUnit radianPR2) |+ p
-    posRP1 = (rad |* toUnit radianRP1) |+ r
-    posRP2 = (rad |* toUnit radianRP2) |+ r
-    posQR1 = (rad |* toUnit radianQR1) |+ q
-    posQR2 = (rad |* toUnit radianQR2) |+ q
-    posRQ1 = (rad |* toUnit radianRQ1) |+ r
-    posRQ2 = (rad |* toUnit radianRQ2) |+ r
-    colors = [red, green, blue]
-    [pa, pt] = drawBlob rad [(simple turnPQ1, simple turnPQ2)]
-    [qa, qt] = drawBlob rad [(simple turnQP1, simple turnQP2)]
-    arcs = [uncurry translate p pa, uncurry translate q qa]
-    tris = [uncurry translate p pt, uncurry translate q qt]
--- draw v = translate x y $ scale z z $ case sm of
---   Left s -> drawStruct s
---   Right m -> drawModel m
---   where
---     sm = structOrModel v
---     z = zoom v
---     (x, y) = center v
+    sm = structOrModel v
+    z = zoom v
+    (x, y) = center v
 
-drawBlob :: Radius -> [(Turn,Turn)] -> [Picture]
-drawBlob rad fromTos = [
-  case compare from to of
-    GT -> arcSolid (degrees from) 360 rad <> arcSolid 0 (degrees to) rad
-    _ -> arcSolid (degrees from) (degrees to) rad
-  , polygon [zeroV, rad |* toUnit (toRadian from), rad |* toUnit (toRadian to)]
-  ]
+-- draw v = trace (show (fmap simple [turnP1, turnP2, turnQ1, turnQ2])) $ Pictures $ zipWith Color colors arcs <> zipWith Color colors tris
+--   where
+--     rad = 400
+--     p = (0, 100)
+--     q = (0,-100)
+--     r = (50,  0)
+--     squashPQ = squashTurn rad p q
+--     squashPR = squashTurn rad p r
+--     squashQR = squashTurn rad q r
+--     dirPQ = direction (q |- p)
+--     dirPR = direction (r |- p)
+--     dirQR = direction (r |- q)
+--     turnPQ1 = dirPQ + squashPQ
+--     turnPQ2 = dirPQ - squashPQ
+--     turnQP1 = pole dirPQ + squashPQ
+--     turnQP2 = pole dirPQ - squashPQ
+--     turnPR1 = dirPR + squashPQ
+--     turnPR2 = dirPR - squashPQ
+--     turnRP1 = pole dirPR + squashPR
+--     turnRP2 = pole dirPR - squashPR
+--     turnQR1 = dirPR + squashPR
+--     turnQR2 = dirPR - squashPR
+--     turnRQ1 = pole dirQR + squashQR
+--     turnRQ2 = pole dirQR - squashQR
+--     radianPQ1 = toRadian turnPQ1
+--     radianPQ2 = toRadian turnPQ2
+--     radianQP1 = toRadian turnQP1
+--     radianQP2 = toRadian turnQP2
+--     radianPR1 = toRadian turnPR1
+--     radianPR2 = toRadian turnPR2
+--     radianRP1 = toRadian turnRP1
+--     radianRP2 = toRadian turnRP2
+--     radianQR1 = toRadian turnQR1
+--     radianQR2 = toRadian turnQR2
+--     radianRQ1 = toRadian turnRQ1
+--     radianRQ2 = toRadian turnRQ2
+--     posPQ1 = (rad |* toUnit radianPQ1) |+ p
+--     posPQ2 = (rad |* toUnit radianPQ2) |+ p
+--     posQP1 = (rad |* toUnit radianQP1) |+ q
+--     posQP2 = (rad |* toUnit radianQP2) |+ q
+--     posPR1 = (rad |* toUnit radianPR1) |+ p
+--     posPR2 = (rad |* toUnit radianPR2) |+ p
+--     posRP1 = (rad |* toUnit radianRP1) |+ r
+--     posRP2 = (rad |* toUnit radianRP2) |+ r
+--     posQR1 = (rad |* toUnit radianQR1) |+ q
+--     posQR2 = (rad |* toUnit radianQR2) |+ q
+--     posRQ1 = (rad |* toUnit radianRQ1) |+ r
+--     posRQ2 = (rad |* toUnit radianRQ2) |+ r
+--     colors = [red, green, blue]
+--     [pa, pt] = drawBlob rad [(simple turnPQ1, simple turnPQ2)]
+--     [qa, qt] = drawBlob rad [(simple turnQP1, simple turnQP2)]
+--     arcs = [uncurry translate p pa, uncurry translate q qa]
+--     tris = [uncurry translate p pt, uncurry translate q qt]
+
+-- drawBlob :: Radius -> [(Turn,Turn)] -> [Picture]
+-- drawBlob rad fromTos = [
+--   case compare from to of
+--     GT -> arcSolid (degrees from) 360 rad <> arcSolid 0 (degrees to) rad
+--     _ -> arcSolid (degrees from) (degrees to) rad
+--   , polygon [zeroV, rad |* toUnit (toRadian from), rad |* toUnit (toRadian to)]
+--   ]
 
 event :: Event -> View c -> View c
 event e v = trace (show e) $ case e of
@@ -130,7 +133,14 @@ update dt v = v { structOrModel = case m of
   where m = structOrModel v
 
 drawStruct :: Chem c => Struct c -> Picture
-drawStruct (Struct ws os) = Pictures $ fmap (drawWall yellow) ws ++ fmap drawOrb os
+drawStruct (Struct ws os) = Pictures (fmap (drawWall yellow) ws) <> drawVoronoi (voronoi vs) --fmap drawOrb os
+  where
+    colorI :: c -> Int
+    colorI ch = 1
+    vs = sortBy (\((_,y1),_) ((_,y2),_) -> compare y1 y2) $ fmap (\(Orb p c) -> (p, colorI c)) os
+
+drawVoronoi :: Voronoi -> Picture
+drawVoronoi v = blank
 
 drawModel :: Chem c => Model c -> Picture
 drawModel m = drawForm (form m) <> Pictures (fmap (drawBond (form m)) (innerIps m))
