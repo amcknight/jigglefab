@@ -5,6 +5,8 @@ module Simulation
 import Graphics.Gloss.Data.ViewPort (ViewPort)
 import Data.Vector (toList)
 import System.Random (getStdGen, StdGen)
+import Data.List (sortBy)
+import Data.Fixed (mod')
 import Geometry.Space
 import Time
 import Point
@@ -26,9 +28,7 @@ import Struct
 import Orb
 import Chem.Sem
 import Geometry.Angle
-import Data.Fixed (mod')
 import Geometry.Tiling
-import Data.List (sortBy)
 
 run :: IO ()
 run = runSeeded =<< getStdGen
@@ -135,8 +135,7 @@ update dt v = v { structOrModel = case m of
 drawStruct :: Chem c => Struct c -> Picture
 drawStruct (Struct ws os) = Pictures (fmap (drawWall yellow) ws) <> drawVoronoi (voronoi ps)
   where
-    -- Sorted High Y to Low Y
-    ps = sortBy (\((_,y1),_) ((_,y2),_) -> compare y2 y1) $ fmap (\(Orb p c) -> (p, chemColor c)) os
+    ps = fmap (\(Orb p c) -> (p, chemColor c)) os
 
 drawVoronoi :: Voronoi -> Picture
 drawVoronoi v = Pictures $ fmap drawArc (arcs v) <> fmap drawTri (tris v)

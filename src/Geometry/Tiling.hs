@@ -5,7 +5,7 @@ module Geometry.Tiling
   , voronoi
   ) where
 import Graphics.Gloss (Picture)
-import Data.List (sortBy)
+import Data.List (sortBy, sort)
 import Data.Maybe (catMaybes)
 import Geometry.Vector
 import Geometry.Angle
@@ -20,12 +20,12 @@ data Arc = Arc
   , from :: Turn
   , to :: Turn
   , arcColor :: Color
-  } deriving (Show, Eq)
+  } deriving Show
 
 data Tri = Tri
   { trip :: (Position, Position, Position)
   , triColor :: Color 
-  } deriving (Show, Eq)
+  } deriving Show
 
 data Bouy = Bouy
   { pos :: Position
@@ -37,19 +37,27 @@ data Bouy = Bouy
 data Voronoi = Voronoi
   { arcs :: [Arc]
   , tris :: [Tri]
-  } deriving (Show, Eq)
+  } deriving Show
 
 data Beach = Beach
-  { verts :: [ColorPos] -- (Assumes sorted by Y)
-  , circs :: [IxPos] -- Bouy Index
+  { events :: [Event]
   , bouys :: [Bouy]
   , voron :: Voronoi
-  }
+  } deriving Show
+
+data Event = NewBouy ColorPos | Cross IxPos | CloseBouy IxPos deriving (Show, Eq)
+height :: Event -> Float 
+height (NewBouy ((_,y), _)) = y
+height (Cross ((_,y), _)) = y
+height (CloseBouy ((_,y), _)) = y
+
+instance Ord Event where
+  compare e1 e2 = compare (height e2) (height e1)
 
 voronoi :: [ColorPos] -> Voronoi
-voronoi ps = voronoi' $ Beach ps [] [] $ Voronoi [] []
+voronoi ps = voronoi' $ Beach (sort (fmap NewBouy ps)) [] $ Voronoi [] []
 voronoi' :: Beach -> Voronoi
-voronoi' (Beach [] [] bs v) = v { arcs = arcs v ++ fmap completeArc bs }
+voronoi' (Beach [] bs v) = v
 voronoi' b = voronoi' $ updateBeach b
 
 completeArc :: Bouy -> Arc
@@ -58,24 +66,29 @@ completeArc (Bouy p _ Nothing c) = Arc p 0 1 c
 completeArc (Bouy p (Just lp) (Just rp) i) = Arc p (direction (lp |- p)) (direction (rp |- p)) i
 
 updateBeach :: Beach -> Beach
-updateBeach b@(Beach [] [] _ v) = undefined -- shouldn't happen
-updateBeach b@(Beach [] (c:cs) _ _) = removeBouy c $ b { circs = cs }
-updateBeach b@(Beach (p:ps) [] _ _) = addBouy p $ b { verts = ps }
-updateBeach b@(Beach (p@((_,py),_):ps) (c@((_,cy),_):cs) _ _) = case compare py cy of
-  LT -> addBouy p $ b { verts = ps }
-  _ -> removeBouy c $ b { circs = cs }
+updateBeach (Beach [] _ _) = undefined -- shouldn't happen
+updateBeach beach@(Beach (e:es) _ _) = case e of
+  NewBouy p -> addBouy p newBeach
+  Cross c -> removeBouy c newBeach
+  CloseBouy c -> closeBouy c newBeach
+  where newBeach = beach { events = es }
+
+closeBouy :: IxPos -> Beach -> Beach
+closeBouy (p,i) (Beach es bs v) = case getBouy i bs of
+  Nothing -> undefined -- Shouldn't happen
+  Just b -> Beach es (take i bs ++ drop (i+1) bs) (Voronoi (arcs v ++ [completeArc b]) (tris v))
 
 removeBouy :: IxPos -> Beach -> Beach
-removeBouy c (Beach ps cs bs v) = case bs of
+removeBouy c (Beach es bs v) = case bs of
   [] -> undefined
   [_] -> undefined
   [_,_] -> undefined
   bs -> case (bs, c) of
     (_, (_,0)) -> undefined 
     ([_,_,_], (_,2)) -> undefined
-    (lb:(b:(rb:bs)), (p,1)) -> Beach ps cs (lb{ rightPos = Just p } : rb{ leftPos = Just p } : bs) (v{ tris = tris v ++ newTris lb b rb p})
+    (lb:(b:(rb:bs)), (p,1)) -> Beach es (lb{ rightPos = Just p } : rb{ leftPos = Just p } : bs) (v{ tris = tris v ++ newTris lb b rb p})
     (bs, (p,i)) -> let
-      newB = removeBouy c $ Beach ps cs (drop (i-1) bs) v
+      newB = removeBouy c $ Beach es (drop (i-1) bs) v
       in newB { bouys = take (i-1) bs ++ bouys newB }
 
 newTris :: Bouy -> Bouy -> Bouy -> Position -> [Tri]
@@ -87,17 +100,17 @@ newTris lb b rb p = catMaybes
   ]
 
 addBouy :: ColorPos -> Beach -> Beach
-addBouy (p,c) (Beach ps cs [] v) = Beach ps cs [Bouy p Nothing Nothing c] v
-addBouy (p@(x,y),c) (Beach ps cs bs v) = Beach ps newCs newBs v
+addBouy (p,c) (Beach es [] v) = Beach (sort (es ++ [CloseBouy (p |+ downV, 0)])) [Bouy p Nothing Nothing c] v
+addBouy (p@(x,y),c) (Beach es bs v) = Beach newEs newBs v
   where
     bi = findBouyI p bs
     newBs = case getBouy bi bs of
       Nothing -> undefined -- Shouldn't happen
       Just splitB -> take bi bs ++ [splitB, Bouy p Nothing Nothing c, splitB] ++ drop (bi+1) bs
-    newCs = circleEvents y newBs
+    newEs = sort $ es ++ circleEvents y newBs ++ [CloseBouy (p |+ downV, 0)]
 
-circleEvents :: Float -> [Bouy] -> [IxPos]
-circleEvents sweep bs = sortBy (\((_,y1),_) ((_,y2),_) -> compare y1 y2) $ filter (\((_,y),_) -> y-1 < sweep) (circleEvents' bs 0)
+circleEvents :: Float -> [Bouy] -> [Event]
+circleEvents sweep bs = Cross <$> filter (\((_,y),_) -> y-1 < sweep) (circleEvents' bs 0)
 circleEvents' :: [Bouy] -> Int -> [IxPos]
 circleEvents' [] _ = []
 circleEvents' [_] _ = []

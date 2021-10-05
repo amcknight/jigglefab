@@ -9,6 +9,7 @@ module Chem.Valence
 , twoBall
 , twoBallInner
 , threeBall
+, threeBallInner
 , fourBall
 ) where
 
@@ -97,6 +98,13 @@ threeBall =
   orbStruct (Orb (0,-2) (vale 1)) <>
   orbStruct (Orb (20,-3) (vale 1)) <>
   orbStruct (Orb (10, 20) (vale 1))
+
+threeBallInner :: Struct Valence
+threeBallInner = 
+  -- wallStruct (VLine 0) <>
+  orbStruct (Orb zeroV (vale 1)) <>
+  orbStruct (Orb (0.2, 0.6) (vale 2)) <>
+  orbStruct (Orb (-0.2, 0.5) (vale 3))
 
 fourBall :: Struct Valence
 fourBall =
