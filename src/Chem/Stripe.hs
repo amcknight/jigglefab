@@ -71,7 +71,7 @@ longStruct = string0 <>
       0 -> No A
       1 -> No B
       2 -> No C
-      _ -> undefined
+      _ -> error "Impossible. mod 3 is under 3"
 
     string0 = orbStruct $ Orb (pos rad left 0) (Yes A)
     string1 = orbStruct $ Orb (pos rad left 1) (chem 1)

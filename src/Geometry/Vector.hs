@@ -163,8 +163,8 @@ squashTurn :: Radius -> Vector -> Vector -> Turn
 squashTurn rad v1 v2 = if 2*rad <= d then 0 else toTurn (acos ((d/2)/rad))
   where d = dist v1 v2
 
-circleFrom3 :: Position -> Position -> Position -> (Position, Radius)
-circleFrom3 (x1,y1) (x2,y2) (x3,y3) = (center, dist (x1,y1) center)
+circleFrom3 :: Position -> Position -> Position -> Maybe (Position, Radius)
+circleFrom3 p@(x1,y1) q@(x2,y2) r@(x3,y3) = if colinear p q r then Nothing else Just (center, dist (x1,y1) center)
   where
     center = (-1/(2*a)) |* (b, c)
     a = x1*(y2-y3) - y1*(x2-x3) + x2*y3 - x3*y2
@@ -176,3 +176,11 @@ circleFrom3 (x1,y1) (x2,y2) (x3,y3) = (center, dist (x1,y1) center)
     c =   (x1^2 + y1^2) * (x2-x3) 
         + (x2^2 + y2^2) * (x3-x1) 
         + (x3^2 + y3^2) * (x1-x2)
+
+colinear :: Position -> Position -> Position -> Bool 
+colinear p q r
+  | parallel (q |- p) (r |- p) = True
+  | otherwise = False
+
+parallel :: Vector -> Vector -> Bool 
+parallel v w = direction v == direction w || direction v == pole (direction w)

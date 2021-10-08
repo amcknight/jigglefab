@@ -71,14 +71,14 @@ toRGB (Color h s v) = RGB (toVal (r'+m)) (toVal (g'+m)) (toVal (b'+m))
     x = c * (1 - abs (((h*6) `mod'` 2) - 1))
     m = v-c
     (r',g',b')
-      | h < 0 = undefined
+      | h < 0 = error "Hue can't be negative"
       | h < 1/6 = (c,x,0)
       | h < 2/6 = (x,c,0)
       | h < 3/6 = (0,c,x)
       | h < 4/6 = (0,x,c)
       | h < 5/6 = (x,0,c)
       | h < 6/6 = (c,0,x)
-      | otherwise = undefined
+      | otherwise = error "Hue can't be greater than 1"
 
 toVal :: Float -> Int
 toVal = round . (255*)

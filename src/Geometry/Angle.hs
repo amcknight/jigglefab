@@ -2,6 +2,7 @@ module Geometry.Angle
 ( Turn
 , Radian
 , TurnDirection (..)
+, AngleType (..)
 , tau
 , toRadian, toTurn
 , degrees, undegrees
@@ -9,6 +10,7 @@ module Geometry.Angle
 , pole
 , chord
 , simple
+, separation
 ) where
 
 import Data.Fixed (mod')
@@ -16,6 +18,7 @@ import Data.Fixed (mod')
 type Turn = Float -- From 0 to 1
 type Radian = Float -- From -pi to pi
 data TurnDirection = Clockwise | CounterClockwise
+data AngleType = Zero | Acute | Orthogonal | Obtuse | Opposite
 
 tau :: Float
 tau = 2*pi
@@ -52,3 +55,14 @@ simple t = case compare t' 0 of
   LT -> t'+1
   _ -> t'
   where t' = t `mod'` 1
+
+separation :: Turn -> Turn -> AngleType
+separation t1 t2
+  | sep == 0 = Zero
+  | sep == 0.5 = Opposite
+  | sep == 0.25 = Orthogonal
+  | sep > 0.25 = Obtuse
+  | otherwise = Acute
+  where
+    rawSep = abs (simple t1 - simple t2)
+    sep = if rawSep > 0.5 then rawSep - 0.5 else rawSep

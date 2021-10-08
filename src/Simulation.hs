@@ -29,13 +29,15 @@ import Orb
 import Chem.Sem
 import Geometry.Angle
 import Geometry.Tiling
+import Geometry.Voronoi
+import qualified Data.Vector as V
 
 run :: IO ()
 run = runSeeded =<< getStdGen
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
-  let struct = twoBallInner
+  let struct = threeBallInner
   let (model, _) = runState (buildModel 3 struct) seed
   let view = View (Left struct) zeroV 250
   let frameRate = 30
@@ -133,26 +135,15 @@ update dt v = v { structOrModel = case m of
   where m = structOrModel v
 
 drawStruct :: Chem c => Struct c -> Picture
-drawStruct (Struct ws os) = Pictures (fmap (drawWall yellow) ws) <> drawVoronoi (voronoi ps)
-  where
-    ps = fmap (\(Orb p c) -> (p, chemColor c)) os
+drawStruct (Struct ws os) = Pictures $ fmap (drawWall yellow) ws <> fmap (drawWedge vos) (tileVoronoi (voronoi (fmap orbPos os)))
+  where vos = V.fromList os
 
-drawVoronoi :: Voronoi -> Picture
-drawVoronoi v = Pictures $ fmap drawArc (arcs v) <> fmap drawTri (tris v)
+drawWedge :: Chem c => V.Vector (Orb c) -> Wedge -> Picture
+drawWedge os (Pie p from to i) = uncurry translate p $ Color (colorFromOrbI os i) (arcSolid 1 from to)
+drawWedge os (Tri p q r i) = Color (colorFromOrbI os i) (polygon [p, q, r])
 
-drawArc :: Arc -> Picture
-drawArc (Geometry.Tiling.Arc p from to c) = uncurry translate p $ Color (C.toGlossColor c) $ circleSolid 1
-
-drawTri :: Tri -> Picture
-drawTri (Tri (a,b,c) i) = polygon [a, b, c]
-
--- drawBlob :: Radius -> [(Turn,Turn)] -> [Picture]
--- drawBlob rad fromTos = [
---   case compare from to of
---     GT -> arcSolid (degrees from) 360 rad <> arcSolid 0 (degrees to) rad
---     _ -> arcSolid (degrees from) (degrees to) rad
---   , polygon [zeroV, rad |* toUnit (toRadian from), rad |* toUnit (toRadian to)]
---   ]
+colorFromOrbI :: Chem c => V.Vector (Orb c) -> Int -> Color
+colorFromOrbI os i = C.toGlossColor $ chemColor $ orbChem $ os V.! i
 
 drawModel :: Chem c => Model c -> Picture
 drawModel m = drawForm (form m) <> Pictures (fmap (drawBond (form m)) (innerIps m))
