@@ -17,6 +17,7 @@ module Geometry.Vector
 , arcDist
 , reflect
 , squashTurn
+, circleFrom3
 ) where
 
 import Control.Monad.State
@@ -161,3 +162,17 @@ radSqFromArc a v1 v2 = distSq v1 v2 / chord a ^ 2
 squashTurn :: Radius -> Vector -> Vector -> Turn
 squashTurn rad v1 v2 = if 2*rad <= d then 0 else toTurn (acos ((d/2)/rad))
   where d = dist v1 v2
+
+circleFrom3 :: Position -> Position -> Position -> (Position, Radius)
+circleFrom3 (x1,y1) (x2,y2) (x3,y3) = (center, dist (x1,y1) center)
+  where
+    center = (-1/(2*a)) |* (b, c)
+    a = x1*(y2-y3) - y1*(x2-x3) + x2*y3 - x3*y2
+
+    b =   (x1^2 + y1^2) * (y3-y2)
+        + (x2^2 + y2^2) * (y1-y3)
+        + (x3^2 + y3^2) * (y2-y1)
+ 
+    c =   (x1^2 + y1^2) * (x2-x3) 
+        + (x2^2 + y2^2) * (x3-x1) 
+        + (x3^2 + y3^2) * (x1-x2)

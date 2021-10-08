@@ -39,6 +39,8 @@ library
       Color
       Form
       Geometry.Angle
+      Geometry.Bound
+      Geometry.Line
       Geometry.Space
       Geometry.Tiling
       Geometry.Vector
