@@ -31,13 +31,14 @@ import Geometry.Angle
 import Geometry.Tiling
 import Geometry.Voronoi
 import qualified Data.Vector as V
+import Geometry.Line
 
 run :: IO ()
 run = runSeeded =<< getStdGen
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
-  let struct = threeBallInner
+  let struct = fourBallInner
   let (model, _) = runState (buildModel 3 struct) seed
   let view = View (Left struct) zeroV 250
   let frameRate = 30
@@ -135,8 +136,11 @@ update dt v = v { structOrModel = case m of
   where m = structOrModel v
 
 drawStruct :: Chem c => Struct c -> Picture
-drawStruct (Struct ws os) = Pictures $ fmap (drawWall yellow) ws <> fmap (drawWedge vos) (tileVoronoi (voronoi (fmap orbPos os)))
-  where vos = V.fromList os
+drawStruct (Struct ws os) = Pictures $ fmap (drawWall yellow) ws <> fmap drawOrb os <> fmap drawEdge (voronoi (fmap orbPos os))-- <> fmap (drawWedge vos) (tileVoronoi (voronoi (fmap orbPos os)))
+  where
+    vos = V.fromList os
+    drawEdge :: Edge -> Picture
+    drawEdge (Edge (Seg p q) _) = Color white $ line [p, q]
 
 drawWedge :: Chem c => V.Vector (Orb c) -> Wedge -> Picture
 drawWedge os (Pie p from to i) = uncurry translate p $ Color (colorFromOrbI os i) (arcSolid 1 from to)
@@ -158,7 +162,7 @@ drawBall :: Chem c => Ball c -> Picture
 drawBall (Ball (Point p _) c) = drawOrb $ Orb p c
 
 drawOrb :: Chem c => Orb c -> Picture
-drawOrb (Orb (x,y) chem) = translate x y $ drawCircle (C.toGlossColor (chemColor chem)) 1
+drawOrb (Orb (x,y) chem) = translate x y $ drawCircle (C.toGlossColor (chemColor chem)) 0.01 <> Color (C.toGlossColor (chemColor chem)) (circle 1)
 
 drawWall :: Color -> Wall -> Picture
 drawWall color (HLine y) = Color color $ line [(-1000000, y), (1000000, y)]

@@ -11,6 +11,7 @@ module Chem.Valence
 , threeBall
 , threeBallInner
 , fourBall
+, fourBallInner
 ) where
 
 import Chem
@@ -41,6 +42,7 @@ instance Chem Valence where
     | w == 0 = blue 
     | w == 1 = red 
     | w == 2 = green 
+    | w == 3 = magenta 
     | otherwise = yellow
   -- chemColor ch = case desire ch of
   --   EQ -> grey
@@ -112,3 +114,11 @@ fourBall =
   orbStruct (Orb (20,-3) (vale 1)) <>
   orbStruct (Orb (10, 20) (vale 1)) <>
   orbStruct (Orb (14, 20) (vale 1))
+
+fourBallInner :: Struct Valence
+fourBallInner = 
+  -- wallStruct (VLine 0) <>
+  orbStruct (Orb zeroV (vale 1)) <>
+  orbStruct (Orb (0.2, 0.6) (vale 2)) <>
+  orbStruct (Orb (-0.2, 0.5) (vale 3)) <>
+  orbStruct (Orb (-0.8, 0.1) (vale 4))

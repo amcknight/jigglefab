@@ -11,14 +11,16 @@ module Geometry.Angle
 , chord
 , simple
 , separation
+, slope
 ) where
 
 import Data.Fixed (mod')
+import Debug.Trace
 
 type Turn = Float -- From 0 to 1
 type Radian = Float -- From -pi to pi
-data TurnDirection = Clockwise | CounterClockwise
-data AngleType = Zero | Acute | Orthogonal | Obtuse | Opposite
+data TurnDirection = Clockwise | CounterClockwise deriving Show
+data AngleType = Zero | Acute | Orthogonal | Obtuse | Opposite deriving Show
 
 tau :: Float
 tau = 2*pi
@@ -65,4 +67,7 @@ separation t1 t2
   | otherwise = Acute
   where
     rawSep = abs (simple t1 - simple t2)
-    sep = if rawSep > 0.5 then rawSep - 0.5 else rawSep
+    sep = if rawSep > 0.5 then 1 - rawSep else rawSep
+
+slope :: Turn -> Float 
+slope = tan . toRadian
