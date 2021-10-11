@@ -2,6 +2,9 @@
 module Geometry.Voronoi
   ( Edge(..)
   , voronoi
+  , parabolaCrossX
+  , parabolaParams
+  , parabolaCrossXs
   ) where
 import Graphics.Gloss (Picture)
 import Data.List (sortBy, sort)
@@ -14,11 +17,17 @@ import Geometry.Bound
 import Geometry.Space
 import Geometry.Angle
 import Data.Fixed (mod')
+import Data.Either (partitionEithers)
 
 type IxPos = (Position, Int)
 type Bouy = IxPos
 data Cross = Cross Position Radius Int deriving (Show, Eq)
-data Ray = Ray Position Turn Int Int deriving Show
+data Ray = Ray Position Turn Int Int deriving (Show, Eq)
+
+instance Ord Ray where
+  compare (Ray _ _ i1 j1) (Ray _ _ i2 j2) = case compare i1 i2 of
+    EQ -> compare j1 j2
+    o -> o
 
 pos :: IxPos -> Position
 pos = fst
@@ -43,13 +52,29 @@ instance Ord Event where
   compare e1 e2 = compare (height e2) (height e1)
 
 voronoi :: [Position] -> [Edge]
-voronoi ps = edgesFromRays (bufferedBound ps 1) $ voronoi' $ Beach (sort (fmap BouyEvent (zip ps [0..]))) [] []
+voronoi ps = edgesFromRays (bufferedBound ps 10) $ voronoi' $ Beach (sort (fmap BouyEvent (zip ps [0..]))) [] []
 voronoi' :: Beach -> [Ray]
-voronoi' (Beach [] _ rs) = rs
+voronoi' b@(Beach [] _ rs) = rs
 voronoi' b = voronoi' $ updateBeach b
 
 edgesFromRays :: Bound -> [Ray] -> [Edge]
-edgesFromRays bnd = fmap (edgeFromRay bnd)
+edgesFromRays bnd rs = pairs ++ fmap (edgeFromRay bnd) strays
+  where (pairs, strays) = rayDups rs
+
+rayDups :: [Ray] -> ([Edge], [Ray])
+rayDups rs = partitionEithers $ addRayDups rs []
+
+addRayDups :: [Ray] -> [Either Edge Ray] -> [Either Edge Ray]
+addRayDups [] ers = ers
+addRayDups [r] ers = Right r : ers
+addRayDups (r1:r2:rs) ers = case edgeRay r1 r2 of
+  Left e -> Left e : addRayDups rs ers
+  Right r -> Right r : addRayDups (r2:rs) ers
+  where
+    edgeRay :: Ray -> Ray -> Either Edge Ray
+    edgeRay r1@(Ray p1 _ i1 j1) (Ray p2 _ i2 j2) = if i1 == i2 && j1 == j2
+      then Left $ Edge (Seg p1 p2) (i1, j1)
+      else Right r1
 
 edgeFromRay :: Bound -> Ray -> Edge
 edgeFromRay b (Ray p dir i j) = Edge (Seg p (rayCrossBound b p (simple dir))) (i,j)
@@ -78,7 +103,7 @@ rayCrossBound ((mxX,mxY),(mnX,mnY)) p@(x,y) dir
 
 
 updateBeach :: Beach -> Beach
-updateBeach (Beach [] _ _) = error "Update beach should not be called with no events"
+updateBeach (Beach [] _ _) = error "updateBeach: No events"
 updateBeach beach@(Beach (e:es) _ _) = case e of
   BouyEvent p -> processBouy p newBeach
   CrossEvent c -> processCross c newBeach
@@ -92,16 +117,27 @@ processCross c@(Cross p r i) (Beach es bs rs) = case bs of
   bs -> case (bs, i) of
     (_, 0) -> error "Bouy index should never be the left-most bouy"
     ([_,_,_], 2) -> error "Bouy index should never be the right-most bouy"
-    (lb:(b:(rb:bs)), 1) -> Beach es (lb:rb:bs) (rs ++ newRays p lb b rb)
+    (lb:(b:(rb:bs)), 1) -> processCross' c (Beach es (lb:b:rb:bs) rs)
     (bs, _) -> let
       newB = processCross (Cross p r 1) $ Beach es (drop (i-1) bs) rs
       in newB { bouys = take (i-1) bs ++ bouys newB }
 
+processCross' :: Cross -> Beach -> Beach
+processCross' c@(Cross p _ _) (Beach es (lb@(lp,li):b:rb@(rp,ri):bs) rs)
+  | crossContainsBouy c bs = Beach es (lb:b:rb:bs) rs
+  | li == ri = Beach es (lb:bs) (rs ++ newRays p lb b rb)
+  | otherwise = Beach es (lb:rb:bs) (rs ++ newRays p lb b rb)
+processCross' _ _ = error "Previous conditions should have made this impossible"
+
+crossContainsBouy :: Cross -> [Bouy] -> Bool
+crossContainsBouy _ [] = False
+crossContainsBouy c@(Cross cp rad _) ((bp,_):bs) = (distSq cp bp < rad^2) || crossContainsBouy c bs
+
 newRays :: Position -> Bouy -> Bouy -> Bouy -> [Ray]
 newRays pos (p1,i1) (p2,i2) (p3,i3) =
-  [ Ray pos (awayRay pos p1 p2 p3) i2 i3
-  , Ray pos (awayRay pos p2 p1 p3) i1 i3
-  , Ray pos (awayRay pos p3 p1 p2) i1 i2
+  [ if i2 < i3 then Ray pos (awayRay pos p1 p2 p3) i2 i3 else Ray pos (awayRay pos p1 p2 p3) i3 i2
+  , if i1 < i3 then Ray pos (awayRay pos p2 p1 p3) i1 i3 else Ray pos (awayRay pos p2 p1 p3) i3 i1
+  , if i1 < i2 then Ray pos (awayRay pos p3 p1 p2) i1 i2 else Ray pos (awayRay pos p3 p1 p2) i2 i1
   ]
 
 awayRay :: Position -> Position -> Position -> Position -> Turn
@@ -143,23 +179,16 @@ crossFrom3 (p1,i1) (p2,i2) (p3,i3) bi =
 
 findBouyI :: Position -> [Bouy] -> Int
 findBouyI _ [] = error "Searching for bouy in empty bouy list"
-findBouyI _ [b] = 0
-findBouyI p@(x,_) (b1:b2:bs) = case compare x x1 of
-  GT -> case compare x x2 of
-    LT -> case bouySide p p1 p2 of
-      GT -> 1
-      _ -> 0
-    _ -> findBouyI p (b2:bs)
-  _ -> 0
-  where
-    p1@(x1,_) = pos b1
-    p2@(x2,_) = pos b2
+findBouyI (px,sw) bs = findBouyI' px $ parabolaCrossXs sw $ fmap fst bs
+findBouyI' :: Float -> [Float] -> Int
+findBouyI' x [] = 0
+findBouyI' x (cx:xs) = case compare x cx of
+  LT -> 0
+  EQ -> 0
+  GT -> 1 + findBouyI' x xs
 
-bouySide :: Position -> Position -> Position -> Ordering
-bouySide p a b = compare (bouyY p a) (bouyY p b)
-
-bouyY :: Position -> Position -> Float
-bouyY (sx,sy) (bx,by) = ((sx-bx)^2 + by^2 - sy^2) / (by-sy)
+-- bouyY :: Position -> Position -> Float
+-- bouyY (sx,sy) (bx,by) = ((sx-bx)^2 + by^2 - sy^2) / (by-sy)
 
 getBouy :: Int -> [Bouy] -> Maybe Bouy
 getBouy _ [] = Nothing
@@ -167,3 +196,45 @@ getBouy i (b:bs) = case compare i 0 of
   LT -> Nothing
   EQ -> Just b
   GT -> getBouy (i-1) bs
+
+parabolaCrossXs :: Float -> [Position] -> [Float]
+parabolaCrossXs _ [] = []
+parabolaCrossXs _ [b] = []
+parabolaCrossXs sw bs = zipWith (parabolaCrossX sw) bs (tail bs)
+
+parabolaCrossX :: Float -> Position -> Position -> Float
+parabolaCrossX sw p1@(px1,_) p2@(px2,_)
+  | aDiff == 0 = 0.5*(px1+px2)
+  | px1 < px2 = innerX
+  | otherwise = outerX
+  where
+    (a1,b1,c1) = parabolaParams sw p1
+    (a2,b2,c2) = parabolaParams sw p2
+    aDiff = a2 - a1
+    bDiff = b2 - b1
+    cDiff = c2 - c1
+    part = 0.5*bDiff/aDiff
+    root = sqrt(part^2 - cDiff/aDiff)
+    x1 = root - part
+    x2 = - root - part
+    -- y1 = a1*x1^2 + b1*x1 + c1
+    -- y2 = a1*x2^2 + b1*x2 + c1
+    isInner1 = between x1 px1 px2
+    isInner2 = between x2 px1 px2
+    (innerX, outerX) = case (isInner1, isInner2) of
+      (True, True) -> error "Both are inner"
+      (False, False) -> error "Both are outer"
+      (True, False) -> (x1, x2)
+      (False, True) -> (x2, x1)
+
+between :: Float -> Float -> Float -> Bool 
+between x a b
+  | b < a = between x b a
+  | otherwise = a <= x && x <= b
+
+parabolaParams :: Float -> Position -> (Float, Float, Float)
+parabolaParams sw (px,py) = (a,b,c)
+  where
+    a = 0.5/(py - sw)
+    b = -2*px * a
+    c = (px^2 + py^2 - sw^2) * a
