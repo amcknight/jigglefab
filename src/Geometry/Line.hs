@@ -2,6 +2,7 @@ module Geometry.Line
 ( Line(..)
 , Seg(..)
 , segCrosses
+, crossPointsAtUnit
 ) where
 import Geometry.Vector
 import Pair
@@ -37,3 +38,21 @@ lineCross (Line (x1,y1) (x2,y2)) (Line (x3,y3) (x4,y4))
     b = y1-m21*x1
     x = ((y3-y1)*x43*x21 + x1*y21*x43 - x3*y43*x21) / (y21*x43 - y43*x21)
     y = m21*x+b
+
+crossPointsAtUnit :: Line -> Maybe (Position, Position)
+crossPointsAtUnit (Line (px, py) (qx, qy)) = case compare discriminant 0 of
+  LT -> Nothing
+  _ -> Just ((1/disSq) |* (scale |+ preXY), (1/disSq) |* (scale |- preXY))
+  where
+    dx = qx - px
+    dy = qy - py
+    disSq = dx^2 + dy^2
+    detPQ = px*qy - py*qx
+    discriminant = disSq - detPQ^2
+    ysign = case compare dy 0 of
+      LT -> -1
+      _ -> 1
+
+    root = sqrt discriminant
+    preXY = root |* (ysign * dx, abs dy)
+    scale = detPQ |* (dy, -dx)

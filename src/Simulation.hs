@@ -112,8 +112,8 @@ drawPosAt :: Position -> Color -> Picture
 drawPosAt pos c = Color c $ uncurry translate pos $ circleSolid 0.02
 
 drawWedge :: Chem c => V.Vector (Orb c) -> Wedge -> Picture
-drawWedge os (Pie p from to i) = uncurry translate p $ Color (colorFromOrbI os i) (arcSolid 1 from to)
-drawWedge os (Tri p q r i) = Color (colorFromOrbI os i) (polygon [p, q, r])
+drawWedge os (Pie p from to c) = uncurry translate p $ Color (C.toGlossColor c) (arcSolid 1 from to)
+drawWedge os (Tri p q r c) = Color (C.toGlossColor c) (polygon [p, q, r])
 
 colorFromOrbI :: Chem c => V.Vector (Orb c) -> Int -> Color
 colorFromOrbI os i = C.toGlossColor $ chemColor $ orbChem $ os V.! i
