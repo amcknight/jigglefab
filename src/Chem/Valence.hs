@@ -120,4 +120,5 @@ fourBallInner =
   -- wallStruct (VLine 0) <>
   orbStruct (Orb zeroV (vale 1)) <>
   orbStruct (Orb (0.2, 0.6) (vale 2)) <>
+  orbStruct (Orb (-0.3, 0.3) (vale 3)) <>
   orbStruct (Orb (-0.7, 1.1) (vale 4))

@@ -60,69 +60,7 @@ draw v = translate x y $ scale z z $ case sm of
     z = zoom v
     (x, y) = center v
 
--- draw v = Pictures $ zipWith Color colors arcs <> zipWith Color colors tris
---   where
---     rad = 400
---     p = (0, 100)
---     q = (0,-100)
---     r = (50,  0)
---     squashPQ = squashTurn rad p q
---     squashPR = squashTurn rad p r
---     squashQR = squashTurn rad q r
---     dirPQ = direction (q |- p)
---     dirPR = direction (r |- p)
---     dirQR = direction (r |- q)
---     turnPQ1 = dirPQ + squashPQ
---     turnPQ2 = dirPQ - squashPQ
---     turnQP1 = pole dirPQ + squashPQ
---     turnQP2 = pole dirPQ - squashPQ
---     turnPR1 = dirPR + squashPQ
---     turnPR2 = dirPR - squashPQ
---     turnRP1 = pole dirPR + squashPR
---     turnRP2 = pole dirPR - squashPR
---     turnQR1 = dirPR + squashPR
---     turnQR2 = dirPR - squashPR
---     turnRQ1 = pole dirQR + squashQR
---     turnRQ2 = pole dirQR - squashQR
---     radianPQ1 = toRadian turnPQ1
---     radianPQ2 = toRadian turnPQ2
---     radianQP1 = toRadian turnQP1
---     radianQP2 = toRadian turnQP2
---     radianPR1 = toRadian turnPR1
---     radianPR2 = toRadian turnPR2
---     radianRP1 = toRadian turnRP1
---     radianRP2 = toRadian turnRP2
---     radianQR1 = toRadian turnQR1
---     radianQR2 = toRadian turnQR2
---     radianRQ1 = toRadian turnRQ1
---     radianRQ2 = toRadian turnRQ2
---     posPQ1 = (rad |* toUnit radianPQ1) |+ p
---     posPQ2 = (rad |* toUnit radianPQ2) |+ p
---     posQP1 = (rad |* toUnit radianQP1) |+ q
---     posQP2 = (rad |* toUnit radianQP2) |+ q
---     posPR1 = (rad |* toUnit radianPR1) |+ p
---     posPR2 = (rad |* toUnit radianPR2) |+ p
---     posRP1 = (rad |* toUnit radianRP1) |+ r
---     posRP2 = (rad |* toUnit radianRP2) |+ r
---     posQR1 = (rad |* toUnit radianQR1) |+ q
---     posQR2 = (rad |* toUnit radianQR2) |+ q
---     posRQ1 = (rad |* toUnit radianRQ1) |+ r
---     posRQ2 = (rad |* toUnit radianRQ2) |+ r
---     colors = [red, green, blue]
---     [pa, pt] = drawBlob rad [(simple turnPQ1, simple turnPQ2)]
---     [qa, qt] = drawBlob rad [(simple turnQP1, simple turnQP2)]
---     arcs = [uncurry translate p pa, uncurry translate q qa]
---     tris = [uncurry translate p pt, uncurry translate q qt]
-
--- drawBlob :: Radius -> [(Turn,Turn)] -> [Picture]
--- drawBlob rad fromTos = [
---   case compare from to of
---     GT -> arcSolid (degrees from) 360 rad <> arcSolid 0 (degrees to) rad
---     _ -> arcSolid (degrees from) (degrees to) rad
---   , polygon [zeroV, rad |* toUnit (toRadian from), rad |* toUnit (toRadian to)]
---   ]
-
-event :: Event -> View c -> View c
+event :: Graphics.Gloss.Interface.IO.Interact.Event -> View c -> View c
 event e v = case e of
   EventKey (MouseButton LeftButton) Down _ pos -> v
   EventKey {} -> v
@@ -136,11 +74,42 @@ update dt v = v { structOrModel = case m of
   where m = structOrModel v
 
 drawStruct :: Chem c => Struct c -> Picture
-drawStruct (Struct ws os) = Pictures $ fmap (drawWall yellow) ws <> fmap drawOrb os <> fmap drawEdge (voronoi (fmap orbPos os))-- <> fmap (drawWedge vos) (tileVoronoi (voronoi (fmap orbPos os)))
+drawStruct (Struct ws os) = Pictures $
+  fmap (drawWall yellow) ws <> 
+  fmap drawEdge (voronoi ps) <> 
+  fmap drawOrb os <> 
+  fmap (drawWedge vos) (tileVoronoi vos (voronoi ps))
+  --   
+  -- drawBeach (processBeach (initialBeach (fmap orbPos os)) 7)
   where
+    ps = fmap orbPos os
     vos = V.fromList os
-    drawEdge :: Edge -> Picture
-    drawEdge (Edge (Seg p q) _) = Color white $ line [p, q]
+
+drawEdge :: Edge -> Picture
+drawEdge (Edge (Seg p q) _) = Color white $ line [p, q]
+
+drawBeach :: Beach -> Picture
+drawBeach (Beach sw es bs rs) = Pictures $ fmap drawEvent es <> fmap (drawBouy sw) bs <> fmap drawRay rs <> drawSweep sw
+
+drawEvent :: Geometry.Voronoi.Event -> Picture 
+drawEvent (BouyEvent (pos, i)) = drawPosAt pos cyan
+drawEvent (CrossEvent (Cross pos rad i)) = Color (greyN 0.5) $ uncurry translate pos $ circle rad
+
+drawBouy :: Float -> Bouy -> Picture
+drawBouy sweep (pos@(x,y), i) = drawPosAt pos green <> Color green (uncurry translate (x,sweep) (drawParabola y sweep))
+
+drawParabola :: Float -> Float -> Picture
+drawParabola focalH sweep = line $ fmap (\xi -> (xi, parabY (focalH-sweep) xi)) [-100,-99.99..100]
+  where parabY h x = (x^2 + h^2)/(2*h)
+
+drawRay :: Ray -> Picture
+drawRay (Ray pos dir i j) = drawPosAt pos yellow
+
+drawSweep :: Float -> [Picture]
+drawSweep h = [Color red $ line [(-100000, h), (100000, h)]]
+
+drawPosAt :: Position -> Color -> Picture
+drawPosAt pos c = Color c $ uncurry translate pos $ circleSolid 0.02
 
 drawWedge :: Chem c => V.Vector (Orb c) -> Wedge -> Picture
 drawWedge os (Pie p from to i) = uncurry translate p $ Color (colorFromOrbI os i) (arcSolid 1 from to)

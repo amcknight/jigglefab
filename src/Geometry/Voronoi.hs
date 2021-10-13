@@ -1,10 +1,17 @@
 {-# LANGUAGE LambdaCase #-}
 module Geometry.Voronoi
   ( Edge(..)
+  , Beach(..)
+  , Event(..)
+  , Cross(..), Bouy(..)
+  , Ray (..)
   , voronoi
+  , initialBeach
+  , processBeach
   , parabolaCrossX
   , parabolaParams
   , parabolaCrossXs
+  , height
   ) where
 import Graphics.Gloss (Picture)
 import Data.List (sortBy, sort)
@@ -38,31 +45,41 @@ data Edge = Edge
   } deriving Show
 
 data Beach = Beach
-  { events :: [Event]
+  { sweep :: Float 
+  , events :: [Event]
   , bouys :: [Bouy]
   , rays :: [Ray]
   } deriving Show
 
 data Event = BouyEvent Bouy | CrossEvent Cross deriving (Show, Eq)
-height :: Event -> Float 
+height :: Event -> Float
 height (BouyEvent ((_,y), _)) = y
-height (CrossEvent (Cross (_,y) r _)) = y-r
+height (CrossEvent (Cross (_,y) r _)) = y - r
 
 instance Ord Event where
   compare e1 e2 = compare (height e2) (height e1)
 
 voronoi :: [Position] -> [Edge]
-voronoi ps = edgesFromRays (bufferedBound ps 10) $ voronoi' $ Beach (sort (fmap BouyEvent (zip ps [0..]))) [] []
+voronoi ps = edgesFromRays (bufferedBound ps 1) $ voronoi' $ initialBeach ps
 voronoi' :: Beach -> [Ray]
-voronoi' b@(Beach [] _ rs) = rs
+voronoi' b@(Beach _ [] _ rs) = rs
 voronoi' b = voronoi' $ updateBeach b
+
+initialBeach :: [Position] -> Beach
+initialBeach ps = Beach sw es [] []
+  where
+    sw = height (head es) + 1
+    es = sort $ BouyEvent <$> zip ps [0..]
+
+processBeach :: Beach -> Int -> Beach
+processBeach b = (iterate updateBeach b !!)
 
 edgesFromRays :: Bound -> [Ray] -> [Edge]
 edgesFromRays bnd rs = pairs ++ fmap (edgeFromRay bnd) strays
   where (pairs, strays) = rayDups rs
 
 rayDups :: [Ray] -> ([Edge], [Ray])
-rayDups rs = partitionEithers $ addRayDups rs []
+rayDups rs = partitionEithers $ addRayDups (sort rs) []
 
 addRayDups :: [Ray] -> [Either Edge Ray] -> [Either Edge Ray]
 addRayDups [] ers = ers
@@ -103,30 +120,32 @@ rayCrossBound ((mxX,mxY),(mnX,mnY)) p@(x,y) dir
 
 
 updateBeach :: Beach -> Beach
-updateBeach (Beach [] _ _) = error "updateBeach: No events"
-updateBeach beach@(Beach (e:es) _ _) = case e of
-  BouyEvent p -> processBouy p newBeach
-  CrossEvent c -> processCross c newBeach
-  where newBeach = beach { events = es }
+updateBeach (Beach _ [] _ _) = error "updateBeach: No events"
+updateBeach beach@(Beach sw (e:es) _ _) = if height e > sw
+  then error "Somehow the event is occurring above the sweep line"
+  else case e of
+    BouyEvent p -> processBouy p newBeach
+    CrossEvent c -> processCross c newBeach
+  where newBeach = beach { sweep = height e, events = es }
 
 processCross :: Cross -> Beach -> Beach
-processCross c@(Cross p r i) (Beach es bs rs) = case bs of
+processCross c@(Cross p r i) b@(Beach sw es bs rs) = case bs of
   [] -> error "Crosspoint event with 0 bouys is impossible"
   [_] -> error "Crosspoint event with 1 bouy is impossible"
   [_,_] -> error "Crosspoint event with 2 bouys is impossible"
   bs -> case (bs, i) of
     (_, 0) -> error "Bouy index should never be the left-most bouy"
     ([_,_,_], 2) -> error "Bouy index should never be the right-most bouy"
-    (lb:(b:(rb:bs)), 1) -> processCross' c (Beach es (lb:b:rb:bs) rs)
+    (lb:(b:(rb:bs)), 1) -> processCross' c (Beach sw es (lb:b:rb:bs) rs)
     (bs, _) -> let
-      newB = processCross (Cross p r 1) $ Beach es (drop (i-1) bs) rs
+      newB = processCross (Cross p r 1) $ Beach sw es (drop (i-1) bs) rs
       in newB { bouys = take (i-1) bs ++ bouys newB }
 
 processCross' :: Cross -> Beach -> Beach
-processCross' c@(Cross p _ _) (Beach es (lb@(lp,li):b:rb@(rp,ri):bs) rs)
-  | crossContainsBouy c bs = Beach es (lb:b:rb:bs) rs
-  | li == ri = Beach es (lb:bs) (rs ++ newRays p lb b rb)
-  | otherwise = Beach es (lb:rb:bs) (rs ++ newRays p lb b rb)
+processCross' c@(Cross p _ _) (Beach sw es (lb@(lp,li):b:rb@(rp,ri):bs) rs)
+  | crossContainsBouy c bs = Beach sw es (lb:b:rb:bs) rs
+  | li == ri = Beach sw es (lb:bs) (rs ++ newRays p lb b rb)
+  | otherwise = Beach sw es (lb:rb:bs) (rs ++ newRays p lb b rb)
 processCross' _ _ = error "Previous conditions should have made this impossible"
 
 crossContainsBouy :: Cross -> [Bouy] -> Bool
@@ -151,8 +170,8 @@ awayRay o away p q = case separation dir adir of
     mid = 0.5 |* (p |+ q)
 
 processBouy :: Bouy -> Beach -> Beach
-processBouy b (Beach es [] rs) = Beach es [b] rs
-processBouy (p@(x,y),i) (Beach es bs rs) = Beach newEs newBs rs
+processBouy b (Beach sw es [] rs) = Beach sw es [b] rs
+processBouy (p@(x,y),i) (Beach sw es bs rs) = Beach sw newEs newBs rs
   where
     bi = findBouyI p bs
     newBs = case getBouy bi bs of
@@ -161,21 +180,25 @@ processBouy (p@(x,y),i) (Beach es bs rs) = Beach newEs newBs rs
     newEs = sort $ filter (\case {BouyEvent{} -> True; _ -> False}) es ++ circleEvents y newBs
 
 circleEvents :: Float -> [Bouy] -> [Event]
-circleEvents sweep bs = CrossEvent <$> filter (\(Cross (_,y) r _) -> y-r < sweep) (circleEvents' bs 0)
+circleEvents sweep bs = CrossEvent <$> filter (\(Cross (_,y) r _) -> y-r <= sweep) (circleEvents' bs 0)
 circleEvents' :: [Bouy] -> Int -> [Cross]
 circleEvents' [] _ = []
 circleEvents' [_] _ = []
 circleEvents' [_,_] _ = []
-circleEvents' [b1,b2,b3] bi = case crossFrom3 b1 b2 b3 (bi+1) of { Nothing -> []; Just cr -> [cr] }
-circleEvents' (b1:b2:b3:bs) bi = case crossFrom3 b1 b2 b3 (bi+1) of { Nothing -> []; Just cr -> [cr] } ++ circleEvents' (b2:b3:bs) (bi+1)
+circleEvents' [b1,b2,b3] bi = case clockwiseCrossFrom3 b1 b2 b3 (bi+1) of { Nothing -> []; Just cr -> [cr] }
+circleEvents' (b1:b2:b3:bs) bi = case clockwiseCrossFrom3 b1 b2 b3 (bi+1) of { Nothing -> []; Just cr -> [cr] } ++ circleEvents' (b2:b3:bs) (bi+1)
 
-crossFrom3 :: Bouy -> Bouy -> Bouy -> Int -> Maybe Cross
-crossFrom3 (p1,i1) (p2,i2) (p3,i3) bi =
+clockwiseCrossFrom3 :: Bouy -> Bouy -> Bouy -> Int -> Maybe Cross
+clockwiseCrossFrom3 (p1,i1) (p2,i2) (p3,i3) bi =
   if i1 == i2 || i1 == i3 || i2 == i3
   then Nothing --not 3 different bouys
-  else case circleFrom3 p1 p2 p3 of
-    Nothing -> Nothing --colinear points
-    Just (center, rad) -> Just $ Cross center rad bi
+  else case turnDirection p1 p2 p3 of
+    Nothing -> Nothing -- Colinear
+    Just CounterClockwise -> Nothing -- Wrong direction
+    Just Clockwise -> case circleFrom3 p1 p2 p3 of
+      Nothing -> Nothing --colinear points
+      Just (center, rad) -> Just $ Cross center rad bi
+      
 
 findBouyI :: Position -> [Bouy] -> Int
 findBouyI _ [] = error "Searching for bouy in empty bouy list"
@@ -205,27 +228,22 @@ parabolaCrossXs sw bs = zipWith (parabolaCrossX sw) bs (tail bs)
 parabolaCrossX :: Float -> Position -> Position -> Float
 parabolaCrossX sw p1@(px1,_) p2@(px2,_)
   | aDiff == 0 = 0.5*(px1+px2)
-  | px1 < px2 = innerX
-  | otherwise = outerX
+  | px1 < px2 = leftX
+  | otherwise = rightX
   where
     (a1,b1,c1) = parabolaParams sw p1
     (a2,b2,c2) = parabolaParams sw p2
     aDiff = a2 - a1
     bDiff = b2 - b1
     cDiff = c2 - c1
-    part = 0.5*bDiff/aDiff
+    part = 0.5 * bDiff / aDiff
     root = sqrt(part^2 - cDiff/aDiff)
     x1 = root - part
     x2 = - root - part
-    -- y1 = a1*x1^2 + b1*x1 + c1
-    -- y2 = a1*x2^2 + b1*x2 + c1
-    isInner1 = between x1 px1 px2
-    isInner2 = between x2 px1 px2
-    (innerX, outerX) = case (isInner1, isInner2) of
-      (True, True) -> error "Both are inner"
-      (False, False) -> error "Both are outer"
-      (True, False) -> (x1, x2)
-      (False, True) -> (x2, x1)
+    (leftX, rightX) = case compare x1 x2 of
+      LT -> (x1, x2)
+      _ -> (x2, x1)
+
 
 between :: Float -> Float -> Float -> Bool 
 between x a b

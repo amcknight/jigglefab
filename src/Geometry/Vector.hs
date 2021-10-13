@@ -18,6 +18,7 @@ module Geometry.Vector
 , reflect
 , squashTurn
 , circleFrom3
+, turnDirection
 ) where
 
 import Control.Monad.State
@@ -184,3 +185,10 @@ colinear p q r
 
 parallel :: Vector -> Vector -> Bool 
 parallel v w = direction v == direction w || direction v == pole (direction w)
+
+turnDirection :: Position -> Position -> Position -> Maybe TurnDirection
+turnDirection (x1,y1) (x2,y2) (x3,y3) = case compare det 0 of
+  LT -> Just Clockwise
+  EQ -> Nothing
+  GT -> Just CounterClockwise 
+  where det = x1*(y2 - y3) - y1*(x2 - x3) + (x2*y3 - y2*x3)
