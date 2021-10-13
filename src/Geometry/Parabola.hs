@@ -1,10 +1,12 @@
 module Geometry.Parabola
 ( Parabola(..)
-, crossPointsFromFocus
+, crossPointsFromFoci
+, parabolaFromFocus
 ) where
     
 import Geometry.Vector
 import Geometry.CrossPoint
+import Debug.Trace
 
 data Parabola = Parabola
   { sharpness :: Float
@@ -22,7 +24,7 @@ instance HasCrossPoints Parabola where
          else OneCross (atX p1 (-cob))
     else case compare discr 0 of
       LT -> NoCross
-      EQ -> OneCross undefined
+      EQ -> OneCross undefined -- TODO
       GT -> TwoCross (atX p1 xLeft) (atX p1 xRight)
     where
       ad = a2 - a1
@@ -31,22 +33,28 @@ instance HasCrossPoints Parabola where
       boa = bd/ad
       coa = cd/ad
       cob = cd/bd
-      discr = boa^2 - coa
+      discr = 0.25*boa^2 - coa
       xRight = sqrt discr - 0.5*boa
       xLeft = - sqrt discr - 0.5*boa
+
+
+-- ad*x^2 + bd*x + cd = 0
+-- x^2 + x*boa + coa = 0
+-- x^2 + x*boa = -coa
+-- (x + boa/2)^2 = -coa + boa^2/4
+-- discr = -coa + boa^2/4
 
 atX :: Parabola -> Float -> Position
 atX (Parabola a b c) x = (x, a*x^2 + b*x + c)
 
-atY :: Parabola -> Float -> CrossPoints
-atY = undefined
-
 parabolaFromFocus :: Float -> Position -> Parabola
-parabolaFromFocus sw (px,py) = Parabola sh dl u
+parabolaFromFocus sw (px,py)
+  | py == sw = error "Parabola can't be equal to sweep line"
+  | otherwise = Parabola sh dl u
   where
     sh = 0.5/(py - sw)
     dl = -2 * px * sh
     u = (px^2 + py^2 - sw^2) * sh
 
-crossPointsFromFocus :: Float -> Position -> Position -> CrossPoints
-crossPointsFromFocus sw p1 p2 = crossPoints (parabolaFromFocus sw p1) (parabolaFromFocus sw p2)
+crossPointsFromFoci :: Float -> Position -> Position -> CrossPoints
+crossPointsFromFoci sw p1 p2 = crossPoints (parabolaFromFocus sw p1) (parabolaFromFocus sw p2)

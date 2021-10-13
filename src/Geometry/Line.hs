@@ -8,6 +8,7 @@ import Geometry.Vector
 import Pair
 import Geometry.Angle
 import Geometry.Bound
+import Geometry.CrossPoint
 
 data Line = Line Position Position deriving Show
 data Seg = Seg Position Position deriving Show
@@ -39,10 +40,11 @@ lineCross (Line (x1,y1) (x2,y2)) (Line (x3,y3) (x4,y4))
     x = ((y3-y1)*x43*x21 + x1*y21*x43 - x3*y43*x21) / (y21*x43 - y43*x21)
     y = m21*x+b
 
-crossPointsAtUnit :: Line -> Maybe (Position, Position)
+crossPointsAtUnit :: Line -> CrossPoints
 crossPointsAtUnit (Line (px, py) (qx, qy)) = case compare discriminant 0 of
-  LT -> Nothing
-  _ -> Just ((1/disSq) |* (scale |+ preXY), (1/disSq) |* (scale |- preXY))
+  LT -> NoCross
+  EQ -> OneCross $ (1/disSq) |* scale
+  GT -> TwoCross ((1/disSq) |* (scale |+ preXY)) ((1/disSq) |* (scale |- preXY))
   where
     dx = qx - px
     dy = qy - py

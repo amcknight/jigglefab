@@ -129,7 +129,7 @@ updateBeach beach@(Beach sw (e:es) _ _) = if height e > sw
   where newBeach = beach { sweep = height e, events = es }
 
 processCross :: Cross -> Beach -> Beach
-processCross c@(Cross p r i) b@(Beach sw es bs rs) = trace ("Cross: "++show c ++"\nBeach:"++show b) $ case bs of
+processCross c@(Cross p r i) b@(Beach sw es bs rs) = case bs of
   [] -> error "Crosspoint event with 0 bouys is impossible"
   [_] -> error "Crosspoint event with 1 bouy is impossible"
   [_,_] -> error "Crosspoint event with 2 bouys is impossible"
@@ -138,19 +138,19 @@ processCross c@(Cross p r i) b@(Beach sw es bs rs) = trace ("Cross: "++show c ++
     ([_,_,_], 2) -> error "Bouy index should never be the right-most bouy"
     (lb:(b:(rb:bs)), 1) -> processCross' c (Beach sw es (lb:b:rb:bs) rs)
     (bs, _) -> let
-      newB = processCross (Cross p r 1) $ Beach sw es (drop (i-1) bs) rs
+      newB = processCross (Cross p r 1) (Beach sw es (drop (i-1) bs) rs)
       in newB { bouys = take (i-1) bs ++ bouys newB }
 
 processCross' :: Cross -> Beach -> Beach
 processCross' c@(Cross p _ _) (Beach sw es (lb@(lp,li):b:rb@(rp,ri):bs) rs)
-  | crossContainsBouy c bs = Beach sw es (lb:b:rb:bs) rs
+  -- | crossContainsBouy c bs = Beach sw es (lb:b:rb:bs) rs --TODO: Should I be checking this or what?
   | li == ri = Beach sw es (lb:bs) (rs ++ newRays p lb b rb)
   | otherwise = Beach sw es (lb:rb:bs) (rs ++ newRays p lb b rb)
 processCross' _ _ = error "Previous conditions should have made this impossible"
 
 crossContainsBouy :: Cross -> [Bouy] -> Bool
 crossContainsBouy _ [] = False
-crossContainsBouy c@(Cross cp rad _) ((bp,_):bs) = (distSq cp bp < rad^2) || crossContainsBouy c bs
+crossContainsBouy c@(Cross cp rad _) b@((bp,_):bs) = distSq cp bp < rad^2 || crossContainsBouy c bs
 
 newRays :: Position -> Bouy -> Bouy -> Bouy -> [Ray]
 newRays pos (p1,i1) (p2,i2) (p3,i3) =
@@ -170,8 +170,8 @@ awayRay o away p q = case separation dir adir of
     mid = 0.5 |* (p |+ q)
 
 processBouy :: Bouy -> Beach -> Beach
-processBouy b bch@(Beach sw es [] rs) = trace ("Bouy: "++show b ++"\nBeach:"++show bch) $ Beach sw es [b] rs
-processBouy (p@(x,y),i) bch@(Beach sw es bs rs) = trace ("Bouy: "++show ((x,y),i) ++"\nBeach:"++show bch++ "BOUYI: "++show bi) $ Beach sw newEs newBs rs
+processBouy b bch@(Beach sw es [] rs) = Beach sw es [b] rs
+processBouy (p@(x,y),i) bch@(Beach sw es bs rs) = Beach sw newEs newBs rs
   where
     bi = findBouyI p bs
     newBs = case getBouy bi bs of
@@ -201,7 +201,7 @@ clockwiseCrossFrom3 (p1,i1) (p2,i2) (p3,i3) bi =
 
 findBouyI :: Position -> [Bouy] -> Int
 findBouyI _ [] = error "Searching for bouy in empty bouy list"
-findBouyI (px,py) bs = findBouyI' px $ trace ("Parabola Crosses: "++show crosses) crosses
+findBouyI (px,py) bs = findBouyI' px crosses
   where crosses = parabolaCrossXs py $ fmap fst bs
 findBouyI' :: Float -> [Float] -> Int
 findBouyI' x [] = 0
@@ -209,9 +209,6 @@ findBouyI' x (cx:xs) = case compare x cx of
   LT -> 0
   EQ -> 0
   GT -> 1 + findBouyI' x xs
-
--- bouyY :: Position -> Position -> Float
--- bouyY (sx,sy) (bx,by) = ((sx-bx)^2 + by^2 - sy^2) / (by-sy)
 
 getBouy :: Int -> [Bouy] -> Maybe Bouy
 getBouy _ [] = Nothing
@@ -226,10 +223,13 @@ parabolaCrossXs _ [b] = []
 parabolaCrossXs sw bs = zipWith (parabolaCrossX sw) bs (tail bs)
 
 parabolaCrossX :: Float -> Position -> Position -> Float
-parabolaCrossX sw p q = case crossPointsFromFocus sw p q of
+parabolaCrossX sw p q = case crossPointsFromFoci sw p q of
   NoCross -> error "All Bouy parabolas should have at least one cross point"
   OneCross c -> fst c
-  TwoCross lc rc -> fst lc
+  TwoCross lc rc -> case compare (fst p) (fst q) of
+    LT -> fst lc
+    EQ -> fst lc
+    GT -> fst rc
   AllCross -> error "Identical Bouys should not be in a voronoi"
 
 

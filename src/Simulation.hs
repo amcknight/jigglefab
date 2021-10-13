@@ -32,6 +32,8 @@ import Geometry.Tiling
 import Geometry.Voronoi
 import qualified Data.Vector as V
 import Geometry.Line
+import Geometry.Parabola
+import Geometry.CrossPoint
 
 run :: IO ()
 run = runSeeded =<< getStdGen
@@ -74,13 +76,15 @@ update dt v = v { structOrModel = case m of
   where m = structOrModel v
 
 drawStruct :: Chem c => Struct c -> Picture
-drawStruct (Struct ws os) = Pictures $
+drawStruct (Struct ws os) = trace (show es) $ trace (show ts) $ Pictures $
   fmap (drawWall yellow) ws <>
-  -- fmap drawEdge (voronoi ps) <>
+  fmap drawEdge (voronoi ps) <>
   fmap drawOrb os <>
-  -- fmap (drawWedge vos) (tileVoronoi vos (voronoi ps))
-  [drawBeach (processBeach (initialBeach (fmap orbPos os)) 3)]
+  fmap (drawWedge vos) ts
+  -- [drawBeach (processBeach (initialBeach (fmap orbPos os)) 4)]
   where
+    es = (voronoi ps)
+    ts = (tileVoronoi vos es)
     ps = fmap orbPos os
     vos = V.fromList os
 
@@ -88,7 +92,12 @@ drawEdge :: Edge -> Picture
 drawEdge (Edge (Seg p q) _) = Color white $ line [p, q]
 
 drawBeach :: Beach -> Picture
-drawBeach (Beach sw es bs rs) = Pictures $ fmap drawEvent es <> fmap (drawBouy sw) bs <> fmap drawRay rs <> drawSweep sw
+drawBeach (Beach sw es bs rs) = Pictures $
+  fmap drawEvent es <>
+  fmap (drawBouy sw) bs <>
+  -- drawParabCrosses sw bs <>
+  fmap drawRay rs <>
+  drawSweep sw
 
 drawEvent :: Geometry.Voronoi.Event -> Picture 
 drawEvent (BouyEvent (pos, i)) = drawPosAt pos cyan
@@ -101,11 +110,19 @@ drawParabola :: Float -> Float -> Picture
 drawParabola focalH sweep = line $ fmap (\xi -> (xi, parabY (focalH-sweep) xi)) [-100,-99.99..100]
   where parabY h x = (x^2 + h^2)/(2*h)
 
+drawParabCrosses :: Float -> [Bouy] -> [Picture]
+drawParabCrosses sw bs = drawCrossPoints <$> zipWith (crossPointsFromFoci sw) (fmap fst bs) (tail (fmap fst bs))
+
+drawCrossPoints :: CrossPoints -> Picture
+drawCrossPoints (OneCross p) = drawPosAt p red
+drawCrossPoints (TwoCross p q) = drawPosAt p magenta <> drawPosAt p blue
+drawCrossPoints _ = error "Drawing non-points"
+
 drawRay :: Ray -> Picture
 drawRay (Ray pos dir i j) = drawPosAt pos yellow
 
 drawSweep :: Float -> [Picture]
-drawSweep h = [Color red $ line [(-100000, h), (100000, h)]]
+drawSweep h = [Color black $ line [(-100000, h), (100000, h)]]
 
 drawPosAt :: Position -> Color -> Picture
 drawPosAt pos c = Color c $ uncurry translate pos $ circleSolid 0.02
