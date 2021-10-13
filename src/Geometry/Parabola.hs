@@ -24,7 +24,7 @@ instance HasCrossPoints Parabola where
          else OneCross (atX p1 (-cob))
     else case compare discr 0 of
       LT -> NoCross
-      EQ -> OneCross undefined -- TODO
+      EQ -> OneCross (atX p1 (-0.5*boa))
       GT -> TwoCross (atX p1 xLeft) (atX p1 xRight)
     where
       ad = a2 - a1

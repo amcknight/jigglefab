@@ -13,7 +13,6 @@ import Orb
 import Geometry.Vector
 import Utils
 
--- TODO: Should this be an Orb with a velocity?
 data Ball c = Ball
   { point :: Point
   , chem :: c
