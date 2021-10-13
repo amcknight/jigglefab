@@ -8,8 +8,6 @@ module Geometry.Voronoi
   , voronoi
   , initialBeach
   , processBeach
-  , parabolaCrossX
-  , parabolaParams
   , parabolaCrossXs
   , height
   ) where
@@ -25,6 +23,8 @@ import Geometry.Space
 import Geometry.Angle
 import Data.Fixed (mod')
 import Data.Either (partitionEithers)
+import Geometry.Parabola
+import Geometry.CrossPoint
 
 type IxPos = (Position, Int)
 type Bouy = IxPos
@@ -129,7 +129,7 @@ updateBeach beach@(Beach sw (e:es) _ _) = if height e > sw
   where newBeach = beach { sweep = height e, events = es }
 
 processCross :: Cross -> Beach -> Beach
-processCross c@(Cross p r i) b@(Beach sw es bs rs) = case bs of
+processCross c@(Cross p r i) b@(Beach sw es bs rs) = trace ("Cross: "++show c ++"\nBeach:"++show b) $ case bs of
   [] -> error "Crosspoint event with 0 bouys is impossible"
   [_] -> error "Crosspoint event with 1 bouy is impossible"
   [_,_] -> error "Crosspoint event with 2 bouys is impossible"
@@ -170,8 +170,8 @@ awayRay o away p q = case separation dir adir of
     mid = 0.5 |* (p |+ q)
 
 processBouy :: Bouy -> Beach -> Beach
-processBouy b (Beach sw es [] rs) = Beach sw es [b] rs
-processBouy (p@(x,y),i) (Beach sw es bs rs) = Beach sw newEs newBs rs
+processBouy b bch@(Beach sw es [] rs) = trace ("Bouy: "++show b ++"\nBeach:"++show bch) $ Beach sw es [b] rs
+processBouy (p@(x,y),i) bch@(Beach sw es bs rs) = trace ("Bouy: "++show ((x,y),i) ++"\nBeach:"++show bch++ "BOUYI: "++show bi) $ Beach sw newEs newBs rs
   where
     bi = findBouyI p bs
     newBs = case getBouy bi bs of
@@ -194,15 +194,15 @@ clockwiseCrossFrom3 (p1,i1) (p2,i2) (p3,i3) bi =
   then Nothing --not 3 different bouys
   else case turnDirection p1 p2 p3 of
     Nothing -> Nothing -- Colinear
-    Just CounterClockwise -> Nothing -- Wrong direction
-    Just Clockwise -> case circleFrom3 p1 p2 p3 of
+    Just _ -> case circleFrom3 p1 p2 p3 of
       Nothing -> Nothing --colinear points
       Just (center, rad) -> Just $ Cross center rad bi
       
 
 findBouyI :: Position -> [Bouy] -> Int
 findBouyI _ [] = error "Searching for bouy in empty bouy list"
-findBouyI (px,sw) bs = findBouyI' px $ parabolaCrossXs sw $ fmap fst bs
+findBouyI (px,py) bs = findBouyI' px $ trace ("Parabola Crosses: "++show crosses) crosses
+  where crosses = parabolaCrossXs py $ fmap fst bs
 findBouyI' :: Float -> [Float] -> Int
 findBouyI' x [] = 0
 findBouyI' x (cx:xs) = case compare x cx of
@@ -226,33 +226,14 @@ parabolaCrossXs _ [b] = []
 parabolaCrossXs sw bs = zipWith (parabolaCrossX sw) bs (tail bs)
 
 parabolaCrossX :: Float -> Position -> Position -> Float
-parabolaCrossX sw p1@(px1,_) p2@(px2,_)
-  | aDiff == 0 = 0.5*(px1+px2)
-  | px1 < px2 = leftX
-  | otherwise = rightX
-  where
-    (a1,b1,c1) = parabolaParams sw p1
-    (a2,b2,c2) = parabolaParams sw p2
-    aDiff = a2 - a1
-    bDiff = b2 - b1
-    cDiff = c2 - c1
-    part = 0.5 * bDiff / aDiff
-    root = sqrt(part^2 - cDiff/aDiff)
-    x1 = root - part
-    x2 = - root - part
-    (leftX, rightX) = case compare x1 x2 of
-      LT -> (x1, x2)
-      _ -> (x2, x1)
+parabolaCrossX sw p q = case crossPointsFromFocus sw p q of
+  NoCross -> error "All Bouy parabolas should have at least one cross point"
+  OneCross c -> fst c
+  TwoCross lc rc -> fst lc
+  AllCross -> error "Identical Bouys should not be in a voronoi"
 
 
 between :: Float -> Float -> Float -> Bool 
 between x a b
   | b < a = between x b a
   | otherwise = a <= x && x <= b
-
-parabolaParams :: Float -> Position -> (Float, Float, Float)
-parabolaParams sw (px,py) = (a,b,c)
-  where
-    a = 0.5/(py - sw)
-    b = -2*px * a
-    c = (px^2 + py^2 - sw^2) * a

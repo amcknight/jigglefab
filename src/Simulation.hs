@@ -38,7 +38,7 @@ run = runSeeded =<< getStdGen
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
-  let struct = fourBallInner
+  let struct = threeBallInner
   let (model, _) = runState (buildModel 3 struct) seed
   let view = View (Left struct) zeroV 250
   let frameRate = 30
@@ -75,12 +75,11 @@ update dt v = v { structOrModel = case m of
 
 drawStruct :: Chem c => Struct c -> Picture
 drawStruct (Struct ws os) = Pictures $
-  fmap (drawWall yellow) ws <> 
-  fmap drawEdge (voronoi ps) <> 
-  fmap drawOrb os <> 
-  fmap (drawWedge vos) (tileVoronoi vos (voronoi ps))
-  --   
-  -- drawBeach (processBeach (initialBeach (fmap orbPos os)) 7)
+  fmap (drawWall yellow) ws <>
+  -- fmap drawEdge (voronoi ps) <>
+  fmap drawOrb os <>
+  -- fmap (drawWedge vos) (tileVoronoi vos (voronoi ps))
+  [drawBeach (processBeach (initialBeach (fmap orbPos os)) 3)]
   where
     ps = fmap orbPos os
     vos = V.fromList os
@@ -112,7 +111,7 @@ drawPosAt :: Position -> Color -> Picture
 drawPosAt pos c = Color c $ uncurry translate pos $ circleSolid 0.02
 
 drawWedge :: Chem c => V.Vector (Orb c) -> Wedge -> Picture
-drawWedge os (Pie p from to c) = uncurry translate p $ Color (C.toGlossColor c) (arcSolid 1 from to)
+drawWedge os (Pie p from to c) = blank --uncurry translate p $ Color (C.toGlossColor c) (arcSolid 1 from to)
 drawWedge os (Tri p q r c) = Color (C.toGlossColor c) (polygon [p, q, r])
 
 colorFromOrbI :: Chem c => V.Vector (Orb c) -> Int -> Color

@@ -40,7 +40,9 @@ library
       Form
       Geometry.Angle
       Geometry.Bound
+      Geometry.CrossPoint
       Geometry.Line
+      Geometry.Parabola
       Geometry.Space
       Geometry.Tiling
       Geometry.Vector

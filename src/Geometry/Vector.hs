@@ -19,6 +19,7 @@ module Geometry.Vector
 , squashTurn
 , circleFrom3
 , turnDirection
+, mid
 ) where
 
 import Control.Monad.State
@@ -192,3 +193,6 @@ turnDirection (x1,y1) (x2,y2) (x3,y3) = case compare det 0 of
   EQ -> Nothing
   GT -> Just CounterClockwise 
   where det = x1*(y2 - y3) - y1*(x2 - x3) + (x2*y3 - y2*x3)
+
+mid :: Vector -> Vector -> Vector
+mid v1 = (0.5 |*) . (v1 |+)

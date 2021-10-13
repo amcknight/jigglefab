@@ -11,6 +11,8 @@ import Color
 import Chem
 import Data.List (sortBy)
 import Geometry.Angle
+import Pair
+import Debug.Trace
 
 data Wedge = Tri Position Position Position Color | Pie Position Turn Turn Color deriving Show
 
@@ -18,11 +20,10 @@ tileVoronoi :: Chem c => V.Vector (Orb c) -> [Edge] -> [Wedge]
 tileVoronoi = concatMap . toWedges
 
 toWedges :: Chem c => V.Vector (Orb c) -> Edge -> [Wedge]
-toWedges os (Edge (Seg p1 p2) (i,j)) = buildWedge p1 p2 cps o1 ++ buildWedge p1 p2 cps o2
+toWedges os (Edge (Seg p1 p2) is) = buildWedge p1 p2 cps o1 ++ buildWedge p1 p2 cps o2
   where
-    cps = crossPointsAtUnit $ Line (p1 |- orbPos o1) (p2 |- orbPos o2)
-    o1 = os V.! i
-    o2 = os V.! j
+    cps = fmap (\(c1,c2) -> (c1 |+ orbPos o1, c2 |+ orbPos o2)) $ crossPointsAtUnit $ Line (p1 |- orbPos o1) (p2 |- orbPos o2)
+    (o1, o2) = pmap (os V.!) is
 
 buildWedge :: Chem c => Position -> Position -> Maybe (Position, Position) -> Orb c -> [Wedge]
 buildWedge p1 p2 Nothing (Orb o ch) = [toPie o p1 p2 (chemColor ch)]
