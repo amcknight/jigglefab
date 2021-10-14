@@ -40,7 +40,7 @@ run = runSeeded =<< getStdGen
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
-  let struct = fourBallInner
+  let struct = threeBallInner
   let (model, _) = runState (buildModel 3 struct) seed
   let view = View (Left struct) zeroV 250
   let frameRate = 30
@@ -78,10 +78,10 @@ update dt v = v { structOrModel = case m of
 drawStruct :: Chem c => Struct c -> Picture
 drawStruct (Struct ws os) = Pictures $
   fmap (drawWall yellow) ws <>
-  fmap drawEdge (voronoi ps) <>
+  fmap drawEdge es <>
   fmap drawOrb os <>
   fmap (drawWedge vos) ts
-  -- [drawBeach (processBeach (initialBeach (fmap orbPos os)) 4)]
+  -- [drawBeach (processBeach (initialBeach (fmap orbPos os)) 5)]
   where
     es = voronoi ps
     ts = tileVoronoi vos es
@@ -94,8 +94,8 @@ drawEdge (Edge (Seg p q) _) = Color white $ line [p, q]
 drawBeach :: Beach -> Picture
 drawBeach (Beach sw es bs rs) = Pictures $
   fmap drawEvent es <>
-  fmap (drawBouy sw) bs <>
-  -- drawParabCrosses sw bs <>
+  fmap (drawBouy sw) (V.toList bs) <>
+  drawParabCrosses (sw-0.0000001) bs <>
   fmap drawRay rs <>
   drawSweep sw
 
@@ -110,13 +110,17 @@ drawParabola :: Float -> Float -> Picture
 drawParabola focalH sweep = line $ fmap (\xi -> (xi, parabY (focalH-sweep) xi)) [-100,-99.99..100]
   where parabY h x = (x^2 + h^2)/(2*h)
 
-drawParabCrosses :: Float -> [Bouy] -> [Picture]
-drawParabCrosses sw bs = drawCrossPoints <$> zipWith (crossPointsFromFoci sw) (fmap fst bs) (tail (fmap fst bs))
+drawParabCrosses :: Float -> V.Vector Bouy -> [Picture]
+drawParabCrosses sw bs = (drawCrossPoints <$> zipWith (crossPointsFromFoci sw) ps (tail ps)) <> fmap drawLiveCrossPoint (zipWith (parabolaCross sw) ps (tail ps))
+  where ps = V.toList $ fmap fst bs
 
 drawCrossPoints :: CrossPoints -> Picture
-drawCrossPoints (OneCross p) = drawPosAt p red
-drawCrossPoints (TwoCross p q) = drawPosAt p magenta <> drawPosAt p blue
+drawCrossPoints (OneCross p) = drawPosAt p blue
+drawCrossPoints (TwoCross p q) = drawPosAt p blue <> drawPosAt p blue
 drawCrossPoints _ = error "Drawing non-points"
+
+drawLiveCrossPoint :: Position -> Picture
+drawLiveCrossPoint p = drawPosAt p magenta
 
 drawRay :: Ray -> Picture
 drawRay (Ray pos dir i j) = drawPosAt pos yellow

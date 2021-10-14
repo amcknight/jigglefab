@@ -41,7 +41,7 @@ instance Chem Valence where
   chemColor (Valence w _)
     | w == 0 = blue 
     | w == 1 = red 
-    | w == 2 = green 
+    | w == 2 = mix yellow red 
     | w == 3 = magenta 
     | otherwise = yellow
   -- chemColor ch = case desire ch of

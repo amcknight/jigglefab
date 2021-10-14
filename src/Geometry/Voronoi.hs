@@ -9,11 +9,14 @@ module Geometry.Voronoi
   , initialBeach
   , processBeach
   , parabolaCrossXs
+  , parabolaCross
   , height
   ) where
 import Graphics.Gloss (Picture)
 import Data.List (sortBy, sort)
 import Data.Maybe (catMaybes)
+import Data.Fixed (mod')
+import Data.Either (partitionEithers)
 import Geometry.Vector
 import Debug.Trace
 import Geometry.Line
@@ -21,10 +24,9 @@ import Pair
 import Geometry.Bound
 import Geometry.Space
 import Geometry.Angle
-import Data.Fixed (mod')
-import Data.Either (partitionEithers)
 import Geometry.Parabola
 import Geometry.CrossPoint
+import qualified Data.Vector as V
 
 type IxPos = (Position, Int)
 type Bouy = IxPos
@@ -47,7 +49,7 @@ data Edge = Edge
 data Beach = Beach
   { sweep :: Float 
   , events :: [Event]
-  , bouys :: [Bouy]
+  , bouys :: V.Vector Bouy
   , rays :: [Ray]
   } deriving Show
 
@@ -66,7 +68,7 @@ voronoi' b@(Beach _ [] _ rs) = rs
 voronoi' b = voronoi' $ updateBeach b
 
 initialBeach :: [Position] -> Beach
-initialBeach ps = Beach sw es [] []
+initialBeach ps = Beach sw es V.empty []
   where
     sw = height (head es) + 1
     es = sort $ BouyEvent <$> zip ps [0..]
@@ -124,33 +126,24 @@ updateBeach (Beach _ [] _ _) = error "updateBeach: No events"
 updateBeach beach@(Beach sw (e:es) _ _) = if height e > sw
   then error "Somehow the event is occurring above the sweep line"
   else case e of
-    BouyEvent p -> processBouy p newBeach
-    CrossEvent c -> processCross c newBeach
+    BouyEvent p -> trace (show p ++ ", " ++ show newBeach) $ processBouy p newBeach
+    CrossEvent c -> trace (show c ++ ", " ++ show newBeach) $ processCross c newBeach
   where newBeach = beach { sweep = height e, events = es }
 
 processCross :: Cross -> Beach -> Beach
-processCross c@(Cross p r i) b@(Beach sw es bs rs) = case bs of
-  [] -> error "Crosspoint event with 0 bouys is impossible"
-  [_] -> error "Crosspoint event with 1 bouy is impossible"
-  [_,_] -> error "Crosspoint event with 2 bouys is impossible"
-  bs -> case (bs, i) of
-    (_, 0) -> error "Bouy index should never be the left-most bouy"
-    ([_,_,_], 2) -> error "Bouy index should never be the right-most bouy"
-    (lb:(b:(rb:bs)), 1) -> processCross' c (Beach sw es (lb:b:rb:bs) rs)
-    (bs, _) -> let
-      newB = processCross (Cross p r 1) (Beach sw es (drop (i-1) bs) rs)
-      in newB { bouys = take (i-1) bs ++ bouys newB }
+processCross c@(Cross p r i) b@(Beach sw es bs rs)
+  | numBs < 3 = error ("Crosspoint event with "++show numBs++" bouys is impossible")
+  | i == 0 = error "Bouy index should never be the left-most bouy"
+  | i == numBs - 1 = error "Bouy index should never be the right-most bouy"
+  | i >= numBs = error "Index out of bounds in processCross"
+  | snd (bs V.! (i-1)) == snd (bs V.! (i+1)) = error "A circle event had left and right indeices equal. Impossible"
+  | crossContainsBouy c bs = b { bouys = V.take (i-1) bs <> V.drop i bs }
+  | otherwise = b { bouys = V.take (i-1) bs <> V.drop i bs, rays = rs ++ newRays p (bs V.! (i-1)) (bs V.! i) (bs V.! (i+1)) }
+  where
+    numBs = length bs
 
-processCross' :: Cross -> Beach -> Beach
-processCross' c@(Cross p _ _) (Beach sw es (lb@(lp,li):b:rb@(rp,ri):bs) rs)
-  -- | crossContainsBouy c bs = Beach sw es (lb:b:rb:bs) rs --TODO: Should I be checking this or what?
-  | li == ri = Beach sw es (lb:bs) (rs ++ newRays p lb b rb)
-  | otherwise = Beach sw es (lb:rb:bs) (rs ++ newRays p lb b rb)
-processCross' _ _ = error "Previous conditions should have made this impossible"
-
-crossContainsBouy :: Cross -> [Bouy] -> Bool
-crossContainsBouy _ [] = False
-crossContainsBouy c@(Cross cp rad _) b@((bp,_):bs) = distSq cp bp < rad^2 || crossContainsBouy c bs
+crossContainsBouy :: Cross -> V.Vector Bouy -> Bool
+crossContainsBouy c@(Cross cp rad i) bs = any (\(p, _) -> distSq cp p < rad^2) (V.take (i-2) bs <> V.drop (i+1) bs)
 
 newRays :: Position -> Bouy -> Bouy -> Bouy -> [Ray]
 newRays pos (p1,i1) (p2,i2) (p3,i3) =
@@ -170,17 +163,17 @@ awayRay o away p q = case separation dir adir of
     mid = 0.5 |* (p |+ q)
 
 processBouy :: Bouy -> Beach -> Beach
-processBouy b bch@(Beach sw es [] rs) = Beach sw es [b] rs
-processBouy (p@(x,y),i) bch@(Beach sw es bs rs) = Beach sw newEs newBs rs
+processBouy b@(p@(x,y),i) bch@(Beach sw es bs rs)
+  | V.null bs = Beach sw es (V.fromList [b]) rs
+  | otherwise = Beach sw newEs newBs rs
   where
     bi = findBouyI p bs
-    newBs = case getBouy bi bs of
-      Nothing -> error "Couldn't find the bouy we just found!?"
-      Just splitB -> take bi bs ++ [splitB, (p, i), splitB] ++ drop (bi+1) bs
+    splitB = bs V.! bi
+    newBs = V.take bi bs <> V.fromList [splitB, (p, i), splitB] <> V.drop (bi+1) bs
     newEs = sort $ filter (\case {BouyEvent{} -> True; _ -> False}) es ++ circleEvents y newBs
 
-circleEvents :: Float -> [Bouy] -> [Event]
-circleEvents sweep bs = CrossEvent <$> filter (\(Cross (_,y) r _) -> y-r <= sweep) (circleEvents' bs 0)
+circleEvents :: Float -> V.Vector Bouy -> [Event]
+circleEvents sweep bs = CrossEvent <$> filter (\(Cross (_,y) r _) -> y-r <= sweep) (circleEvents' (V.toList bs) 0)
 circleEvents' :: [Bouy] -> Int -> [Cross]
 circleEvents' [] _ = []
 circleEvents' [_] _ = []
@@ -194,15 +187,17 @@ clockwiseCrossFrom3 (p1,i1) (p2,i2) (p3,i3) bi =
   then Nothing --not 3 different bouys
   else case turnDirection p1 p2 p3 of
     Nothing -> Nothing -- Colinear
-    Just _ -> case circleFrom3 p1 p2 p3 of
+    Just Clockwise -> case circleFrom3 p1 p2 p3 of
       Nothing -> Nothing --colinear points
       Just (center, rad) -> Just $ Cross center rad bi
+    Just CounterClockwise -> case circleFrom3 p1 p2 p3 of
+        Nothing -> Nothing --colinear points
+        Just (center, rad) -> Just $ Cross center rad bi
       
-
-findBouyI :: Position -> [Bouy] -> Int
-findBouyI _ [] = error "Searching for bouy in empty bouy list"
-findBouyI (px,py) bs = findBouyI' px crosses
-  where crosses = parabolaCrossXs py $ fmap fst bs
+findBouyI :: Position -> V.Vector Bouy -> Int
+findBouyI (px,py) bs
+  | V.null bs = error "Searching for bouy in empty bouy list"
+  | otherwise = findBouyI' px $ parabolaCrossXs py $ V.toList $ fmap fst bs
 findBouyI' :: Float -> [Float] -> Int
 findBouyI' x [] = 0
 findBouyI' x (cx:xs) = case compare x cx of
@@ -210,30 +205,27 @@ findBouyI' x (cx:xs) = case compare x cx of
   EQ -> 0
   GT -> 1 + findBouyI' x xs
 
-getBouy :: Int -> [Bouy] -> Maybe Bouy
-getBouy _ [] = Nothing
-getBouy i (b:bs) = case compare i 0 of
-  LT -> Nothing
-  EQ -> Just b
-  GT -> getBouy (i-1) bs
-
 parabolaCrossXs :: Float -> [Position] -> [Float]
 parabolaCrossXs _ [] = []
 parabolaCrossXs _ [b] = []
 parabolaCrossXs sw bs = zipWith (parabolaCrossX sw) bs (tail bs)
 
 parabolaCrossX :: Float -> Position -> Position -> Float
-parabolaCrossX sw p q = case crossPointsFromFoci sw p q of
-  NoCross -> error "All Bouy parabolas should have at least one cross point"
-  OneCross c -> fst c
-  TwoCross lc rc -> case compare (fst p) (fst q) of
-    LT -> fst lc
-    EQ -> fst lc
-    GT -> fst rc
-  AllCross -> error "Identical Bouys should not be in a voronoi"
+parabolaCrossX sw p q = fst $ parabolaCross sw p q
 
+parabolaCross :: Float -> Position -> Position -> Position
+parabolaCross sw p q = case compare p q of
+  GT -> parabolaCross sw q p
+  _ -> case crossPointsFromFoci sw p q of
+    NoCross -> error "All Bouy parabolas should have at least one cross point"
+    OneCross c -> c
+    TwoCross lc rc -> case compare (snd p) (snd q) of
+      LT -> rc
+      EQ -> error "Shouldn't happen I guess"
+      GT -> lc
+    AllCross -> error "Identical Bouys should not be in a voronoi"
 
-between :: Float -> Float -> Float -> Bool 
+between :: Float -> Float -> Float -> Bool
 between x a b
   | b < a = between x b a
   | otherwise = a <= x && x <= b
