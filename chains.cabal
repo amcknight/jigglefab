@@ -39,6 +39,7 @@ library
       Color
       Form
       Geometry.Angle
+      Geometry.Beach
       Geometry.Bound
       Geometry.CrossPoint
       Geometry.Line

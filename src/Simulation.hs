@@ -7,6 +7,7 @@ import Data.Vector (toList)
 import System.Random (getStdGen, StdGen)
 import Data.List (sortBy)
 import Data.Fixed (mod')
+import qualified Data.Vector as V
 import Geometry.Space
 import Time
 import Point
@@ -27,20 +28,19 @@ import Geometry.Vector
 import Struct
 import Orb
 import Chem.Sem
-import Geometry.Angle
 import Geometry.Tiling
 import Geometry.Voronoi
-import qualified Data.Vector as V
 import Geometry.Line
 import Geometry.Parabola
 import Geometry.CrossPoint
+import Geometry.Beach
 
 run :: IO ()
 run = runSeeded =<< getStdGen
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
-  let struct = threeBallInner
+  let struct = fourBallInner
   let (model, _) = runState (buildModel 3 struct) seed
   let view = View (Left struct) zeroV 350
   let frameRate = 30
@@ -78,13 +78,13 @@ update dt v = v { structOrModel = case m of
 drawStruct :: Chem c => Struct c -> Picture
 drawStruct (Struct ws os) = Pictures $
   fmap (drawWall yellow) ws <>
-  fmap drawEdge es <>
+  -- fmap drawEdge es <>
   fmap drawOrb os <>
   -- fmap (drawWedge vos) ts
-  [drawBeach (processBeach (initialBeach (fmap orbPos os)) 5)]
+  [drawBeach (processBeach (initialBeach (fmap orbPos os)) 1)]
   where
-    es = voronoi ps
-    ts = tileVoronoi vos es
+    -- es = voronoi ps
+    -- ts = tileVoronoi vos es
     ps = fmap orbPos os
     vos = V.fromList os
 
@@ -98,12 +98,12 @@ drawBeach (Beach sw es bs rs) = Pictures $
   drawParabCrosses (sw-0.0000001) bs <>
   drawSweep sw
 
-drawEvent :: Geometry.Voronoi.Event -> Picture 
-drawEvent (BouyEvent (pos, i)) = drawPosAt pos cyan
+drawEvent :: Geometry.Beach.Event -> Picture 
+drawEvent (BouyEvent b) = drawPosAt (bouyPos b) cyan
 drawEvent (CrossEvent (Cross pos rad i)) = Color (greyN 0.5) $ uncurry translate pos $ circle rad
 
 drawBouy :: Float -> Bouy -> Picture
-drawBouy sweep (pos@(x,y), i) = drawPosAt pos green <> Color green (uncurry translate (x,sweep) (drawParabola y sweep))
+drawBouy sweep (Bouy pos@(x,y) _) = drawPosAt pos green <> Color green (uncurry translate (x,sweep) (drawParabola y sweep))
 
 drawParabola :: Float -> Float -> Picture
 drawParabola focalH sweep = line $ fmap (\xi -> (xi, parabY (focalH-sweep) xi)) [-100,-99.99..100]
@@ -111,7 +111,7 @@ drawParabola focalH sweep = line $ fmap (\xi -> (xi, parabY (focalH-sweep) xi)) 
 
 drawParabCrosses :: Float -> V.Vector Bouy -> [Picture]
 drawParabCrosses sw bs = (drawCrossPoints <$> zipWith (crossPointsFromFoci sw) ps (tail ps)) <> fmap drawLiveCrossPoint (zipWith (parabolaCross sw) ps (tail ps))
-  where ps = V.toList $ fmap fst bs
+  where ps = V.toList $ fmap bouyPos bs
 
 drawCrossPoints :: CrossPoints -> Picture
 drawCrossPoints (OneCross p) = drawPosAt p blue
