@@ -32,15 +32,15 @@ toWedges os (Edge s@(Seg p1 p2) is) = buildWedge p1 p2 cps o1 ++ buildWedge p1 p
 
 buildWedge :: Chem c => Position -> Position -> CrossPoints -> Orb c -> [Wedge]
 buildWedge p1 p2 NoCross (Orb o ch) = [toPie o p1 p2 (chemColor ch)]
-buildWedge p1 p2 (OneCross c) (Orb o ch) = undefined 
+buildWedge p1 p2 (OneCross _) (Orb o ch) = [toPie o p1 p2 (chemColor ch)]
 buildWedge p1 p2 (TwoCross c1 c2) (Orb o ch) = case (compare (distSq p1 o) 1, compare (distSq p2 o) 1) of
-  (GT, GT) -> -- Both outside but cross"
+  (GT, GT) -> -- Both outside but cross
     let (s1, s2, s3) = sort4 p1 (p2,c1,c2)
     in [toPie o p1 s1 c, Tri o s1 s2 c, toPie o s2 s3 c]
-  (GT, _) -> -- Left out right in" at
+  (GT, _) -> -- Left out right in. at
     let (s1, s2, s3) = sort4 p1 (p2,c1,c2)
     in [toPie o p1 s1 c, Tri o s1 s2 c]
-  (_, GT) -> -- Right out left in" ta
+  (_, GT) -> -- Right out left in. ta
     let (s1, s2, s3) = sort4 p2 (p1,c1,c2)
     in [toPie o p2 s1 c, Tri o s1 s2 c]
   (_, _) -> [Tri o p1 p2 c] -- Both in

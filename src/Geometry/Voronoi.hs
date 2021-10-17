@@ -4,7 +4,6 @@ module Geometry.Voronoi
   , Beach(..)
   , Event(..)
   , Cross(..), Bouy(..)
-  , Ray (..)
   , voronoi
   , initialBeach
   , processBeach
@@ -120,7 +119,6 @@ rayCrossBound ((mxX,mxY),(mnX,mnY)) p@(x,y) dir
     closer :: Position -> Position -> Position
     closer a b = if distSq p a < distSq p b then a else b
 
-
 updateBeach :: Beach -> Beach
 updateBeach (Beach _ [] _ _) = error "updateBeach: No events"
 updateBeach beach@(Beach sw (e:es) _ _) = if height e > sw
@@ -136,14 +134,22 @@ processCross c@(Cross p r i) b@(Beach sw es bs rs)
   | i == 0 = error "Bouy index should never be the left-most bouy"
   | i == numBs - 1 = error "Bouy index should never be the right-most bouy"
   | i >= numBs = error "Index out of bounds in processCross"
-  | snd (bs V.! (i-1)) == snd (bs V.! (i+1)) = error "A circle event had left and right indeices equal. Impossible"
-  | crossContainsBouy c bs = b { bouys = V.take (i-1) bs <> V.drop i bs }
-  | otherwise = b { bouys = V.take (i-1) bs <> V.drop i bs, rays = rs ++ newRays p (bs V.! (i-1)) (bs V.! i) (bs V.! (i+1)) }
+  | snd (bs V.! (i-1)) == snd (bs V.! (i+1)) = error "A circle event had left and right indices equal. Impossible"
+  | crossContainsBouy c bs = b { events = newEs, bouys = newBs } -- Don't add Rays. Just drop event.
+  | otherwise = b { events = newEs, bouys = newBs, rays = rs ++ newRays p (bs V.! (i-1)) (bs V.! i) (bs V.! (i+1)) }
   where
+    newBs = remove bs i
+    newEs = replenishCircleEvents sw newBs es
     numBs = length bs
+    remove :: V.Vector Bouy -> Int -> V.Vector Bouy
+    remove bs i = V.take i bs <> V.drop (i+1) bs
 
 crossContainsBouy :: Cross -> V.Vector Bouy -> Bool
-crossContainsBouy c@(Cross cp rad i) bs = any (\(p, _) -> distSq cp p < rad^2) (V.take (i-2) bs <> V.drop (i+1) bs)
+crossContainsBouy c@(Cross cp rad i) bs = any (\(p, j) -> j /= li && j /= mi && j /= ri && distSq cp p < rad^2) bs
+  where
+    (_, li) = bs V.! (i-1)
+    (_, mi) = bs V.! i
+    (_, ri) = bs V.! (i+1)
 
 newRays :: Position -> Bouy -> Bouy -> Bouy -> [Ray]
 newRays pos (p1,i1) (p2,i2) (p3,i3) =
@@ -170,7 +176,10 @@ processBouy b@(p@(x,y),i) bch@(Beach sw es bs rs)
     bi = findBouyI p bs
     splitB = bs V.! bi
     newBs = V.take bi bs <> V.fromList [splitB, (p, i), splitB] <> V.drop (bi+1) bs
-    newEs = sort $ filter (\case {BouyEvent{} -> True; _ -> False}) es ++ circleEvents y newBs
+    newEs = replenishCircleEvents y newBs es
+
+replenishCircleEvents :: Float -> V.Vector Bouy -> [Event] -> [Event]
+replenishCircleEvents sw bs es = sort $ filter (\case {BouyEvent{} -> True; _ -> False}) es ++ circleEvents sw bs
 
 circleEvents :: Float -> V.Vector Bouy -> [Event]
 circleEvents sweep bs = CrossEvent <$> filter (\(Cross (_,y) r _) -> y-r <= sweep) (circleEvents' (V.toList bs) 0)
@@ -214,18 +223,17 @@ parabolaCrossX :: Float -> Position -> Position -> Float
 parabolaCrossX sw p q = fst $ parabolaCross sw p q
 
 parabolaCross :: Float -> Position -> Position -> Position
-parabolaCross sw p q = case compare p q of
-  GT -> parabolaCross sw q p
-  _ -> case crossPointsFromFoci sw p q of
-    NoCross -> error "All Bouy parabolas should have at least one cross point"
-    OneCross c -> c
-    TwoCross lc rc -> case compare (snd p) (snd q) of
-      LT -> rc
-      EQ -> error "Shouldn't happen I guess"
-      GT -> lc
-    AllCross -> error "Identical Bouys should not be in a voronoi"
+parabolaCross sw p q = case crossPointsFromFoci sw p q of
+  NoCross -> error "All Bouy parabolas should have at least one cross point"
+  OneCross c -> c
+  TwoCross lc rc -> case compare (snd p) (snd q) of
+    LT -> rc
+    EQ -> error "Shouldn't happen I guess"
+    GT -> lc
+  AllCross -> error "Identical Bouys should not be in a voronoi"
 
 between :: Float -> Float -> Float -> Bool
 between x a b
   | b < a = between x b a
   | otherwise = a <= x && x <= b
+

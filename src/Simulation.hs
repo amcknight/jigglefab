@@ -42,7 +42,7 @@ runSeeded :: StdGen -> IO ()
 runSeeded seed = do
   let struct = threeBallInner
   let (model, _) = runState (buildModel 3 struct) seed
-  let view = View (Left struct) zeroV 250
+  let view = View (Left struct) zeroV 350
   let frameRate = 30
   play
     FullScreen
@@ -80,8 +80,8 @@ drawStruct (Struct ws os) = Pictures $
   fmap (drawWall yellow) ws <>
   fmap drawEdge es <>
   fmap drawOrb os <>
-  fmap (drawWedge vos) ts
-  -- [drawBeach (processBeach (initialBeach (fmap orbPos os)) 5)]
+  -- fmap (drawWedge vos) ts
+  [drawBeach (processBeach (initialBeach (fmap orbPos os)) 5)]
   where
     es = voronoi ps
     ts = tileVoronoi vos es
@@ -96,7 +96,6 @@ drawBeach (Beach sw es bs rs) = Pictures $
   fmap drawEvent es <>
   fmap (drawBouy sw) (V.toList bs) <>
   drawParabCrosses (sw-0.0000001) bs <>
-  fmap drawRay rs <>
   drawSweep sw
 
 drawEvent :: Geometry.Voronoi.Event -> Picture 
@@ -117,13 +116,11 @@ drawParabCrosses sw bs = (drawCrossPoints <$> zipWith (crossPointsFromFoci sw) p
 drawCrossPoints :: CrossPoints -> Picture
 drawCrossPoints (OneCross p) = drawPosAt p blue
 drawCrossPoints (TwoCross p q) = drawPosAt p blue <> drawPosAt p blue
-drawCrossPoints _ = error "Drawing non-points"
+drawCrossPoints NoCross = error "Drawing non-points"
+drawCrossPoints AllCross = error "Drawing infinite-points"
 
 drawLiveCrossPoint :: Position -> Picture
 drawLiveCrossPoint p = drawPosAt p magenta
-
-drawRay :: Ray -> Picture
-drawRay (Ray pos dir i j) = drawPosAt pos yellow
 
 drawSweep :: Float -> [Picture]
 drawSweep h = [Color black $ line [(-100000, h), (100000, h)]]
