@@ -1,7 +1,7 @@
 module Geometry.Space
 ( Radius
-, Ortho (Vertical, Horizontal)
-, Side (In, Out)
+, Ortho (..)
+, Side (..)
 , Sided
 , flipSide
 , flipSided

@@ -3,6 +3,7 @@ module Geometry.Angle
 , Radian
 , TurnDirection (..)
 , AngleType (..)
+, Compass(..), compass
 , tau
 , toRadian, toTurn
 , degrees, undegrees
@@ -21,6 +22,20 @@ type Turn = Float -- From 0 to 1
 type Radian = Float -- From -pi to pi
 data TurnDirection = Clockwise | CounterClockwise deriving Show
 data AngleType = Zero | Acute | Orthogonal | Obtuse | Opposite deriving Show
+data Compass = East | NorthEast | North | NorthWest | West | SouthWest | South | SouthEast
+
+compass :: Turn -> Compass
+compass t
+  | dir == 0 || dir == 1 = East
+  | dir == 0.25 = North
+  | dir == 0.50 = West
+  | dir == 0.75 = South
+  | dir > 0.75 = SouthEast
+  | dir > 0.50 = SouthWest
+  | dir > 0.25 = NorthWest
+  | dir > 0.00 = NorthEast
+  | otherwise = error "Invalid direction"
+  where dir = simple t
 
 tau :: Float
 tau = 2*pi
