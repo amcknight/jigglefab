@@ -18,6 +18,7 @@ module Geometry.Vector
 , reflect
 , squashTurn
 , circleFrom3
+, sort3
 , turnDirection
 , mid
 ) where
@@ -28,6 +29,7 @@ import Geometry.Angle
 import Geometry.Space
 import Utils
 import Pair
+import Data.List (sort)
 
 type Vector = P Float
 type Position = Vector
@@ -166,18 +168,23 @@ squashTurn rad v1 v2 = if 2*rad <= d then 0 else toTurn (acos ((d/2)/rad))
   where d = dist v1 v2
 
 circleFrom3 :: Position -> Position -> Position -> Maybe (Position, Radius)
-circleFrom3 p@(x1,y1) q@(x2,y2) r@(x3,y3) = if colinear p q r then Nothing else Just (center, dist (x1,y1) center)
+circleFrom3 p1 p2 p3 = if colinear p q r then Nothing else Just (center, dist p center)
   where
+    (p@(px,py),q@(qx,qy),r@(rx,ry)) = sort3 p1 p2 p3
     center = (-1/(2*a)) |* (b, c)
-    a = x1*(y2-y3) - y1*(x2-x3) + x2*y3 - x3*y2
+    a = px*(qy-ry) - py*(qx-rx) + qx*ry - rx*qy
 
-    b =   (x1^2 + y1^2) * (y3-y2)
-        + (x2^2 + y2^2) * (y1-y3)
-        + (x3^2 + y3^2) * (y2-y1)
+    b =   (px^2 + py^2) * (ry-qy)
+        + (qx^2 + qy^2) * (py-ry)
+        + (rx^2 + ry^2) * (qy-py)
  
-    c =   (x1^2 + y1^2) * (x2-x3) 
-        + (x2^2 + y2^2) * (x3-x1) 
-        + (x3^2 + y3^2) * (x1-x2)
+    c =   (px^2 + py^2) * (qx-rx) 
+        + (qx^2 + qy^2) * (rx-px) 
+        + (rx^2 + ry^2) * (px-qx)
+
+sort3 :: Ord a => a -> a -> a -> (a, a, a)
+sort3 x y z = (a,b,c)
+  where [a,b,c] = sort [x,y,z]
 
 colinear :: Position -> Position -> Position -> Bool 
 colinear p q r

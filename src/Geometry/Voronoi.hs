@@ -24,7 +24,7 @@ data Edge = Edge
 voronoi :: [Position] -> [Edge]
 voronoi ps = edgesFromRays (bufferedBound ps 1) $ voronoi' $ initialBeach ps
 voronoi' :: Beach -> [Ray]
-voronoi' b@(Beach _ [] _ rs) = S.toList rs
+voronoi' b@(Beach _ _ [] _ rs) = rs
 voronoi' b = voronoi' $ updateBeach b
 
 edgesFromRays :: Bound -> [Ray] -> [Edge]

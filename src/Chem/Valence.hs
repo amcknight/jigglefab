@@ -12,6 +12,7 @@ module Chem.Valence
 , threeBallInner
 , fourBall
 , fourBallInner
+, sevenBall
 ) where
 
 import Chem
@@ -122,3 +123,13 @@ fourBallInner =
   orbStruct (Orb (0.2, 0.6) (vale 2)) <>
   orbStruct (Orb (-0.3, 0.3) (vale 3)) <>
   orbStruct (Orb (-0.7, 1.1) (vale 4))
+
+sevenBall :: Struct Valence
+sevenBall = 
+  orbStruct (Orb (-0.54, 0.51) (vale 1)) <>
+  orbStruct (Orb ( 0.23, 0.62) (vale 2)) <>
+  orbStruct (Orb (-0.36, 0.35) (vale 3)) <>
+  orbStruct (Orb (-0.73, 1.14) (vale 4)) <>
+  orbStruct (Orb (-0.27, 0.68) (vale 2)) <>
+  orbStruct (Orb ( 0.31, 0.38) (vale 3)) <>
+  orbStruct (Orb ( 0.71, -1.12) (vale 4))

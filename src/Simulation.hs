@@ -40,7 +40,7 @@ run = runSeeded =<< getStdGen
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
-  let struct = fourBallInner
+  let struct = sevenBall
   let (model, _) = runState (buildModel 3 struct) seed
   let view = View (Left struct) zeroV 350
   let frameRate = 30
@@ -78,13 +78,13 @@ update dt v = v { structOrModel = case m of
 drawStruct :: Chem c => Struct c -> Picture
 drawStruct (Struct ws os) = Pictures $
   fmap (drawWall yellow) ws <>
-  -- fmap drawEdge es <>
-  fmap drawOrb os <>
+  fmap drawEdge es <>
+  fmap drawOrb os
   -- fmap (drawWedge vos) ts
-  [drawBeach (processBeach (initialBeach (fmap orbPos os)) 1)]
+  -- [drawBeach (processBeach (initialBeach (fmap orbPos os)) 7)]
   where
-    -- es = voronoi ps
-    -- ts = tileVoronoi vos es
+    es = voronoi ps
+    ts = tileVoronoi vos es
     ps = fmap orbPos os
     vos = V.fromList os
 
@@ -92,7 +92,7 @@ drawEdge :: Edge -> Picture
 drawEdge (Edge (Seg p q) _) = Color white $ line [p, q]
 
 drawBeach :: Beach -> Picture
-drawBeach (Beach sw es bs rs) = Pictures $
+drawBeach (Beach sw _ es bs _) = Pictures $
   fmap drawEvent es <>
   fmap (drawBouy sw) (V.toList bs) <>
   drawParabCrosses (sw-0.0000001) bs <>
