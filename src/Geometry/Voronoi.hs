@@ -4,6 +4,11 @@ module Geometry.Voronoi
 , voronoi
 ) where
 
+import qualified Data.Vector as V
+import qualified Data.Set as S
+import Data.Either (partitionEithers)
+import Data.List (sort)
+import Data.Maybe (mapMaybe)
 import Geometry.Vector
 import Debug.Trace
 import Geometry.Line
@@ -11,12 +16,7 @@ import Pair
 import Geometry.Bound
 import Geometry.Beach
 import Geometry.Angle
-import qualified Data.Vector as V
-import qualified Data.Set as S
-import Data.Either (partitionEithers)
-import Data.List (sort)
 import Geometry.CrossPoint
-import Data.Maybe (mapMaybe)
 
 data Edge = Edge
   { seg :: Seg
@@ -26,11 +26,11 @@ data Edge = Edge
 voronoi :: [Position] -> [Edge]
 voronoi ps = edgesFromRays (bufferedBound ps 1) $ voronoi' $ initialBeach ps
 voronoi' :: Beach -> [Ray]
-voronoi' b@(Beach _ _ [] _ rs) = rs
+voronoi' b@(Beach _ _ [] _ rs) = trace (show rs) rs
 voronoi' b = voronoi' $ updateBeach b
 
 edgesFromRays :: Bound -> [Ray] -> [Edge]
-edgesFromRays bnd rs = pairs ++ mapMaybe (edgeFromRay bnd) strays
+edgesFromRays bnd rs = fmap (boundedEdge bnd) pairs ++ mapMaybe (edgeFromRay bnd) strays
   where (pairs, strays) = rayDups rs
 
 rayDups :: [Ray] -> ([Edge], [Ray])
@@ -49,42 +49,18 @@ addRayDups (r1:r2:rs) ers = case edgeRay r1 r2 of
       else Right r1
 
 edgeFromRay :: Bound -> Ray -> Maybe Edge
-edgeFromRay b (Ray p dir i j) = case rayCrossBound b p (simple dir) of 
+edgeFromRay b (Ray p dir i j) = case rayCrossBound b p (simple dir) of
   NoCross -> Nothing
   OneCross q -> Just $ Edge (Seg p q) (i,j)
   TwoCross q r -> Just $ Edge (Seg q r) (i,j)
   AllCross -> error "A line and bound can't be identical"
 
-rayCrossBound :: Bound -> Position -> Turn -> CrossPoints
-rayCrossBound bnd@((mxX,mxY),(mnX,mnY)) p@(x,y) dir = case overlap bnd (boundOne p) of
-  Nothing -> if length onBound < 2 then NoCross
-    else if length onBound > 2 then error "Three crosspoints on the bound. Possible only in very edgy cases"
-    else let [b1, b2] = onBound in TwoCross b1 b2
-  Just _ -> OneCross $ case compass dir of
-    East -> (mxX, y)
-    North -> (x, mxY)
-    West -> (mnX, y)
-    South -> (x, mnY)
-    NorthEast -> closer pForMinX pForMinY
-    NorthWest -> closer pForMinX pForMinY
-    SouthWest -> closer pForMinX pForMaxY
-    SouthEast -> closer pForMinX pForMaxY
-  where
-    s = slope dir
-    b = y - s * x
-    mnXY = s * mnX + b
-    mxXY = s * mxX + b
-    mnYX = (mnY-b) / s
-    mxYX = (mxY-b) / s
-    pForMinX = (mnX, mnXY)
-    pForMinY = (mnYX, mnY)
-    pForMaxX = (mxX, mxXY)
-    pForMaxY = (mxYX, mxY)
-    mnXYIn = mnXY < mxY && mnXY > mnY
-    mxXYIn = mxXY < mxY && mxXY > mnY
-    mnYXIn = mnYX < mxX && mnYX > mnX
-    mxYXIn = mxYX < mxX && mxYX > mnX
-    onBound = fmap snd $ filter fst $ zip [mnXYIn, mxXYIn, mnYXIn, mxYXIn] [pForMinX, pForMaxX, pForMinY, pForMaxY]
+boundedEdge :: Bound -> Edge -> Edge
+boundedEdge b e@(Edge (Seg p q) is) = case segCrossBound b (seg e) of
+  NoCross -> e
+  OneCross c -> if isIn b p then Edge (Seg c p) is else Edge (Seg c q) is
+  TwoCross c1 c2 -> Edge (Seg c1 c2) is
+  AllCross -> error "Impossible for an edge and bound to fully overlap"
 
-    closer :: Position -> Position -> Position
-    closer a b = if distSq p a < distSq p b then a else b
+segCrossBound :: Bound -> Seg -> CrossPoints
+segCrossBound = error "IMPLEMENT THIS IN BOUND OR LINE"

@@ -4,10 +4,16 @@ module Geometry.Bound
 , overlap
 , boundOne
 , bound, bufferedBound
+, rayCrossBound
+, isIn
 ) where
       
 import Pair
 import Geometry.Vector
+import Geometry.Angle
+import Geometry.CrossPoint
+import Debug.Trace
+import Data.Maybe (isJust)
 
 type Bound = (P Position)
 
@@ -37,3 +43,45 @@ bound ((x,y):vs) = ((max maxX x, max maxY y), (min minX x, min minY y))
 bufferedBound :: [Position] -> Float -> Bound
 bufferedBound vs b = ((maxX+b, maxY+b), (minX-b, minY-b))
   where ((maxX, maxY), (minX, minY)) = bound vs
+
+rayCrossBound :: Bound -> Position -> Turn -> CrossPoints
+rayCrossBound bnd@((mxX,mxY),(mnX,mnY)) p@(x,y) dir = case overlap bnd (boundOne p) of
+  Nothing -> if length onBound < 2 then NoCross
+    else if length onBound > 2 then error "TODO: Three crosspoints on the bound. Possible only in very edgy cases"
+    else
+      let [b1, b2] = onBound 
+      in case separation dir (direction (b1 |- p)) of
+        Zero -> TwoCross b1 b2
+        Acute -> TwoCross b1 b2
+        _ -> NoCross 
+  Just _ -> OneCross $ case compass dir of
+    East -> (mxX, y)
+    North -> (x, mxY)
+    West -> (mnX, y)
+    South -> (x, mnY)
+    NorthEast -> closer pForMaxX pForMaxY
+    NorthWest -> closer pForMinX pForMaxY
+    SouthWest -> closer pForMinX pForMinY
+    SouthEast -> closer pForMaxX pForMinY
+  where
+    s = slope dir -- breaks on vertical or horizontal
+    b = y - s * x
+    mnXY = s * mnX + b
+    mxXY = s * mxX + b
+    mnYX = (mnY-b) / s
+    mxYX = (mxY-b) / s
+    pForMinX = (mnX, mnXY)
+    pForMinY = (mnYX, mnY)
+    pForMaxX = (mxX, mxXY)
+    pForMaxY = (mxYX, mxY)
+    mnXYIn = mnXY < mxY && mnXY > mnY
+    mxXYIn = mxXY < mxY && mxXY > mnY
+    mnYXIn = mnYX < mxX && mnYX > mnX
+    mxYXIn = mxYX < mxX && mxYX > mnX
+    onBound = fmap snd $ filter fst $ zip [mnXYIn, mxXYIn, mnYXIn, mxYXIn] [pForMinX, pForMaxX, pForMinY, pForMaxY]
+
+    closer :: Position -> Position -> Position
+    closer a b = if distSq p a < distSq p b then a else b
+
+isIn :: Bound -> Position -> Bool
+isIn b = isJust . overlap b . boundOne

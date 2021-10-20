@@ -11,6 +11,8 @@ module Geometry.Beach
 , parabolaCrossXs
 , parabolaCross
 , height
+, newRays
+, awayRay
 ) where
 
 import qualified Data.Vector as V
@@ -140,19 +142,26 @@ crossContainsBouy c@(Cross cp rad i) bs = any (\(Bouy p j) -> j /= li && j /= mi
 
 newRays :: Position -> Bouy -> Bouy -> Bouy -> [Ray]
 newRays pos (Bouy p1 i1) (Bouy p2 i2) (Bouy p3 i3) =
-  [ if i2 < i3 then Ray pos (awayRay pos p1 p2 p3) i2 i3 else Ray pos (awayRay pos p1 p2 p3) i3 i2
-  , if i1 < i3 then Ray pos (awayRay pos p2 p1 p3) i1 i3 else Ray pos (awayRay pos p2 p1 p3) i3 i1
-  , if i1 < i2 then Ray pos (awayRay pos p3 p1 p2) i1 i2 else Ray pos (awayRay pos p3 p1 p2) i2 i1
+  [ if i2 < i3 then Ray pos away1 i2 i3 else Ray pos away1 i3 i2
+  , if i1 < i3 then Ray pos away2 i1 i3 else Ray pos away2 i3 i1
+  , if i1 < i2 then Ray pos away3 i1 i2 else Ray pos away3 i2 i1
   ]
+  where
+    away1 = awayRay pos p1 p2 p3
+    away2 = awayRay pos p2 p1 p3
+    away3 = awayRay pos p3 p1 p2
 
 awayRay :: Position -> Position -> Position -> Position -> Turn
-awayRay o away p q = case separation dir adir of 
-  Opposite -> dir
-  Obtuse -> dir
-  _ -> pole dir
+awayRay o away p q = trace ("Orig: "++show o ++ " Away: "++show away++" PQ: "++show p ++show q++" TurnO: "++show (turnDirection p q o)++" TurnA: "++show (turnDirection p q away)++" Dir: "++show dir) $ if turnDirection p q o == turnDirection p q away
+  then dir
+  else pole dir
+-- awayRay o away p q = case separation dir adir of 
+--   Opposite -> dir
+--   Obtuse -> dir
+--   _ -> pole dir
   where
     dir = direction $ mid p q |- o
-    adir = direction $ away |- o
+--     adir = direction $ away |- o
 
 processBouy :: Bouy -> Beach -> Beach
 processBouy b bch@(Beach sw ss es bs rs)
@@ -168,7 +177,7 @@ removeBrokenCircleEvent :: [Event] -> Int -> [Event]
 removeBrokenCircleEvent es i = filter (\case CrossEvent (Cross _ _ ci) -> ci /= i; _ -> True ) es
 
 newCircleEventsAt :: V.Vector Bouy -> [Int] -> [Event]
-newCircleEventsAt bs is = let x = mapMaybe (fmap CrossEvent . crossFrom3 bs) (filter notOnEdge is) in trace ("Adding: "++show x) x
+newCircleEventsAt bs is = mapMaybe (fmap CrossEvent . crossFrom3 bs) (filter notOnEdge is)
   where notOnEdge i = i > 0 && i < length bs - 1
 
 crossFrom3 :: V.Vector Bouy -> Int -> Maybe Cross

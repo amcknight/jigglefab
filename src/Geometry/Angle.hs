@@ -20,9 +20,9 @@ import Debug.Trace
 
 type Turn = Float -- From 0 to 1
 type Radian = Float -- From -pi to pi
-data TurnDirection = Clockwise | CounterClockwise deriving Show
-data AngleType = Zero | Acute | Orthogonal | Obtuse | Opposite deriving Show
-data Compass = East | NorthEast | North | NorthWest | West | SouthWest | South | SouthEast
+data TurnDirection = Clockwise | CounterClockwise deriving (Show, Eq)
+data AngleType = Zero | Acute | Orthogonal | Obtuse | Opposite deriving (Show, Eq)
+data Compass = East | NorthEast | North | NorthWest | West | SouthWest | South | SouthEast deriving (Show, Eq)
 
 compass :: Turn -> Compass
 compass t
@@ -44,7 +44,7 @@ toRadian :: Turn -> Radian
 toRadian = (tau*)
 
 toTurn :: Radian -> Turn
-toTurn = (/tau)
+toTurn = simple . (/tau)
 
 degrees :: Turn -> Float 
 degrees = (360*)
@@ -53,7 +53,7 @@ undegrees :: Float -> Turn
 undegrees = (/360)
 
 pole :: Turn -> Turn
-pole = (`mod'` 1) . (0.5+)
+pole = simple . (0.5+)
 
 right :: Turn
 right = 0.0

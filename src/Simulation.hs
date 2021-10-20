@@ -81,7 +81,7 @@ drawStruct (Struct ws os) = Pictures $
   fmap drawEdge es <>
   fmap drawOrb os
   -- fmap (drawWedge vos) ts
-  -- [drawBeach (processBeach (initialBeach (fmap orbPos os)) 7)]
+  -- [drawBeach (processBeach (initialBeach (fmap orbPos os)) 4)]
   where
     es = voronoi ps
     ts = tileVoronoi vos es
@@ -100,7 +100,7 @@ drawBeach (Beach sw _ es bs _) = Pictures $
 
 drawEvent :: Geometry.Beach.Event -> Picture 
 drawEvent (BouyEvent b) = drawPosAt (bouyPos b) cyan
-drawEvent (CrossEvent (Cross pos rad i)) = Color (greyN 0.5) $ uncurry translate pos $ circle rad
+drawEvent (CrossEvent (Cross pos rad i)) = Color (greyN 0.5) (uncurry translate pos (circle rad)) <> drawPosAt pos (greyN 0.5)
 
 drawBouy :: Float -> Bouy -> Picture
 drawBouy sweep (Bouy pos@(x,y) _) = drawPosAt pos green <> Color green (uncurry translate (x,sweep) (drawParabola y sweep))
