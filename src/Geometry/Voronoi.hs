@@ -30,7 +30,7 @@ voronoi' b@(Beach _ _ [] _ rs) = trace (show rs) rs
 voronoi' b = voronoi' $ updateBeach b
 
 edgesFromRays :: Bound -> [Ray] -> [Edge]
-edgesFromRays bnd rs = fmap (boundedEdge bnd) pairs ++ mapMaybe (edgeFromRay bnd) strays
+edgesFromRays bnd rs = trace ("PAIRS: "++show pairs) mapMaybe (edgeInBound bnd) pairs ++ mapMaybe (edgeFromRay bnd) strays
   where (pairs, strays) = rayDups rs
 
 rayDups :: [Ray] -> ([Edge], [Ray])
@@ -55,12 +55,5 @@ edgeFromRay b (Ray p dir i j) = case rayCrossBound b p (simple dir) of
   TwoCross q r -> Just $ Edge (Seg q r) (i,j)
   AllCross -> error "A line and bound can't be identical"
 
-boundedEdge :: Bound -> Edge -> Edge
-boundedEdge b e@(Edge (Seg p q) is) = case segCrossBound b (seg e) of
-  NoCross -> e
-  OneCross c -> if isIn b p then Edge (Seg c p) is else Edge (Seg c q) is
-  TwoCross c1 c2 -> Edge (Seg c1 c2) is
-  AllCross -> error "Impossible for an edge and bound to fully overlap"
-
-segCrossBound :: Bound -> Seg -> CrossPoints
-segCrossBound = error "IMPLEMENT THIS IN BOUND OR LINE"
+edgeInBound :: Bound -> Edge -> Maybe Edge
+edgeInBound b (Edge s is) = fmap (`Edge` is) (segInBound b s)

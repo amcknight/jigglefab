@@ -40,7 +40,7 @@ run = runSeeded =<< getStdGen
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
-  let struct = sevenBall
+  let struct = sevenBall 
   let (model, _) = runState (buildModel 3 struct) seed
   let view = View (Left struct) zeroV 350
   let frameRate = 30

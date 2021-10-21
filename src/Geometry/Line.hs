@@ -3,12 +3,15 @@ module Geometry.Line
 , Seg(..)
 , segCrosses
 , crossPointsAtUnit
+, rayCrossBound
+, segInBound
 ) where
+
 import Geometry.Vector
-import Pair
 import Geometry.Angle
-import Geometry.Bound
+import Geometry.Bound ( Bound, overlap, boundOne, isIn )
 import Geometry.CrossPoint
+import Debug.Trace
 
 data Line = Line Position Position deriving Show
 data Seg = Seg Position Position deriving Show
@@ -58,3 +61,73 @@ crossPointsAtUnit (Line (px, py) (qx, qy)) = case compare discriminant 0 of
     root = sqrt discriminant
     preXY = root |* (ysign * dx, abs dy)
     scale = detPQ |* (dy, -dx)
+
+rayCrossBound :: Bound -> Position -> Turn -> CrossPoints
+rayCrossBound bnd@((mxX,mxY),(mnX,mnY)) p@(x,y) dir
+  | isIn bnd p = OneCross $ case compass dir of
+    East -> (mxX, y)
+    North -> (x, mxY)
+    West -> (mnX, y)
+    South -> (x, mnY)
+    NorthEast -> closer pForMaxX pForMaxY
+    NorthWest -> closer pForMinX pForMaxY
+    SouthWest -> closer pForMinX pForMinY
+    SouthEast -> closer pForMaxX pForMinY
+  | length onBound < 2 = NoCross
+  | length onBound > 2 = error "TODO: Three crosspoints on the bound. Possible only in very edgy cases"
+  | otherwise = case separation dir (direction (b1 |- p)) of
+    Zero -> TwoCross b1 b2
+    Acute -> TwoCross b1 b2
+    _ -> NoCross 
+  where
+    s = slope dir -- breaks on vertical or horizontal
+    b = y - s * x
+    mnXY = s * mnX + b
+    mxXY = s * mxX + b
+    mnYX = (mnY-b) / s
+    mxYX = (mxY-b) / s
+    pForMinX = (mnX, mnXY)
+    pForMinY = (mnYX, mnY)
+    pForMaxX = (mxX, mxXY)
+    pForMaxY = (mxYX, mxY)
+    mnXYIn = mnXY < mxY && mnXY > mnY
+    mxXYIn = mxXY < mxY && mxXY > mnY
+    mnYXIn = mnYX < mxX && mnYX > mnX
+    mxYXIn = mxYX < mxX && mxYX > mnX
+    onBound = fmap snd $ filter fst $ zip [mnXYIn, mxXYIn, mnYXIn, mxYXIn] [pForMinX, pForMaxX, pForMinY, pForMaxY]
+    [b1, b2] = onBound -- Only used after checking length is two
+
+    closer :: Position -> Position -> Position
+    closer a b = if distSq p a < distSq p b then a else b
+
+segInBound :: Bound -> Seg -> Maybe Seg
+segInBound bnd@((mxX,mxY),(mnX,mnY)) (Seg p@(px,py) q@(qx,qy))
+  | isIn bnd p && isIn bnd q = Just $ Seg p q
+  | length onBound < 2 = Nothing -- Completely outside
+  | length onBound > 2 = error "Three crosspoints on the bound. Possible only in very edgy cases"
+  | isIn bnd p = case separation (direction (q |- p)) (direction (b1 |- p)) of
+    Zero -> Just $ Seg p b1
+    Acute -> Just $ Seg p b1
+    _ -> Just $ Seg p b2
+  | isIn bnd q = case separation (direction (p |- q)) (direction (b1 |- q)) of
+    Zero -> Just $ Seg q b1
+    Acute -> Just $ Seg q b1
+    _ -> Just $ Seg q b2
+  | otherwise = error "Two cross points but Seg is outside. Sounds impossible"
+  where
+    s = (qy-py)/(qx-px) -- breaks on vertical or horizontal
+    b = py - s * px
+    mnXY = s * mnX + b
+    mxXY = s * mxX + b
+    mnYX = (mnY-b) / s
+    mxYX = (mxY-b) / s
+    pForMinX = (mnX, mnXY)
+    pForMinY = (mnYX, mnY)
+    pForMaxX = (mxX, mxXY)
+    pForMaxY = (mxYX, mxY)
+    mnXYIn = mnXY < mxY && mnXY > mnY
+    mxXYIn = mxXY < mxY && mxXY > mnY
+    mnYXIn = mnYX < mxX && mnYX > mnX
+    mxYXIn = mxYX < mxX && mxYX > mnX
+    onBound = fmap snd $ filter fst $ zip [mnXYIn, mxXYIn, mnYXIn, mxYXIn] [pForMinX, pForMaxX, pForMinY, pForMaxY]
+    [b1, b2] = onBound -- Only used after checking the length is 2 so should be ok
