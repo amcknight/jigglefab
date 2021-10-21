@@ -110,8 +110,8 @@ processCross c@(Cross p r i) b@(Beach sw cs es bs rs)
   | i < 1 = error "Bouy index should never be the left-most bouy (or out of bounds)"
   | i >= numBs - 1 = error "Bouy index should never be the right-most bouy (or out of bounds)"
   | bouyI (bs V.! (i-1)) == bouyI (bs V.! (i+1)) = error "A circle event had left and right indices equal. Impossible"
-  | crossContainsBouy c bs = error "Cross Contained Bouy. Should be filtered earlier" --Beach sw newEs newBs rs -- Don't add Rays. Just drop event.
-  | bis `elem` cs = Beach sw cs newEs newBs rs -- No new rays
+  | bis `elem` cs = Beach sw cs newEs newBs rs -- No new rays. TODO: Should it not use the newBS?
+  | crossContainsBouy c bs = Beach sw newCs newEs newBs rs -- Don't add Rays. Just drop event.
   | otherwise = Beach sw newCs newEs newBs newRs
   where
     numBs = length bs

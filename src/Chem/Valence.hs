@@ -43,8 +43,8 @@ instance Chem Valence where
     | w == 0 = blue 
     | w == 1 = red 
     | w == 2 = mix yellow red 
-    | w == 3 = magenta 
-    | otherwise = yellow
+    | w == 3 = yellow 
+    | otherwise = mix blue cyan
   -- chemColor ch = case desire ch of
   --   EQ -> grey
   --   GT -> red
@@ -126,10 +126,10 @@ fourBallInner =
 
 sevenBall :: Struct Valence
 sevenBall = 
-  orbStruct (Orb (-0.54, 0.51) (vale 1)) <>
-  orbStruct (Orb (-0.36, 0.35) (vale 3)) <>
+  -- orbStruct (Orb (-0.54, 0.51) (vale 1)) <>
+  orbStruct (Orb (-0.36, 0.05) (vale 1)) <>
   orbStruct (Orb ( 0.2, 0.7) (vale 2)) <>
   -- orbStruct (Orb (-0.73, 1.14) (vale 1)) <>
-  -- orbStruct (Orb (-0.27, 0.68) (vale 2)) <>
-  orbStruct (Orb ( 0.3, 0.6) (vale 3)) -- <>
+  orbStruct (Orb (-0.27, 0.68) (vale 3)) <>
+  orbStruct (Orb ( 0.3, 0.6) (vale 4)) -- <>
   -- orbStruct (Orb ( 0.7,-1.0) (vale 4))

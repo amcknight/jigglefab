@@ -42,7 +42,7 @@ runSeeded :: StdGen -> IO ()
 runSeeded seed = do
   let struct = sevenBall 
   let (model, _) = runState (buildModel 3 struct) seed
-  let view = View (Left struct) zeroV 350
+  let view = View (Left struct) zeroV 500
   let frameRate = 30
   play
     FullScreen
@@ -78,10 +78,10 @@ update dt v = v { structOrModel = case m of
 drawStruct :: Chem c => Struct c -> Picture
 drawStruct (Struct ws os) = Pictures $
   fmap (drawWall yellow) ws <>
-  fmap drawEdge es <>
-  fmap drawOrb os
+  -- fmap drawEdge es <>
+  -- fmap drawOrb os <>
   -- fmap (drawWedge vos) ts
-  -- [drawBeach (processBeach (initialBeach (fmap orbPos os)) 4)]
+  [drawBeach vos (processBeach (initialBeach (fmap orbPos os)) 5)]
   where
     es = voronoi ps
     ts = tileVoronoi vos es
@@ -91,10 +91,10 @@ drawStruct (Struct ws os) = Pictures $
 drawEdge :: Edge -> Picture
 drawEdge (Edge (Seg p q) _) = Color white $ line [p, q]
 
-drawBeach :: Beach -> Picture
-drawBeach (Beach sw _ es bs _) = Pictures $
+drawBeach :: Chem c => V.Vector (Orb c) -> Beach -> Picture
+drawBeach os (Beach sw _ es bs _) = Pictures $
   fmap drawEvent es <>
-  fmap (drawBouy sw) (V.toList bs) <>
+  fmap (drawBouy os sw) (V.toList bs) <>
   drawParabCrosses (sw-0.0000001) bs <>
   drawSweep sw
 
@@ -102,8 +102,9 @@ drawEvent :: Geometry.Beach.Event -> Picture
 drawEvent (BouyEvent b) = drawPosAt (bouyPos b) cyan
 drawEvent (CrossEvent (Cross pos rad i)) = Color (greyN 0.5) (uncurry translate pos (circle rad)) <> drawPosAt pos (greyN 0.5)
 
-drawBouy :: Float -> Bouy -> Picture
-drawBouy sweep (Bouy pos@(x,y) _) = drawPosAt pos green <> Color green (uncurry translate (x,sweep) (drawParabola y sweep))
+drawBouy :: Chem c => V.Vector (Orb c) -> Float -> Bouy -> Picture
+drawBouy cs sweep (Bouy pos@(x,y) i) = drawPosAt pos c <> Color c (uncurry translate (x,sweep) (drawParabola y sweep))
+  where c = C.toGlossColor $ chemColor $ orbChem $ cs V.! i
 
 drawParabola :: Float -> Float -> Picture
 drawParabola focalH sweep = line $ fmap (\xi -> (xi, parabY (focalH-sweep) xi)) [-100,-99.99..100]
@@ -126,7 +127,7 @@ drawSweep :: Float -> [Picture]
 drawSweep h = [Color black $ line [(-100000, h), (100000, h)]]
 
 drawPosAt :: Position -> Color -> Picture
-drawPosAt pos c = Color c $ uncurry translate pos $ circleSolid 0.02
+drawPosAt pos c = Color c $ uncurry translate pos $ circleSolid 0.01
 
 drawWedge :: Chem c => V.Vector (Orb c) -> Wedge -> Picture
 drawWedge os (Pie p from to c) = blank --uncurry translate p $ Color (C.toGlossColor c) (arcSolid 1 from to)
@@ -148,7 +149,8 @@ drawBall :: Chem c => Ball c -> Picture
 drawBall (Ball (Point p _) c) = drawOrb $ Orb p c
 
 drawOrb :: Chem c => Orb c -> Picture
-drawOrb (Orb (x,y) chem) = translate x y $ drawCircle (C.toGlossColor (chemColor chem)) 0.01 <> Color (C.toGlossColor (chemColor chem)) (circle 1)
+drawOrb (Orb (x,y) chem) = translate x y $ drawCircle c 0.01 <> Color c (circle 1)
+  where c = C.toGlossColor $ chemColor chem
 
 drawWall :: Color -> Wall -> Picture
 drawWall color (HLine y) = Color color $ line [(-1000000, y), (1000000, y)]
