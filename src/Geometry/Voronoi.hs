@@ -2,6 +2,7 @@
 module Geometry.Voronoi
 ( Edge(..)
 , voronoi
+, edgesFromRays
 ) where
 
 import qualified Data.Vector as V
@@ -26,11 +27,11 @@ data Edge = Edge
 voronoi :: [Position] -> [Edge]
 voronoi ps = edgesFromRays (bufferedBound ps 1) $ voronoi' $ initialBeach ps
 voronoi' :: Beach -> [Ray]
-voronoi' b@(Beach _ _ [] _ rs) = trace (show rs) rs
+voronoi' b@(Beach _ _ [] _ rs) = rs
 voronoi' b = voronoi' $ updateBeach b
 
 edgesFromRays :: Bound -> [Ray] -> [Edge]
-edgesFromRays bnd rs = trace ("PAIRS: "++show pairs) mapMaybe (edgeInBound bnd) pairs ++ mapMaybe (edgeFromRay bnd) strays
+edgesFromRays bnd rs = mapMaybe (edgeInBound bnd) pairs ++ mapMaybe (edgeFromRay bnd) strays
   where (pairs, strays) = rayDups rs
 
 rayDups :: [Ray] -> ([Edge], [Ray])

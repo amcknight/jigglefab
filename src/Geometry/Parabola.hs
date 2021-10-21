@@ -2,6 +2,7 @@ module Geometry.Parabola
 ( Parabola(..)
 , crossPointsFromFoci
 , parabolaFromFocus
+, atX
 ) where
     
 import Geometry.Vector
@@ -37,24 +38,23 @@ instance HasCrossPoints Parabola where
       xRight = sqrt discr - 0.5*boa
       xLeft = - sqrt discr - 0.5*boa
 
-
--- ad*x^2 + bd*x + cd = 0
--- x^2 + x*boa + coa = 0
--- x^2 + x*boa = -coa
--- (x + boa/2)^2 = -coa + boa^2/4
--- discr = -coa + boa^2/4
-
 atX :: Parabola -> Float -> Position
 atX (Parabola a b c) x = (x, a*x^2 + b*x + c)
 
-parabolaFromFocus :: Float -> Position -> Parabola
+parabolaFromFocus :: Float -> Position -> Maybe Parabola
 parabolaFromFocus sw (px,py)
-  | py == sw = error "Parabola can't be equal to sweep line"
-  | otherwise = Parabola sh dl u
+  | py == sw = Nothing
+  | otherwise = Just $ Parabola sh dl u
   where
     sh = 0.5/(py - sw)
     dl = -2 * px * sh
     u = (px^2 + py^2 - sw^2) * sh
 
 crossPointsFromFoci :: Float -> Position -> Position -> CrossPoints
-crossPointsFromFoci sw p1 p2 = crossPoints (parabolaFromFocus sw p1) (parabolaFromFocus sw p2)
+crossPointsFromFoci sw p1 p2
+  | p1 == p2 = AllCross
+  | otherwise = case (parabolaFromFocus sw p1, parabolaFromFocus sw p2) of
+    (Nothing, Nothing) -> if fst p1 == fst p2 then AllCross else NoCross 
+    (Nothing, Just p) -> OneCross $ atX p $ fst p1
+    (Just p, Nothing) -> OneCross $ atX p $ fst p2
+    (Just a, Just b) -> crossPoints a b

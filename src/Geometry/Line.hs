@@ -113,7 +113,7 @@ segInBound bnd@((mxX,mxY),(mnX,mnY)) (Seg p@(px,py) q@(qx,qy))
     Zero -> Just $ Seg q b1
     Acute -> Just $ Seg q b1
     _ -> Just $ Seg q b2
-  | otherwise = error "Two cross points but Seg is outside. Sounds impossible"
+  | otherwise = Nothing
   where
     s = (qy-py)/(qx-px) -- breaks on vertical or horizontal
     b = py - s * px

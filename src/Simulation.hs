@@ -34,6 +34,7 @@ import Geometry.Line
 import Geometry.Parabola
 import Geometry.CrossPoint
 import Geometry.Beach
+import Geometry.Bound
 
 run :: IO ()
 run = runSeeded =<< getStdGen
@@ -42,7 +43,7 @@ runSeeded :: StdGen -> IO ()
 runSeeded seed = do
   let struct = sevenBall 
   let (model, _) = runState (buildModel 3 struct) seed
-  let view = View (Left struct) zeroV 500
+  let view = View (Left struct) zeroV 200
   let frameRate = 30
   play
     FullScreen
@@ -78,10 +79,10 @@ update dt v = v { structOrModel = case m of
 drawStruct :: Chem c => Struct c -> Picture
 drawStruct (Struct ws os) = Pictures $
   fmap (drawWall yellow) ws <>
-  -- fmap drawEdge es <>
-  -- fmap drawOrb os <>
+  fmap drawEdge es <>
+  fmap drawOrb os 
   -- fmap (drawWedge vos) ts
-  [drawBeach vos (processBeach (initialBeach (fmap orbPos os)) 5)]
+  -- [drawBeach vos (processBeach (initialBeach ps) 6)]
   where
     es = voronoi ps
     ts = tileVoronoi vos es
@@ -92,23 +93,32 @@ drawEdge :: Edge -> Picture
 drawEdge (Edge (Seg p q) _) = Color white $ line [p, q]
 
 drawBeach :: Chem c => V.Vector (Orb c) -> Beach -> Picture
-drawBeach os (Beach sw _ es bs _) = Pictures $
+drawBeach os (Beach sw _ es bs rs) = Pictures $
   fmap drawEvent es <>
-  fmap (drawBouy os sw) (V.toList bs) <>
-  drawParabCrosses (sw-0.0000001) bs <>
+  zipWith (drawBouy os sw) xBounds (V.toList bs) <>
+  fmap drawEdge (edgesFromRays b rs) <>
   drawSweep sw
+  where
+    ops = V.toList $ fmap orbPos os
+    bps = V.toList $ fmap bouyPos bs
+    b = bufferedBound ops 1
+    pcs = parabolaCrossXs sw bps
+    xBounds = zip (minX b : pcs) (pcs ++ [maxX b])
 
 drawEvent :: Geometry.Beach.Event -> Picture 
 drawEvent (BouyEvent b) = drawPosAt (bouyPos b) cyan
 drawEvent (CrossEvent (Cross pos rad i)) = Color (greyN 0.5) (uncurry translate pos (circle rad)) <> drawPosAt pos (greyN 0.5)
 
-drawBouy :: Chem c => V.Vector (Orb c) -> Float -> Bouy -> Picture
-drawBouy cs sweep (Bouy pos@(x,y) i) = drawPosAt pos c <> Color c (uncurry translate (x,sweep) (drawParabola y sweep))
-  where c = C.toGlossColor $ chemColor $ orbChem $ cs V.! i
+drawBouy :: Chem c => V.Vector (Orb c) -> Float -> (Float, Float) -> Bouy -> Picture
+drawBouy cs sweep xBound (Bouy pos@(x,y) i) = drawPosAt pos c <> Color c p
+  where
+    p = drawParabola pos sweep xBound
+    c = C.toGlossColor $ chemColor $ orbChem $ cs V.! i
 
-drawParabola :: Float -> Float -> Picture
-drawParabola focalH sweep = line $ fmap (\xi -> (xi, parabY (focalH-sweep) xi)) [-100,-99.99..100]
-  where parabY h x = (x^2 + h^2)/(2*h)
+drawParabola :: Position -> Float -> (Float, Float) -> Picture
+drawParabola focal sweep (mnX,mxX) = case parabolaFromFocus sweep focal of
+  Nothing -> blank
+  Just p -> line $ fmap (atX p) [mnX,(mnX+0.01)..mxX]
 
 drawParabCrosses :: Float -> V.Vector Bouy -> [Picture]
 drawParabCrosses sw bs = (drawCrossPoints <$> zipWith (crossPointsFromFoci sw) ps (tail ps)) <> fmap drawLiveCrossPoint (zipWith (parabolaCross sw) ps (tail ps))
@@ -127,7 +137,7 @@ drawSweep :: Float -> [Picture]
 drawSweep h = [Color black $ line [(-100000, h), (100000, h)]]
 
 drawPosAt :: Position -> Color -> Picture
-drawPosAt pos c = Color c $ uncurry translate pos $ circleSolid 0.01
+drawPosAt pos c = Color c $ uncurry translate pos $ circleSolid 0.05
 
 drawWedge :: Chem c => V.Vector (Orb c) -> Wedge -> Picture
 drawWedge os (Pie p from to c) = blank --uncurry translate p $ Color (C.toGlossColor c) (arcSolid 1 from to)

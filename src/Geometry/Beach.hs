@@ -92,9 +92,9 @@ updateBeach :: Beach -> Beach
 updateBeach (Beach _ _ [] _ _) = error "updateBeach: No events"
 updateBeach beach@(Beach sw cs (e:es) _ _)
   | h > sw = error "Somehow the event is occurring above the sweep line"
-  | otherwise = case e of
-    BouyEvent p -> trace (show p ++ ", " ++ show newBeach) $ processBouy p newBeach
-    CrossEvent c -> trace (show c ++ ", " ++ show newBeach) $ processCross c newBeach
+  | otherwise = trace (show beach) $ case e of
+    BouyEvent p -> processBouy p newBeach
+    CrossEvent c -> processCross c newBeach
   where
     h = height e
     newBeach = if h == sw
@@ -110,27 +110,28 @@ processCross c@(Cross p r i) b@(Beach sw cs es bs rs)
   | i < 1 = error "Bouy index should never be the left-most bouy (or out of bounds)"
   | i >= numBs - 1 = error "Bouy index should never be the right-most bouy (or out of bounds)"
   | bouyI (bs V.! (i-1)) == bouyI (bs V.! (i+1)) = error "A circle event had left and right indices equal. Impossible"
-  | bis `elem` cs = Beach sw cs newEs newBs rs -- No new rays. TODO: Should it not use the newBS?
-  | crossContainsBouy c bs = Beach sw newCs newEs newBs rs -- Don't add Rays. Just drop event.
-  | otherwise = Beach sw newCs newEs newBs newRs
+  | bis `elem` cs = trace "BIS" $ Beach sw cs newEs newBs rs -- No new rays. TODO: Should it not use the newBS?
+  | crossContainsBouy c bs = trace "CONTAINS" $ Beach sw newCs newEs newBs rs -- Don't add Rays. Just drop event.
+  | otherwise = trace "OTHERWISE" $ Beach sw newCs newEs newBs newRs
   where
     numBs = length bs
     leftBouy =  bs V.! (i-1)
     midBouy =   bs V.! i
     rightBouy = bs V.! (i+1)
     bis = sort3 (bouyI leftBouy) (bouyI midBouy) (bouyI rightBouy)
-    
+     -- 0123210
+     -- 013210
     newCs = bis : cs
     newBs = V.take i bs <> V.drop (i+1) bs
-    newEs = sort $ shiftCrossEventIndices i es ++ newCircleEventsAt newBs [i-1, i]
+    newEs = sort $ shiftCrosses i (-1) (removeBrokenCircleEvent (removeBrokenCircleEvent es (i+1)) (i-1)) ++ newCircleEventsAt newBs [i-1, i]
     newRs = rs ++ newRays p leftBouy midBouy rightBouy
 
-shiftCrossEventIndices :: Int -> [Event] -> [Event]
-shiftCrossEventIndices i = fmap (\case CrossEvent c -> CrossEvent (shiftCross c i); e -> e)
+shiftCrosses :: Int -> Int -> [Event] -> [Event]
+shiftCrosses i by = fmap (\case CrossEvent c -> CrossEvent (shiftCross c); e -> e)
   where
-    shiftCross :: Cross -> Int -> Cross
-    shiftCross (Cross p r ci) i = if ci >= i
-      then Cross p r $ ci - 1
+    shiftCross :: Cross -> Cross
+    shiftCross (Cross p r ci) = if ci >= i
+      then Cross p r $ ci + by
       else Cross p r ci
 
 crossContainsBouy :: Cross -> V.Vector Bouy -> Bool
@@ -152,7 +153,7 @@ newRays pos (Bouy p1 i1) (Bouy p2 i2) (Bouy p3 i3) =
     away3 = awayRay pos p3 p1 p2
 
 awayRay :: Position -> Position -> Position -> Position -> Turn
-awayRay o away p q = trace ("Orig: "++show o ++ " Away: "++show away++" PQ: "++show p ++show q++" TurnO: "++show (turnDirection p q o)++" TurnA: "++show (turnDirection p q away)++" Dir: "++show dir) $ if turnDirection p q o == turnDirection p q away
+awayRay o away p q = if turnDirection p q o == turnDirection p q away
   then dir
   else pole dir
 -- awayRay o away p q = case separation dir adir of 
@@ -171,10 +172,10 @@ processBouy b bch@(Beach sw ss es bs rs)
     bi = findBouyI (bouyPos b) bs
     dupB = bs V.! bi
     newBs = V.take bi bs <> V.fromList [dupB, b, dupB] <> V.drop (bi+1) bs
-    newEs = sort $ removeBrokenCircleEvent es bi ++ newCircleEventsAt newBs [bi, bi+2] -- Could do this without re-sorting for better performance
+    newEs = sort $ shiftCrosses bi 2 (removeBrokenCircleEvent es bi) ++ newCircleEventsAt newBs [bi, bi+2] -- Could do this without re-sorting for better performance
 
 removeBrokenCircleEvent :: [Event] -> Int -> [Event]
-removeBrokenCircleEvent es i = filter (\case CrossEvent (Cross _ _ ci) -> ci /= i; _ -> True ) es
+removeBrokenCircleEvent es bi = filter (\case CrossEvent (Cross _ _ ci) -> ci /= bi; _ -> True ) es
 
 newCircleEventsAt :: V.Vector Bouy -> [Int] -> [Event]
 newCircleEventsAt bs is = mapMaybe (fmap CrossEvent . crossFrom3 bs) (filter notOnEdge is)
