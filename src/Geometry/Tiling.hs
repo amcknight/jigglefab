@@ -47,10 +47,16 @@ buildWedge p1 p2 (TwoCross c1 c2) (Orb o ch) = case (compare (distSq p1 o) 1, co
   where
     c = chemColor ch
 buildWedge _ _ AllCross _ = error "Impossible for a circle and line to share all points"
+--     (p1, p2) = case turnDirection o x1 x2 of
+--       Nothing -> error "Colinear wedge shouldn't happen??"
+--       Just CounterClockwise -> (x1, x2)
+--       Just Clockwise -> (x2, x1)
+TODO: ADD clockwise check
+
 
 sort4 :: Position -> (Position, Position, Position) -> (Position, Position, Position)
 sort4 out (a,b,c) = (d,e,f)
   where [d, e, f] = sortBy (\p q -> compare (distSq p out) (distSq q out)) [a,b,c] 
 
 toPie :: Position -> Position -> Position -> Color -> Wedge
-toPie o p1 p2 = Pie o (direction (o |- p1)) (direction (o |- p2))
+toPie o p1 p2 = Pie o (direction (p1 |- o)) (direction (p2 |- o))

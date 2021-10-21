@@ -35,15 +35,16 @@ import Geometry.Parabola
 import Geometry.CrossPoint
 import Geometry.Beach
 import Geometry.Bound
+import Geometry.Angle
 
 run :: IO ()
 run = runSeeded =<< getStdGen
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
-  let struct = sevenBall 
+  let struct = fourBallInner  
   let (model, _) = runState (buildModel 3 struct) seed
-  let view = View (Left struct) zeroV 200
+  let view = View (Left struct) zeroV 500
   let frameRate = 30
   play
     FullScreen
@@ -80,8 +81,8 @@ drawStruct :: Chem c => Struct c -> Picture
 drawStruct (Struct ws os) = Pictures $
   fmap (drawWall yellow) ws <>
   fmap drawEdge es <>
-  fmap drawOrb os 
-  -- fmap (drawWedge vos) ts
+  fmap drawOrb os <>
+  fmap (drawWedge vos) ts
   -- [drawBeach vos (processBeach (initialBeach ps) 6)]
   where
     es = voronoi ps
@@ -107,7 +108,8 @@ drawBeach os (Beach sw _ es bs rs) = Pictures $
 
 drawEvent :: Geometry.Beach.Event -> Picture 
 drawEvent (BouyEvent b) = drawPosAt (bouyPos b) cyan
-drawEvent (CrossEvent (Cross pos rad i)) = Color (greyN 0.5) (uncurry translate pos (circle rad)) <> drawPosAt pos (greyN 0.5)
+drawEvent (CrossEvent (Cross pos rad i)) = Color g (uncurry translate pos (circle rad)) <> drawPosAt pos g
+  where g = greyN 0.5
 
 drawBouy :: Chem c => V.Vector (Orb c) -> Float -> (Float, Float) -> Bouy -> Picture
 drawBouy cs sweep xBound (Bouy pos@(x,y) i) = drawPosAt pos c <> Color c p
@@ -121,7 +123,9 @@ drawParabola focal sweep (mnX,mxX) = case parabolaFromFocus sweep focal of
   Just p -> line $ fmap (atX p) [mnX,(mnX+0.01)..mxX]
 
 drawParabCrosses :: Float -> V.Vector Bouy -> [Picture]
-drawParabCrosses sw bs = (drawCrossPoints <$> zipWith (crossPointsFromFoci sw) ps (tail ps)) <> fmap drawLiveCrossPoint (zipWith (parabolaCross sw) ps (tail ps))
+drawParabCrosses sw bs =
+  fmap drawCrossPoints (zipWith (crossPointsFromFoci sw) ps (tail ps)) <> 
+  fmap drawLiveCrossPoint (zipWith (parabolaCross sw) ps (tail ps))
   where ps = V.toList $ fmap bouyPos bs
 
 drawCrossPoints :: CrossPoints -> Picture
@@ -140,8 +144,8 @@ drawPosAt :: Position -> Color -> Picture
 drawPosAt pos c = Color c $ uncurry translate pos $ circleSolid 0.05
 
 drawWedge :: Chem c => V.Vector (Orb c) -> Wedge -> Picture
-drawWedge os (Pie p from to c) = blank --uncurry translate p $ Color (C.toGlossColor c) (arcSolid 1 from to)
-drawWedge os (Tri p q r c) = Color (C.toGlossColor c) (polygon [p, q, r])
+drawWedge os (Pie p from to c) = Color (C.toGlossColor c) $ drawArcAt p from to
+drawWedge os (Tri p q r c) = Color (C.toGlossColor c) $ polygon [p, q, r]
 
 colorFromOrbI :: Chem c => V.Vector (Orb c) -> Int -> Color
 colorFromOrbI os i = C.toGlossColor $ chemColor $ orbChem $ os V.! i
@@ -163,13 +167,22 @@ drawOrb (Orb (x,y) chem) = translate x y $ drawCircle c 0.01 <> Color c (circle 
   where c = C.toGlossColor $ chemColor chem
 
 drawWall :: Color -> Wall -> Picture
-drawWall color (HLine y) = Color color $ line [(-1000000, y), (1000000, y)]
-drawWall color (VLine x) = Color color $ line [(x, -1000000), (x, 1000000)]
+drawWall color (HLine y) = Color color $ line [(-10000, y), (10000, y)]
+drawWall color (VLine x) = Color color $ line [(x, -10000), (x, 10000)]
 drawWall color (Wall.Circle (x,y) rad) = Color color $ translate x y $ circle rad
 
 drawBond :: Form c -> P Int -> Picture
 drawBond f ip = Color white $ line [p1, p2]
   where (p1, p2) = pmap (pos . point . ballI f) ip
+
+drawArcAt :: Position -> Turn -> Turn -> Picture
+drawArcAt p from to = trace (show from ++ " to "++show to) $ uncurry translate p $ case compare f t of
+   _ -> arcSolid f t 1
+   EQ -> error "Exactly equal from to shouldn't happen?"
+   GT -> arcSolid f 360 1 <> arcSolid 0 t 1
+   where
+     f = degrees $ simple from
+     t = degrees $ simple to
 
 drawCircle :: Color -> Radius -> Picture
 drawCircle color = Color color . circleSolid
