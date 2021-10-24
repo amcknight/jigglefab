@@ -5,6 +5,7 @@ module Hit
 import Time
 import Geometry.Space
 import Pair
+import Data.Ord
 
 data Hit = Hit
   { hitTime :: Time
@@ -13,7 +14,7 @@ data Hit = Hit
   } deriving (Eq, Show)
 
 instance Ord Hit where
-  compare h1 h2 = compare (hitTime h1) (hitTime h2)
+  compare = comparing hitTime
 
 instance Mover Hit where
   move dt (Hit d s ip) = Hit (d - dt) s ip

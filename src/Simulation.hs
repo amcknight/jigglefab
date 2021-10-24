@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 module Simulation
 ( run
 ) where
@@ -36,6 +37,9 @@ import Geometry.CrossPoint
 import Geometry.Beach
 import Geometry.Bound
 import Geometry.Angle
+import Geometry.Pie
+import Geometry.Tri
+import Geometry.Sweep
 
 run :: IO ()
 run = runSeeded =<< getStdGen
@@ -78,15 +82,15 @@ update dt v = v { structOrModel = case m of
   where m = structOrModel v
 
 drawStruct :: Chem c => Struct c -> Picture
-drawStruct (Struct ws os) = Pictures $
-  fmap (drawWall yellow) ws <>
+drawStruct (Struct walls os) = Pictures $
+  fmap (drawWall yellow) walls <>
   fmap drawEdge es <>
   fmap drawOrb os <>
-  fmap (drawWedge vos) ts
+  fmap (drawWedge vos) ws
   -- [drawBeach vos (processBeach (initialBeach ps) 6)]
   where
     es = voronoi ps
-    ts = tileVoronoi vos es
+    ws = tileVoronoi vos es
     ps = fmap orbPos os
     vos = V.fromList os
 
@@ -144,8 +148,15 @@ drawPosAt :: Position -> Color -> Picture
 drawPosAt pos c = Color c $ uncurry translate pos $ circleSolid 0.05
 
 drawWedge :: Chem c => V.Vector (Orb c) -> Wedge -> Picture
-drawWedge os (Pie p from to c) = Color (C.toGlossColor c) $ drawArcAt p from to
-drawWedge os (Tri p q r c) = Color (C.toGlossColor c) $ polygon [p, q, r]
+drawWedge os (PieWedge i p) = Color (colorFromOrbI os i) $ drawPie p
+drawWedge os (TriWedge i t) = Color (colorFromOrbI os i) $ drawTri t
+
+drawPie :: Pie -> Picture
+drawPie (Pie o (Sweep from to)) = drawArcAt o from to
+drawPie (Pie o FullSweep) = drawArcAt o 0 1
+
+drawTri :: Tri -> Picture
+drawTri (Tri o (Seg p q)) = polygon [o, p, q]
 
 colorFromOrbI :: Chem c => V.Vector (Orb c) -> Int -> Color
 colorFromOrbI os i = C.toGlossColor $ chemColor $ orbChem $ os V.! i
@@ -177,7 +188,7 @@ drawBond f ip = Color white $ line [p1, p2]
 
 drawArcAt :: Position -> Turn -> Turn -> Picture
 drawArcAt p from to = trace (show from ++ " to "++show to) $ uncurry translate p $ case compare f t of
-   _ -> arcSolid f t 1
+   LT -> arcSolid f t 1
    EQ -> error "Exactly equal from to shouldn't happen?"
    GT -> arcSolid f 360 1 <> arcSolid 0 t 1
    where

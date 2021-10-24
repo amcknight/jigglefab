@@ -44,8 +44,11 @@ library
       Geometry.CrossPoint
       Geometry.Line
       Geometry.Parabola
+      Geometry.Pie
       Geometry.Space
+      Geometry.Sweep
       Geometry.Tiling
+      Geometry.Tri
       Geometry.Vector
       Geometry.Voronoi
       Hit
