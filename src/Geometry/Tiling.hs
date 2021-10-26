@@ -38,7 +38,10 @@ toPies' [] [] = []
 toPies' [] _ = error "Out of Orbs but still have Tris with Orb indices"
 toPies' ((i,o):ios) [] = extractPie i (orbPos o) [] : toPies' ios []
 toPies' _ ([]:_) = error "Somehow we have an empty Tri list"
-toPies' ((i,o):ios) (ts:tss) = extractPie i (orbPos o) (if i == wedgeI (head ts) then ts else []) : toPies' ios tss
+toPies' ((i,o):ios) (ts:tss) = case compare i (wedgeI (head ts)) of
+   LT -> extractPie i (orbPos o) [] : toPies' ios (ts:tss)
+   EQ -> extractPie i (orbPos o) ts : toPies' ios tss
+   GT -> error "Orb index should never be above Tri index"
 
 extractPie :: Int -> Position -> [Wedge] -> [Wedge]
 extractPie i p [] = [PieWedge i (Pie p FullSweep)]

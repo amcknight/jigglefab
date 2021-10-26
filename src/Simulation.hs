@@ -46,9 +46,9 @@ run = runSeeded =<< getStdGen
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
-  let struct = fourBallInner  
+  let struct = sevenBall   
   let (model, _) = runState (buildModel 3 struct) seed
-  let view = View (Left struct) zeroV 500
+  let view = View (Left struct) zeroV 200
   let frameRate = 30
   play
     FullScreen
@@ -87,7 +87,7 @@ drawStruct (Struct walls os) = Pictures $
   fmap drawEdge es <>
   fmap drawOrb os <>
   fmap (drawWedge vos) ws
-  -- [drawBeach vos (processBeach (initialBeach ps) 6)]
+  -- [drawBeach vos (processBeach (initialBeach ps) 2)]
   where
     es = voronoi ps
     ws = tileVoronoi vos es
