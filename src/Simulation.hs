@@ -187,13 +187,13 @@ drawBond f ip = Color white $ line [p1, p2]
   where (p1, p2) = pmap (pos . point . ballI f) ip
 
 drawArcAt :: Position -> Turn -> Turn -> Picture
-drawArcAt p from to = trace (show from ++ " to "++show to) $ uncurry translate p $ case compare f t of
+drawArcAt p from to = uncurry translate p $ case compare f t of
    LT -> arcSolid f t 1
    EQ -> error "Exactly equal from to shouldn't happen?"
    GT -> arcSolid f 360 1 <> arcSolid 0 t 1
    where
-     f = degrees $ simple from
-     t = degrees $ simple to
+     f = degrees from
+     t = degrees to
 
 drawCircle :: Color -> Radius -> Picture
 drawCircle color = Color color . circleSolid
