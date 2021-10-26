@@ -1,7 +1,6 @@
 module Geometry.Tiling
 ( Wedge(..)
 , tileVoronoi
-, antiSweeps
 ) where
 
 import Data.List (sortBy, sortOn, groupBy)
