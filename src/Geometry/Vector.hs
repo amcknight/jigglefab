@@ -144,7 +144,7 @@ arcFromTo :: Radian -> Vector -> Vector -> Int -> [Vector]
 arcFromTo _ _ _ 0 = []
 arcFromTo _ _ v2 1 = [v2]
 arcFromTo _ v1 v2 2 = [v1, v2]
-arcFromTo a v1 v2 n = fmap (\i -> rotate (i*gap) c v1) [0..numHops] 
+arcFromTo a v1 v2 n = fmap (\i -> rotate (i*gap) c v1) [0..numHops]
   where
     numHops = fromIntegral $ n - 1
     m = mid v1 v2
