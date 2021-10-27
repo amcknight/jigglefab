@@ -59,7 +59,7 @@ gateStruct slack c = rocks <> signals <> chains <> ports <> gate
     inPort2V = ( gap,-gap)
     outPortV = (0, gap)
 
-    rocks = wallStruct (Circle in1V 1) <> wallStruct (Circle in2V 1) <> wallStruct (Circle outV 1)
+    rocks = wallStruct (rock in1V 1) <> wallStruct (rock in2V 1) <> wallStruct (rock outV 1)
     s1 = orbStruct $ Orb in1V $ Wire (On Red)
     s2 = orbStruct $ Orb in2V $ Wire (On Blue)
     signals = s1 <> s2

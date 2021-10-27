@@ -9,6 +9,8 @@ import System.Random (getStdGen, StdGen)
 import Data.List (sortBy)
 import Data.Fixed (mod')
 import qualified Data.Vector as V
+import qualified Color as C
+import Geometry.Circle
 import Geometry.Space
 import Time
 import Point
@@ -21,7 +23,6 @@ import Control.Monad.State
 import Chem
 import Chem.Valence
 import Debug.Trace
-import qualified Color as C
 import Graphics.Gloss
 import Graphics.Gloss.Interface.IO.Interact
 import View
@@ -77,10 +78,9 @@ event e v = case e of
   EventResize _ -> v
 
 update :: Chem c => Duration -> View c -> View c
-update dt v = v { structOrModel = case m of
+update dt v = v { structOrModel = case structOrModel v of
    Left s -> Left s
    Right s -> Right $ step dt s }
-  where m = structOrModel v
 
 drawStruct :: Chem c => Struct c -> Picture
 drawStruct (Struct walls os) = Pictures $
@@ -96,7 +96,7 @@ drawStruct (Struct walls os) = Pictures $
     vos = V.fromList os
 
 drawEdge :: Edge -> Picture
-drawEdge (Edge (Seg p q) _) = Color white $ line [p, q]
+drawEdge (Edge s _) = Color white $ drawSeg s
 
 drawBeach :: Chem c => V.Vector (Orb c) -> Beach -> Picture
 drawBeach os (Beach sw _ es bs rs) = Pictures $
@@ -175,13 +175,13 @@ drawBall :: Chem c => Ball c -> Picture
 drawBall (Ball (Point p _) c) = drawOrb $ Orb p c
 
 drawOrb :: Chem c => Orb c -> Picture
-drawOrb (Orb (x,y) chem) = translate x y $ drawCircle c 0.01 <> Color c (circle 1)
+drawOrb (Orb (x,y) chem) = translate x y . Color c $ drawCircle 0.01 <> circle 1
   where c = C.toGlossColor $ chemColor chem
 
 drawWall :: Color -> Wall -> Picture
 drawWall color (HLine y) = Color color $ line [(-10000, y), (10000, y)]
 drawWall color (VLine x) = Color color $ line [(x, -10000), (x, 10000)]
-drawWall color (Wall.Circle (x,y) rad) = Color color $ translate x y $ circle rad
+drawWall color (Rock (Geometry.Circle.Circle (x,y) rad)) = Color color $ translate x y $ circle rad
 
 drawBond :: Form c -> P Int -> Picture
 drawBond f ip = Color white $ line [p1, p2]
@@ -196,5 +196,8 @@ drawArcAt p from to = uncurry translate p $ case compare f t of
      f = degrees from
      t = degrees to
 
-drawCircle :: Color -> Radius -> Picture
-drawCircle color = Color color . circleSolid
+drawCircle :: Radius -> Picture
+drawCircle = circleSolid
+
+drawSeg :: Seg -> Picture
+drawSeg (Seg p q) = line [p, q]

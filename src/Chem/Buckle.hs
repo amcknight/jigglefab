@@ -78,7 +78,7 @@ turnbuckle = walls <> prechain <> buckle <> postchain
     mid = zeroV
     sigs = fmap (Wire . On) (replicate 1 Red) --[Red, Red, Red, Blue, Blue, Blue, Blue, Blue, Red, Red, Red]
 
-    walls = mconcat $ fmap (\p -> wallStruct (Circle p 1)) [bottom, top]
+    walls = mconcat $ fmap (\p -> wallStruct (rock p 1)) [bottom, top]
     prechain = cappedLinChainExcl slack bottom mid sigs (Wire Off) [Port In Off]
     buckle = orbStruct $ Orb mid $ Actor Off
     postchain = linChainExcl slack mid top $ Wire Off

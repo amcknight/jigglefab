@@ -37,4 +37,4 @@ placement = string <> walls
     right = size |* rightV
     sig = wrap 50 Yes
     string = cappedLinChainExcl slack left right [sig] No []
-    walls = mconcat $ fmap (\p -> wallStruct (Circle p 1)) [left, right]
+    walls = mconcat $ fmap (\p -> wallStruct (rock p 1)) [left, right]

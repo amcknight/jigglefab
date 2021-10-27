@@ -61,7 +61,7 @@ load = walls <> wire -- <> ribo
     adjacentStep = 0.95
     diagStep = sqrt ((adjacentStep^2)/2)
 
-    walls = wallStruct (Circle start 1) -- <> wallStruct (Circle end 1)
+    walls = wallStruct (rock start 1) -- <> wallStruct (rock end 1)
     sigs = [Red, Blue, Blue, Red]
     wire = cappedLinChainExcl slack start end (fmap (Wire . On) sigs) (Wire Off) [Load Stem, Port In Off]
     -- ribo = orbStruct $ Orb end $ Load Stem

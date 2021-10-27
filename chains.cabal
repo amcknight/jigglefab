@@ -41,6 +41,7 @@ library
       Geometry.Angle
       Geometry.Beach
       Geometry.Bound
+      Geometry.Circle
       Geometry.CrossPoint
       Geometry.Line
       Geometry.Parabola

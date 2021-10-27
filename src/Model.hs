@@ -24,6 +24,7 @@ import Data.Bifunctor
 import HitTime
 import Struct
 import Utils
+import Geometry.Circle
 
 type SideMap = M.Map (P Int) Side
 data Model c = Model
@@ -205,4 +206,4 @@ bonkModel s (wi, li) m = replace li newBall m
     newBall = case w of
       VLine _ -> Ball (bonkVLine p) c
       HLine _ -> Ball (bonkHLine p) c
-      Circle pl r -> Ball (bonkCircle pl r p) c
+      Rock (Circle pl r) -> Ball (bonkCircle pl r p) c

@@ -32,7 +32,7 @@ instance InnerChem Electro where
 wireStruct :: Struct Electro
 wireStruct = walls <> chain <> signal
   where
-    walls = wallStruct (Circle v1 20) <> wallStruct (Circle v2 20)
+    walls = wallStruct (rock v1 20) <> wallStruct (rock v2 20)
     chain = linChainIncl 20 v1 v2 Dormant
     signal = orbStruct (Orb (x2, y2) Active)
     x1 = -12

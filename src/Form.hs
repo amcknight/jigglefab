@@ -25,6 +25,7 @@ import Geometry.Vector
 import Struct
 import Utils
 import Orb
+import Geometry.Circle
 
 data Form c = Form
   { walls :: V.Vector Wall
@@ -96,7 +97,7 @@ toBonk f s ip@(wi, li) = fmap (\t -> Hit t s ip) (bonkTime s w p)
 bonkTime :: Side -> Wall -> Point -> Maybe Time
 bonkTime s (VLine w) (Point (p,_) (v,_)) = bonkTime1d w p v
 bonkTime s (HLine w) (Point (_,p) (_,v)) = bonkTime1d w p v
-bonkTime s (Circle c r) p = case hitTimes r (Point c zeroV, p) of
+bonkTime s (Rock (Circle c r)) p = case hitTimes r (Point c zeroV, p) of
   NoHit -> Nothing
   InHit t -> if s == In then Just t else Nothing
   OutAndInHit t1 t2 -> case s of

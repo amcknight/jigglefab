@@ -52,7 +52,7 @@ instance InnerChem Core where
 gateStruct :: Int -> Core -> Struct Core
 gateStruct slack c = rocks <> signals <> chains <> gate
   where
-    rocks = wallStruct (Circle in1V rad) <> wallStruct (Circle in2V rad) <> wallStruct (Circle outV rad)
+    rocks = wallStruct (rock in1V rad) <> wallStruct (rock in2V rad) <> wallStruct (rock outV rad)
     s1 = orbStruct $ Orb in1V $ Wire $ On Red
     s2 = orbStruct $ Orb in2V $ Wire $ On Red
     signals = s1 <> s2
@@ -158,7 +158,7 @@ headStruct = pegs <> tether <> tool <> packet <> hose
     backPeg = boxRad |* downV
     sigs = [Wire (On Red), Wire (On Red), Wire (On Blue), Wire (On Red)]
     sigTopPos = backPeg |+ (fromIntegral (length sigs - 1) |* up)
-    pegs = mconcat $ fmap (\peg -> wallStruct (Circle peg 1)) [leftPeg, rightPeg, backPeg]
+    pegs = mconcat $ fmap (\peg -> wallStruct (rock peg 1)) [leftPeg, rightPeg, backPeg]
     inPort = orbStruct $ Orb toolBottom $ Port In Off
     outPort = orbStruct $ Orb toolTop $ Port Out Off
     ports = inPort <> outPort
