@@ -112,7 +112,7 @@ drawBeach os (Beach sw _ es bs rs) = Pictures $
 
 drawEvent :: Voronoi.Beach.Event -> Picture 
 drawEvent (BouyEvent b) = drawPosAt (bouyPos b) cyan
-drawEvent (CrossEvent (Cross pos rad i)) = Color g (uncurry translate pos (circle rad)) <> drawPosAt pos g
+drawEvent (CrossEvent (Cross (Geometry.Circle.Circle pos rad) i)) = Color g (uncurry translate pos (circle rad)) <> drawPosAt pos g
   where g = greyN 0.5
 
 drawBouy :: Chem c => V.Vector (Orb c) -> Float -> (Float, Float) -> Bouy -> Picture

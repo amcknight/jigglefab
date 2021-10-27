@@ -24,6 +24,8 @@ import Geometry.Angle
 import Geometry.CrossPoint
 import Geometry.Parabola
 import Debug.Trace
+import Utils
+import Geometry.Circle
 
 data Bouy = Bouy
   { bouyPos :: Position
@@ -34,13 +36,12 @@ instance Show Bouy where
   show (Bouy pos i) = "Bouy "++show pos++" i"++show i
 
 data Cross = Cross
-  { crossPos :: Position
-  , crossRad :: Radius
+  { crossC :: Circle
   , crossI :: Int
    } deriving Eq
 
 instance Show Cross where
-  show (Cross pos rad i) = "Cross "++show pos++" r"++show rad++" i"++show i
+  show (Cross c i) = "Cross "++show c++" i"++show i
 
 data Event = BouyEvent Bouy | CrossEvent Cross deriving Eq
 
@@ -50,7 +51,7 @@ instance Show Event where
 
 height :: Event -> Float
 height (BouyEvent (Bouy (_,y) _)) = y
-height (CrossEvent (Cross (_,y) r _)) = y - r
+height (CrossEvent (Cross (Circle (_,y) r) _)) = y - r
 
 instance Ord Event where
   compare e1 e2 = compare (height e2) (height e1)
@@ -106,13 +107,13 @@ processBeach :: Beach -> Int -> Beach
 processBeach b = (iterate updateBeach b !!)
 
 processCross :: Cross -> Beach -> Beach
-processCross c@(Cross p r i) b@(Beach sw cs es bs rs)
+processCross cr@(Cross c i) b@(Beach sw cs es bs rs)
   | numBs < 3 = error $ "Crosspoint event with "++show numBs++" bouys is impossible"
   | i < 1 = error "Bouy index should never be the left-most bouy (or out of bounds)"
   | i >= numBs - 1 = error "Bouy index should never be the right-most bouy (or out of bounds)"
   | bouyI (bs V.! (i-1)) == bouyI (bs V.! (i+1)) = error "A circle event had left and right indices equal. Impossible"
   | bis `elem` cs = Beach sw cs newEs newBs rs -- No new rays
-  | crossContainsBouy c bs = Beach sw newCs newEs newBs rs -- No new rays
+  | crossContainsBouy cr bs = Beach sw newCs newEs newBs rs -- No new rays
   | otherwise = Beach sw newCs newEs newBs newRs
   where
     numBs = length bs
@@ -125,18 +126,18 @@ processCross c@(Cross p r i) b@(Beach sw cs es bs rs)
     newBs = V.take i bs <> V.drop (i+1) bs
     adjustedEs = shiftCrosses i (-1) . removeBrokenCircleEvent (i-1) . removeBrokenCircleEvent (i+1)
     newEs = sort $ adjustedEs es ++ newCircleEventsAt newBs [i-1, i]
-    newRs = rs ++ newRays p leftBouy midBouy rightBouy
+    newRs = rs ++ newRays (circPos c) leftBouy midBouy rightBouy
 
 shiftCrosses :: Int -> Int -> [Event] -> [Event]
 shiftCrosses i by = fmap (\case CrossEvent c -> CrossEvent (shiftCross c); e -> e)
   where
     shiftCross :: Cross -> Cross
-    shiftCross (Cross p r ci) = if ci >= i
-      then Cross p r $ ci + by
-      else Cross p r ci
+    shiftCross (Cross c ci) = if ci >= i
+      then Cross c $ ci + by
+      else Cross c ci
 
 crossContainsBouy :: Cross -> V.Vector Bouy -> Bool
-crossContainsBouy c@(Cross cp rad i) bs = any (\(Bouy p j) -> j /= li && j /= mi && j /= ri && distSq cp p < rad^2) bs
+crossContainsBouy (Cross (Circle cp r) i) bs = any (\(Bouy p j) -> j /= li && j /= mi && j /= ri && distSq cp p < r^2) bs
   where
     li = bouyI $ bs V.! (i-1)
     mi = bouyI $ bs V.! i
@@ -171,7 +172,7 @@ processBouy b bch@(Beach sw ss es bs rs)
     newEs = sort $ shiftCrosses bi 2 (removeBrokenCircleEvent bi es) ++ newCircleEventsAt newBs [bi, bi+2] -- Could do this without re-sorting for better performance
 
 removeBrokenCircleEvent :: Int -> [Event] -> [Event]
-removeBrokenCircleEvent bi = filter (\case CrossEvent (Cross _ _ ci) -> ci /= bi; _ -> True)
+removeBrokenCircleEvent bi = filter (\case CrossEvent (Cross _ ci) -> ci /= bi; _ -> True)
 
 newCircleEventsAt :: V.Vector Bouy -> [Int] -> [Event]
 newCircleEventsAt bs is = mapMaybe (fmap CrossEvent . crossFrom3 bs) (filter notOnEdge is)
@@ -185,10 +186,10 @@ crossFrom3 bs bi =
     Nothing -> Nothing -- Colinear
     Just Clockwise -> case circleFrom3 p1 p2 p3 of
       Nothing -> Nothing --colinear points
-      Just (center, rad) ->
-        if crossContainsBouy (Cross center rad bi) bs
+      Just c ->
+        if crossContainsBouy (Cross c bi) bs
         then Nothing -- Contains other bouy
-        else Just $ Cross center rad bi
+        else Just $ Cross c bi
     Just CounterClockwise -> Nothing
   where
     Bouy p1 i1 = bs V.! (bi-1)

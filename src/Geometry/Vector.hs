@@ -13,13 +13,12 @@ module Geometry.Vector
 , randomV, randomVs, randomVIn
 , (|*), (|+), (|-)
 , (|.)
+, colinear
 , fromTo, arcFromTo
 , distSq, dist
 , arcDist
 , reflect
 , squashTurn
-, circleFrom3
-, sort3
 , turnDirection
 , mid
 ) where
@@ -137,7 +136,7 @@ arcFromTo _ v1 v2 2 = [v1, v2]
 arcFromTo a v1 v2 n = fmap (\i -> rotate (i*gap) c v1) [0..numHops] 
   where
     numHops = fromIntegral $ n - 1
-    m = midPoint v1 v2
+    m = mid v1 v2
     v1m = 0.5 |* (v2 |- v1)
     v1mMagSq = magnitudeSq v1m
     cmMagSq = radSqFromArc a v1 v2 - v1mMagSq
@@ -158,9 +157,6 @@ dist v1 v2 = magnitude $ v2 |- v1
 arcDist :: Radian -> Vector -> Vector -> Float 
 arcDist a v1 v2 = a * sqrt (radSqFromArc a v1 v2)
 
-midPoint :: Vector -> Vector -> Vector
-midPoint v1 v2 = 0.5 |* (v2 |+ v1)
-
 negOpp :: Vector -> Vector
 negOpp (x,y) = (-y, x)
 
@@ -170,25 +166,6 @@ radSqFromArc a v1 v2 = distSq v1 v2 / chord a ^ 2
 squashTurn :: Radius -> Vector -> Vector -> Turn
 squashTurn rad v1 v2 = if 2*rad <= d then 0 else toTurn (acos ((d/2)/rad))
   where d = dist v1 v2
-
-circleFrom3 :: Position -> Position -> Position -> Maybe (Position, Radius)
-circleFrom3 p1 p2 p3 = if colinear p q r then Nothing else Just (center, dist p center)
-  where
-    (p@(px,py),q@(qx,qy),r@(rx,ry)) = sort3 p1 p2 p3
-    center = (-1/(2*a)) |* (b, c)
-    a = px*(qy-ry) - py*(qx-rx) + qx*ry - rx*qy
-
-    b =   (px^2 + py^2) * (ry-qy)
-        + (qx^2 + qy^2) * (py-ry)
-        + (rx^2 + ry^2) * (qy-py)
- 
-    c =   (px^2 + py^2) * (qx-rx) 
-        + (qx^2 + qy^2) * (rx-px) 
-        + (rx^2 + ry^2) * (px-qx)
-
-sort3 :: Ord a => a -> a -> a -> (a, a, a)
-sort3 x y z = (a,b,c)
-  where [a,b,c] = sort [x,y,z]
 
 colinear :: Position -> Position -> Position -> Bool 
 colinear p q r
