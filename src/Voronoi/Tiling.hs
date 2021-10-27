@@ -48,8 +48,7 @@ extractPie i p [] = [PieWedge i (Pie p FullSweep)]
 extractPie i p ts = fmap (PieWedge i) $ antiPies $ fmap (triToPie . (\(TriWedge i t) -> t)) ts
 
 antiPies :: [Pie] -> [Pie]
-antiPies ps = fmap (Pie o) . antiSweeps . sortOn (\(Sweep t _) -> t) . fmap (\(Pie _ s) -> s) $ ps
-  where o = piePos $ head ps
+antiPies ps = fmap (Pie (pos (head ps))) . antiSweeps . sortOn (\(Sweep t _) -> t) . fmap (\(Pie _ s) -> s) $ ps
 
 triToPie :: Tri -> Pie
 triToPie (Tri o (Seg p q)) = Pie o $ Sweep (direction (p |- o)) (direction (q |- o))

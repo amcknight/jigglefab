@@ -61,13 +61,12 @@ runSeeded seed = do
     update
 
 draw :: Chem c => View c -> Picture
-draw v = translate x y $ scale z z $ case sm of
+draw v = uncurry translate (pos v) $ scale z z $ case sm of
   Left s -> drawStruct s
   Right m -> drawModel m
   where
     sm = structOrModel v
     z = zoom v
-    (x, y) = center v
 
 event :: Graphics.Gloss.Interface.IO.Interact.Event -> View c -> View c
 event e v = case e of
@@ -89,9 +88,8 @@ drawStruct (Struct walls os) = Pictures $
   fmap (drawWedge vos) ws
   -- [drawBeach vos (processBeach (initialBeach ps) 2)]
   where
-    es = voronoi ps
+    es = voronoi $ fmap pos os
     ws = tileVoronoi vos es
-    ps = fmap orbPos os
     vos = V.fromList os
 
 drawEdge :: Edge -> Picture
@@ -104,14 +102,14 @@ drawBeach os (Beach sw _ es bs rs) = Pictures $
   fmap drawEdge (edgesFromRays b rs) <>
   drawSweep sw
   where
-    ops = V.toList $ fmap orbPos os
-    bps = V.toList $ fmap bouyPos bs
+    ops = V.toList $ fmap pos os
+    bps = V.toList $ fmap pos bs
     b = bufferedBound ops 1
     pcs = parabolaCrossXs sw bps
     xBounds = zip (minX b : pcs) (pcs ++ [maxX b])
 
 drawEvent :: Voronoi.Beach.Event -> Picture 
-drawEvent (BouyEvent b) = drawPosAt (bouyPos b) cyan
+drawEvent (BouyEvent b) = drawPosAt (pos b) cyan
 drawEvent (CrossEvent (Cross (Geometry.Circle.Circle pos rad) i)) = Color g (uncurry translate pos (circle rad)) <> drawPosAt pos g
   where g = greyN 0.5
 
@@ -130,7 +128,7 @@ drawParabCrosses :: Float -> V.Vector Bouy -> [Picture]
 drawParabCrosses sw bs =
   fmap drawCrossPoints (zipWith (crossPointsFromFoci sw) ps (tail ps)) <> 
   fmap drawLiveCrossPoint (zipWith (parabolaCross sw) ps (tail ps))
-  where ps = V.toList $ fmap bouyPos bs
+  where ps = V.toList $ fmap pos bs
 
 drawCrossPoints :: CrossPoints -> Picture
 drawCrossPoints (OneCross p) = drawPosAt p blue

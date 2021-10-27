@@ -14,11 +14,15 @@ import Time
 import Geometry.Space
 import Pair
 import Graphics.Gloss.Geometry.Line (closestPointOnLine)
+import Geometry.Circle
 
 data Point = Point
-  { pos :: Position
+  { pointPos :: Position
   , vel :: Velocity
   } deriving Show
+
+instance AnchorPos Point where
+  pos = pointPos
 
 instance Mover Point where
   move dt (Point p v) = Point (p |+ (dt |* v)) v
@@ -40,8 +44,8 @@ bonkVLine p = Point (pos p) $ reflect Vertical $ vel p
 bonkHLine :: Point -> Point
 bonkHLine p = Point (pos p) $ reflect Horizontal $ vel p
 
-bonkCircle :: Position -> Radius -> Point -> Point
-bonkCircle pl r p = p {vel = vel p |+ ((-2) |* velTransferTo p pl) }
+bonkCircle :: Circle -> Point -> Point
+bonkCircle c p = p {vel = vel p |+ ((-2) |* velTransferTo p (pos c)) }
 
 bounce :: P Point -> P Point
 bounce (p1, p2) = (p3, p4)

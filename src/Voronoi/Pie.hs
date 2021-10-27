@@ -10,3 +10,6 @@ data Pie = Pie
   { piePos :: Position
   , pieSweep :: Sweep
   } deriving Show
+
+instance AnchorPos Pie where
+  pos = piePos

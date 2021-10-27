@@ -3,6 +3,7 @@
 module Geometry.Vector
 ( Vector
 , Position, Velocity
+, AnchorPos(..)
 , zeroV
 , unit, direction, radians
 , unitV
@@ -34,6 +35,12 @@ import Data.List (sort)
 type Vector = P Float
 type Position = Vector
 type Velocity = Vector
+
+instance AnchorPos Position where
+  pos = id
+
+class AnchorPos a where
+  pos :: a -> Position
 
 instance Random Vector where
   randomR ((x1,y1),(x2,y2)) g = ((x,y), g3)

@@ -13,6 +13,9 @@ data Circle = Circle
   , circRad :: Radius
   } deriving (Show, Eq)
 
+instance AnchorPos Circle where
+  pos = circPos
+
 circleFrom3 :: Position -> Position -> Position -> Maybe Circle
 circleFrom3 p1 p2 p3 = if colinear p q r then Nothing else Just $ Circle center $ dist p center
   where
@@ -23,8 +26,8 @@ circleFrom3 p1 p2 p3 = if colinear p q r then Nothing else Just $ Circle center 
     b =   (px^2 + py^2) * (ry-qy)
         + (qx^2 + qy^2) * (py-ry)
         + (rx^2 + ry^2) * (qy-py)
- 
-    c =   (px^2 + py^2) * (qx-rx) 
-        + (qx^2 + qy^2) * (rx-px) 
+
+    c =   (px^2 + py^2) * (qx-rx)
+        + (qx^2 + qy^2) * (rx-px)
         + (rx^2 + ry^2) * (px-qx)
   

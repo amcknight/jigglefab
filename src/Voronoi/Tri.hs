@@ -17,3 +17,6 @@ makeCCW (Tri o (Seg p q)) = Tri o $ case turnDirection o p q of
   Nothing -> error "Tri Can't be colinear at this point"
   Just Clockwise -> Seg q p
   Just CounterClockwise -> Seg p q
+
+instance AnchorPos Tri where
+  pos = triPos

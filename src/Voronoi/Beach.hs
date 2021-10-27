@@ -19,7 +19,6 @@ import qualified Data.Vector as V
 import Data.List (sort, partition)
 import Data.Maybe (mapMaybe)
 import Geometry.Vector
-import Geometry.Space
 import Geometry.Angle
 import Geometry.CrossPoint
 import Geometry.Parabola
@@ -35,10 +34,16 @@ data Bouy = Bouy
 instance Show Bouy where
   show (Bouy pos i) = "Bouy "++show pos++" i"++show i
 
+instance AnchorPos Bouy where
+  pos = bouyPos
+
 data Cross = Cross
   { crossC :: Circle
   , crossI :: Int
-   } deriving Eq
+  } deriving Eq
+
+instance AnchorPos Cross where
+  pos = pos . crossC
 
 instance Show Cross where
   show (Cross c i) = "Cross "++show c++" i"++show i

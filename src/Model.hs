@@ -202,8 +202,8 @@ bonkModel s (wi, li) m = replace li newBall m
   where
     f = form m
     w = wallI f wi
-    Ball p c = ballI f li
+    Ball p ch = ballI f li
     newBall = case w of
-      VLine _ -> Ball (bonkVLine p) c
-      HLine _ -> Ball (bonkHLine p) c
-      Rock (Circle pl r) -> Ball (bonkCircle pl r p) c
+      VLine _ -> Ball (bonkVLine p) ch
+      HLine _ -> Ball (bonkHLine p) ch
+      Rock c ->  Ball (bonkCircle c p) ch
