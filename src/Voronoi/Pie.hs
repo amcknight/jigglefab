@@ -1,10 +1,10 @@
-module Geometry.Pie
+module Voronoi.Pie
 ( Pie(..)
 ) where
 
 import Geometry.Vector
 import Geometry.Line
-import Geometry.Sweep
+import Voronoi.Sweep
 
 data Pie = Pie
   { piePos :: Position

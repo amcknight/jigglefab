@@ -1,4 +1,4 @@
-module Geometry.Tiling
+module Voronoi.Tiling
 ( Wedge(..)
 , tileVoronoi
 ) where
@@ -6,7 +6,7 @@ module Geometry.Tiling
 import Data.List (sortBy, sortOn, groupBy)
 import Data.Maybe (catMaybes)
 import Geometry.Vector
-import Geometry.Voronoi
+import Voronoi.Fortune
 import Geometry.Line
 import qualified Data.Vector as V
 import Orb
@@ -16,9 +16,9 @@ import Geometry.Angle
 import Pair
 import Debug.Trace
 import Geometry.CrossPoint
-import Geometry.Pie
-import Geometry.Tri
-import Geometry.Sweep
+import Voronoi.Pie
+import Voronoi.Tri
+import Voronoi.Sweep
 
 data Wedge = TriWedge Int Tri | PieWedge Int Pie deriving Show
 

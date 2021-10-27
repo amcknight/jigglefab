@@ -3,7 +3,8 @@ module Geometry.Angle
 , Radian
 , TurnDirection (..)
 , AngleType (..)
-, Compass(..), compass
+, Compass(..)
+, compass
 , tau
 , toRadian, toTurn
 , degrees, undegrees
@@ -16,7 +17,6 @@ module Geometry.Angle
 ) where
 
 import Data.Fixed (mod')
-import Debug.Trace
 
 type Turn = Float -- From 0 to 1
 type Radian = Float -- From -pi to pi

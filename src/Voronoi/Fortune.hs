@@ -1,5 +1,4 @@
-{-# LANGUAGE LambdaCase #-}
-module Geometry.Voronoi
+module Voronoi.Fortune
 ( Edge(..)
 , voronoi
 , edgesFromRays
@@ -15,7 +14,7 @@ import Debug.Trace
 import Geometry.Line
 import Pair
 import Geometry.Bound
-import Geometry.Beach
+import Voronoi.Beach
 import Geometry.Angle
 import Geometry.CrossPoint
 import Graphics.Gloss.Data.Vector (unitVectorAtAngle)

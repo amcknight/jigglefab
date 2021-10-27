@@ -1,5 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
-module Geometry.Beach
+module Voronoi.Beach
 ( Beach(..)
 , Bouy(..)
 , Cross(..)

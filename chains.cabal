@@ -39,19 +39,13 @@ library
       Color
       Form
       Geometry.Angle
-      Geometry.Beach
       Geometry.Bound
       Geometry.Circle
       Geometry.CrossPoint
       Geometry.Line
       Geometry.Parabola
-      Geometry.Pie
       Geometry.Space
-      Geometry.Sweep
-      Geometry.Tiling
-      Geometry.Tri
       Geometry.Vector
-      Geometry.Voronoi
       Hit
       HitTime
       Model
@@ -64,6 +58,12 @@ library
       Time
       Utils
       View
+      Voronoi.Beach
+      Voronoi.Fortune
+      Voronoi.Pie
+      Voronoi.Sweep
+      Voronoi.Tiling
+      Voronoi.Tri
       Wall
   other-modules:
       Paths_chains

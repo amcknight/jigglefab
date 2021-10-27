@@ -1,5 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
-module Geometry.Sweep
+module Voronoi.Sweep
 ( Sweep(..)
 , antiSweeps
 ) where

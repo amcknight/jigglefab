@@ -20,8 +20,8 @@ data Encode = Wire Active | Port Side Active | Eat | Sync Sync | Dup Dup derivin
 
 instance Chem Encode where
   chemColor (Wire Off) = grey
-  chemColor (Wire (On Red)) = mix red $ grey
-  chemColor (Wire (On Blue)) = mix cyan $ grey
+  chemColor (Wire (On Red)) = mix red grey
+  chemColor (Wire (On Blue)) = mix cyan grey
   chemColor (Port _ Off) = green
   chemColor (Port _ (On Red)) = mix red green
   chemColor (Port _ (On Blue)) = mix cyan green

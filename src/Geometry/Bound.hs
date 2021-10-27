@@ -9,7 +9,6 @@ module Geometry.Bound
       
 import Data.Maybe (isJust)
 import Geometry.Vector
-import Debug.Trace
 
 data Bound = Bound 
   { maxB :: Position

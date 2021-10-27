@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 module Simulation
 ( run
 ) where
@@ -30,17 +29,17 @@ import Geometry.Vector
 import Struct
 import Orb
 import Chem.Sem
-import Geometry.Tiling
-import Geometry.Voronoi
+import Voronoi.Tiling
+import Voronoi.Fortune
 import Geometry.Line
 import Geometry.Parabola
 import Geometry.CrossPoint
-import Geometry.Beach
+import Voronoi.Beach
 import Geometry.Bound
 import Geometry.Angle
-import Geometry.Pie
-import Geometry.Tri
-import Geometry.Sweep
+import Voronoi.Pie
+import Voronoi.Tri
+import Voronoi.Sweep
 import Chem.Buckle
 
 run :: IO ()
@@ -111,7 +110,7 @@ drawBeach os (Beach sw _ es bs rs) = Pictures $
     pcs = parabolaCrossXs sw bps
     xBounds = zip (minX b : pcs) (pcs ++ [maxX b])
 
-drawEvent :: Geometry.Beach.Event -> Picture 
+drawEvent :: Voronoi.Beach.Event -> Picture 
 drawEvent (BouyEvent b) = drawPosAt (bouyPos b) cyan
 drawEvent (CrossEvent (Cross pos rad i)) = Color g (uncurry translate pos (circle rad)) <> drawPosAt pos g
   where g = greyN 0.5

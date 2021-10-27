@@ -65,7 +65,7 @@ arcExcl :: Radian -> Position -> Position -> Int -> c -> Struct c
 arcExcl angle from to num ch = Struct [] orbStructs
   where
     poss = arcFromTo angle from to num
-    _:orbStructs = take (num-1) $ fmap (\p -> Orb p ch) poss
+    _:orbStructs = take (num-1) $ fmap (`Orb` ch) poss
 
 cappedLinChainIncl :: Int -> Position -> Position -> [c] -> c -> [c] -> Struct c
 cappedLinChainIncl slack from to = cappedLinIncl from to num

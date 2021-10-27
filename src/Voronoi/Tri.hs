@@ -1,4 +1,4 @@
-module Geometry.Tri
+module Voronoi.Tri
 ( Tri(..)
 , makeCCW
 ) where
