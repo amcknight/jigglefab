@@ -70,14 +70,15 @@ rightV :: Vector
 rightV = (1,0)
 leftV :: Vector
 leftV = (-1,0)
+
 upRightV :: Vector
-upRightV = (1,1)
+upRightV = upV |+ rightV
 upLeftV :: Vector
-upLeftV = (-1,1)
+upLeftV = upV |+ leftV
 downRightV :: Vector
-downRightV = (1,-1)
+downRightV = downV |+ rightV
 downLeftV :: Vector
-downLeftV = (-1,-1)
+downLeftV = downV |+ leftV
 
 direction :: Vector -> Turn 
 direction = toTurn . radians
@@ -120,13 +121,16 @@ reflect Horizontal (x,y) = (x,-y)
 (|*) scale = pmap (scale *)
 
 (|-) :: Vector -> Vector -> Vector
-(|-) (x1,y1) (x2,y2) = (x1-x2, y1-y2)
+(|-) = pairwise (-)
 
 (|+) :: Vector -> Vector -> Vector
-(|+) (x1,y1) (x2,y2) = (x1+x2, y1+y2)
+(|+) = pairwise (+)
 
 (|.) :: Vector -> Vector -> Float
 (|.) (x1,y1) (x2,y2) = x1*x2 + y1*y2
+
+pairwise :: (Float -> Float -> Float) -> Vector -> Vector -> Vector
+pairwise f (x1, y1) (x2, y2) = (f x1 x2, f y1 y2)
 
 fromTo :: Vector -> Vector -> Int -> [Vector]
 fromTo _ _ 0 = []
