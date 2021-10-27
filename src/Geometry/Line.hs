@@ -9,24 +9,26 @@ module Geometry.Line
 
 import Geometry.Vector
 import Geometry.Angle
-import Geometry.Bound ( Bound, overlap, boundOne, isIn )
+import Geometry.Bound
 import Geometry.CrossPoint
 import Debug.Trace
+import Data.Maybe (isJust)
 
 data Line = Line Position Position deriving Show
 data Seg = Seg Position Position deriving Show
 
-segBound :: Seg -> Bound
-segBound (Seg p q) = (p,q)
+segB :: Seg -> Bound
+segB (Seg p q) = Bound p q
+
+segL :: Seg -> Line
+segL (Seg p q) = Line p q
 
 segCrosses :: Seg -> Seg -> Bool
-segCrosses (Seg a b) (Seg c d) = case overlap (a,b) (c,d) of
+segCrosses s1 s2 = case overlap (segB s1) (segB s2) of
   Nothing -> False 
-  Just bound -> case lineCross (Line a b) (Line c d) of
+  Just bound -> case lineCross (segL s1) (segL s2) of
     Nothing -> False
-    Just cross -> case overlap bound (boundOne cross) of
-      Nothing -> False
-      Just _ -> True
+    Just cross -> isJust $ overlap bound $ boundOne cross
       
 lineCross :: Line -> Line -> Maybe Position
 lineCross (Line (x1,y1) (x2,y2)) (Line (x3,y3) (x4,y4))
@@ -63,7 +65,7 @@ crossPointsAtUnit (Line (px, py) (qx, qy)) = case compare discriminant 0 of
     scale = detPQ |* (dy, -dx)
 
 rayCrossBound :: Bound -> Position -> Turn -> CrossPoints
-rayCrossBound bnd@((mxX,mxY),(mnX,mnY)) p@(x,y) dir
+rayCrossBound bnd@(Bound (mxX,mxY) (mnX,mnY)) p@(x,y) dir
   | isIn bnd p = OneCross $ case compass dir of
     East -> (mxX, y)
     North -> (x, mxY)
@@ -101,7 +103,7 @@ rayCrossBound bnd@((mxX,mxY),(mnX,mnY)) p@(x,y) dir
     closer a b = if distSq p a < distSq p b then a else b
 
 unsidedRayCrossBound :: Bound -> Position -> Turn -> CrossPoints
-unsidedRayCrossBound bnd@((mxX,mxY),(mnX,mnY)) p@(x,y) dir
+unsidedRayCrossBound bnd@(Bound (mxX,mxY) (mnX,mnY)) p@(x,y) dir
   | isIn bnd p = case compass dir of
     East -> TwoCross (mxX, y) (mnX, y)
     North -> TwoCross (x, mxY) (x, mnY)
@@ -136,7 +138,7 @@ unsidedRayCrossBound bnd@((mxX,mxY),(mnX,mnY)) p@(x,y) dir
     closer a b = if distSq p a < distSq p b then a else b
 
 segInBound :: Bound -> Seg -> Maybe Seg
-segInBound bnd@((mxX,mxY),(mnX,mnY)) (Seg p@(px,py) q@(qx,qy))
+segInBound bnd@(Bound (mxX,mxY) (mnX,mnY)) (Seg p@(px,py) q@(qx,qy))
   | isIn bnd p && isIn bnd q = Just $ Seg p q
   | length onBound < 2 = Nothing -- Completely outside
   | length onBound > 2 = error "Three crosspoints on the bound. Possible only in very edgy cases"

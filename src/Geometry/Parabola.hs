@@ -25,7 +25,7 @@ instance HasCrossPoints Parabola where
          else OneCross (atX p1 (-cob))
     else case compare discr 0 of
       LT -> NoCross
-      EQ -> OneCross (atX p1 (-0.5*boa))
+      EQ -> OneCross $ atX p1 $ -0.5 * boa
       GT -> TwoCross (atX p1 xLeft) (atX p1 xRight)
     where
       ad = a2 - a1
@@ -46,7 +46,7 @@ parabolaFromFocus sw (px,py)
   | py == sw = Nothing
   | otherwise = Just $ Parabola sh dl u
   where
-    sh = 0.5/(py - sw)
+    sh = 0.5 / (py - sw)
     dl = -2 * px * sh
     u = (px^2 + py^2 - sw^2) * sh
 
