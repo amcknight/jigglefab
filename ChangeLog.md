@@ -1,4 +1,4 @@
 # Changelog for chains
 
 ## Unreleased changes
-- Buggy physics
+- Functioning chemistry experiments
