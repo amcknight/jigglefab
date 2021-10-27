@@ -40,13 +40,14 @@ import Geometry.Angle
 import Geometry.Pie
 import Geometry.Tri
 import Geometry.Sweep
+import Chem.Buckle
 
 run :: IO ()
 run = runSeeded =<< getStdGen
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
-  let struct = twoBallInner   
+  let struct = threeBallInner   
   let (model, _) = runState (buildModel 3 struct) seed
   let view = View (Left struct) zeroV 200
   let frameRate = 30
