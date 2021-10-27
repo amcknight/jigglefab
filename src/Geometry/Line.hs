@@ -3,7 +3,7 @@ module Geometry.Line
 , Seg(..)
 , segCrosses
 , crossPointsAtUnit
-, rayCrossBound
+, rayCrossBound, unsidedRayCrossBound
 , segInBound
 ) where
 
@@ -81,6 +81,41 @@ rayCrossBound bnd@((mxX,mxY),(mnX,mnY)) p@(x,y) dir
     _ -> NoCross 
   where
     s = slope dir -- breaks on vertical or horizontal
+    b = y - s * x
+    mnXY = s * mnX + b
+    mxXY = s * mxX + b
+    mnYX = (mnY-b) / s
+    mxYX = (mxY-b) / s
+    pForMinX = (mnX, mnXY)
+    pForMinY = (mnYX, mnY)
+    pForMaxX = (mxX, mxXY)
+    pForMaxY = (mxYX, mxY)
+    mnXYIn = mnXY < mxY && mnXY > mnY
+    mxXYIn = mxXY < mxY && mxXY > mnY
+    mnYXIn = mnYX < mxX && mnYX > mnX
+    mxYXIn = mxYX < mxX && mxYX > mnX
+    onBound = fmap snd $ filter fst $ zip [mnXYIn, mxXYIn, mnYXIn, mxYXIn] [pForMinX, pForMaxX, pForMinY, pForMaxY]
+    [b1, b2] = onBound -- Only used after checking length is two
+
+    closer :: Position -> Position -> Position
+    closer a b = if distSq p a < distSq p b then a else b
+
+unsidedRayCrossBound :: Bound -> Position -> Turn -> CrossPoints
+unsidedRayCrossBound bnd@((mxX,mxY),(mnX,mnY)) p@(x,y) dir
+  | isIn bnd p = case compass dir of
+    East -> TwoCross (mxX, y) (mnX, y)
+    North -> TwoCross (x, mxY) (x, mnY)
+    West -> TwoCross (mnX, y) (mxX, y)
+    South -> TwoCross (x, mnY) (x, mxY)
+    NorthEast -> TwoCross (closer pForMaxX pForMaxY) (closer pForMinX pForMinY)
+    NorthWest -> TwoCross (closer pForMinX pForMaxY) (closer pForMaxX pForMinY)
+    SouthWest -> TwoCross (closer pForMinX pForMinY) (closer pForMaxX pForMaxY)
+    SouthEast -> TwoCross (closer pForMaxX pForMinY) (closer pForMinX pForMaxY)
+  | length onBound < 2 = NoCross
+  | length onBound > 2 = error "TODO: Three crosspoints on the bound. Possible only in edgy cases"
+  | otherwise = TwoCross b1 b2
+  where
+    s = slope dir
     b = y - s * x
     mnXY = s * mnX + b
     mxXY = s * mxX + b

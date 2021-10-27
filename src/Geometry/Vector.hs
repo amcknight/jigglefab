@@ -5,6 +5,7 @@ module Geometry.Vector
 , Position, Velocity
 , zeroV
 , unit, direction, radians
+, unitV
 , upV, downV, rightV, leftV
 , upRightV, upLeftV, downRightV, downLeftV
 , toUnit
@@ -49,6 +50,9 @@ toUnit a = (cos a, sin a)
 
 unit :: Vector -> Vector
 unit v = (1 / magnitude v) |* v
+
+unitV :: Turn -> Vector
+unitV = toUnit . (*tau)
 
 zeroV :: Vector
 zeroV = (0,0)

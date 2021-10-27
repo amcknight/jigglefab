@@ -79,6 +79,7 @@ isBouyEvent _ = False
 
 bouyEvents :: Beach -> [Event]
 bouyEvents (Beach _ _ es _ _) = filter isBouyEvent es
+
 crossEvents :: Beach -> [Event]
 crossEvents (Beach _ _ es _ _) = filter (not . isBouyEvent) es
 
@@ -156,13 +157,8 @@ awayRay :: Position -> Position -> Position -> Position -> Turn
 awayRay o away p q = if turnDirection p q o == turnDirection p q away
   then dir
   else pole dir
--- awayRay o away p q = case separation dir adir of 
---   Opposite -> dir
---   Obtuse -> dir
---   _ -> pole dir
   where
     dir = direction $ mid p q |- o
---     adir = direction $ away |- o
 
 processBouy :: Bouy -> Beach -> Beach
 processBouy b bch@(Beach sw ss es bs rs)
