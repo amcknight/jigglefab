@@ -10,6 +10,7 @@ module Geometry.Vector
 , upV, downV, rightV, leftV
 , upRightV, upLeftV, downRightV, downLeftV
 , toUnit
+, rotate, rotateAround
 , magnitudeSq, magnitude
 , randomV, randomVs, randomVIn
 , (|*), (|+), (|-)
@@ -28,7 +29,6 @@ import Control.Monad.State
 import System.Random as R
 import Geometry.Angle
 import Geometry.Space
-
 import Utils
 import Pair
 import Data.List (sort)
@@ -88,6 +88,12 @@ direction = toTurn . radians
 radians :: Vector -> Radian
 radians (x,y) = atan2 y x
 
+rotate :: Vector -> Turn -> Vector
+rotate v = (magnitude v |*) . unitV . simple . (direction v +)
+
+rotateAround :: Vector -> Turn -> Vector -> Vector
+rotateAround c t v = rotate (v |- c) t |+ c
+
 magnitudeSq :: Vector -> Float
 magnitudeSq v = v |. v
 
@@ -146,7 +152,7 @@ arcFromTo :: Radian -> Vector -> Vector -> Int -> [Vector]
 arcFromTo _ _ _ 0 = []
 arcFromTo _ _ v2 1 = [v2]
 arcFromTo _ v1 v2 2 = [v1, v2]
-arcFromTo a v1 v2 n = fmap (\i -> rotate (i*gap) c v1) [0..numHops]
+arcFromTo a v1 v2 n = fmap (\i -> rotateAround (i*gap) c v1) [0..numHops]
   where
     numHops = fromIntegral $ n - 1
     m = mid v1 v2
@@ -157,9 +163,9 @@ arcFromTo a v1 v2 n = fmap (\i -> rotate (i*gap) c v1) [0..numHops]
     c = (if a < toRadian 0.5 then (m |+) else (m |-)) leftCM
     gap = a / numHops
 
-rotate :: Radian -> Vector -> Vector -> Vector
-rotate a c v = let cv = v |- c
-  in c |+ (magnitude cv |* toUnit (a + radians cv))
+    rotateAround :: Radian -> Vector -> Vector -> Vector
+    rotateAround a c v = let cv = v |- c
+      in c |+ (magnitude cv |* toUnit (a + radians cv))
 
 distSq :: Vector -> Vector -> Float
 distSq v1 v2 = magnitudeSq $ v2 |- v1

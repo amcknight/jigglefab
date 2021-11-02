@@ -1,11 +1,12 @@
 import Test.QuickCheck
-import Geometry.Circle (circleFrom3)
-import Geometry.Vector
 import SpecUtils
+import Geometry.Circle
+import Geometry.Vector
 import Geometry.VectorTest
 import Geometry.CircleTest
 import Geometry.AngleTest
 import Voronoi.FortuneTest
+import Voronoi.BeachTest
 
 main :: IO ()
 main = quickCheck circlePointsSame
@@ -16,3 +17,7 @@ main = quickCheck circlePointsSame
     -- <> quickCheck degUndeg -- Fails due to floats
     <> quickCheck singletonNoEdge
     <> quickCheck pairOneEdge
+    <> quickCheck newRaysEmitFromCenter
+    <> quickCheck parallelEdgesFromColinear
+    <> quickCheck rotatedPointsSame
+    <> quickCheck rotateIntSame

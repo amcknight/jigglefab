@@ -3,6 +3,7 @@ module Geometry.VectorTest
 , sumIs2Mids
 , scaledUnitSame
 , sumSymmetric
+, rotateIntSame
 ) where
 
 import Geometry.Vector
@@ -21,3 +22,6 @@ scaledUnitSame v = case unit v of
 
 sumSymmetric :: Vector -> Vector -> Bool
 sumSymmetric = sym2 (|+)
+
+rotateIntSame :: Vector -> Int -> Bool
+rotateIntSame v n = rotate v (fromIntegral n) == v
