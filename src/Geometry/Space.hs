@@ -15,12 +15,11 @@ import Data.Tuple
 type Radius = Float
 data Ortho = Vertical | Horizontal deriving (Eq, Show)
 data Side = Out | In deriving (Show, Eq, Ord)
+type Sided a = (P a, Side)
 
 flipSide :: Side -> Side
 flipSide In = Out
 flipSide Out = In
-
-type Sided a = (P a, Side)
 
 flipSided :: Sided a -> Sided a
 flipSided (p, s) = (p, flipSide s)

@@ -10,7 +10,7 @@ module Geometry.Vector
 , upV, downV, rightV, leftV
 , upRightV, upLeftV, downRightV, downLeftV
 , toUnit
-, magnitudeSq
+, magnitudeSq, magnitude
 , randomV, randomVs, randomVIn
 , (|*), (|+), (|-)
 , (|.)
@@ -28,6 +28,7 @@ import Control.Monad.State
 import System.Random as R
 import Geometry.Angle
 import Geometry.Space
+
 import Utils
 import Pair
 import Data.List (sort)
@@ -54,8 +55,9 @@ instance Random Vector where
 toUnit:: Radian -> Vector
 toUnit a = (cos a, sin a)
 
-unit :: Vector -> Vector
-unit v = (1 / magnitude v) |* v
+unit :: Vector -> Maybe Vector
+unit (0,0) = Nothing
+unit v = Just $ (1 / magnitude v) |* v
 
 unitV :: Turn -> Vector
 unitV = toUnit . (*tau)
