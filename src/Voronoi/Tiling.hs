@@ -6,19 +6,18 @@ module Voronoi.Tiling
 import Data.List (sortBy, sortOn, groupBy)
 import Data.Maybe (catMaybes)
 import Geometry.Vector
-import Voronoi.Fortune
 import Geometry.Line
 import qualified Data.Vector as V
 import Orb
 import Color
 import Chem
-import Geometry.Angle
 import Pair
 import Debug.Trace
 import Geometry.CrossPoint
 import Voronoi.Pie
 import Voronoi.Tri
 import Voronoi.Sweep
+import Voronoi.Edge
 
 data Wedge = TriWedge Int Tri | PieWedge Int Pie deriving Show
 

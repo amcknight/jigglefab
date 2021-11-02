@@ -59,6 +59,7 @@ library
       Utils
       View
       Voronoi.Beach
+      Voronoi.Edge
       Voronoi.Fortune
       Voronoi.Pie
       Voronoi.Sweep
@@ -94,6 +95,12 @@ test-suite chains-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      Geometry.AngleTest
+      Geometry.CircleTest
+      Geometry.VectorTest
+      SpecUtils
+      Voronoi.BeachTest
+      Voronoi.FortuneTest
       Paths_chains
   hs-source-dirs:
       test

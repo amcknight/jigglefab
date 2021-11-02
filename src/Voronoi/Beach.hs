@@ -4,7 +4,6 @@ module Voronoi.Beach
 , Bouy(..)
 , Cross(..)
 , Event(..)
-, Ray(..)
 , initialBeach
 , updateBeach
 , processBeach
@@ -25,6 +24,7 @@ import Geometry.Parabola
 import Debug.Trace
 import Utils
 import Geometry.Circle
+import Voronoi.Edge
 
 data Bouy = Bouy
   { bouyPos :: Position
@@ -60,13 +60,6 @@ height (CrossEvent (Cross (Circle (_,y) r) _)) = y - r
 
 instance Ord Event where
   compare e1 e2 = compare (height e2) (height e1)
-
-data Ray = Ray Position Turn Int Int deriving (Show, Eq)
-
-instance Ord Ray where
-  compare (Ray _ _ i1 j1) (Ray _ _ i2 j2) = case compare i1 i2 of
-    EQ -> compare j1 j2
-    o -> o
 
 data Beach = Beach
   { sweep :: Float 

@@ -41,6 +41,7 @@ import Voronoi.Pie
 import Voronoi.Tri
 import Voronoi.Sweep
 import Chem.Buckle
+import Voronoi.Edge
 
 run :: IO ()
 run = runSeeded =<< getStdGen

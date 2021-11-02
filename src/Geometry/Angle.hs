@@ -46,7 +46,7 @@ toRadian = (tau*)
 toTurn :: Radian -> Turn
 toTurn = simple . (/tau)
 
-degrees :: Turn -> Float 
+degrees :: Turn -> Float
 degrees = (360*)
 
 undegrees :: Float -> Turn
