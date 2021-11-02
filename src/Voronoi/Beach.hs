@@ -25,6 +25,7 @@ import Debug.Trace
 import Utils
 import Geometry.Circle
 import Voronoi.Edge
+import Pair
 
 data Bouy = Bouy
   { bouyPos :: Position
@@ -143,14 +144,10 @@ crossContainsBouy (Cross (Circle cp r) i) bs = any (\(Bouy p j) -> j /= li && j 
 
 newRays :: Position -> Bouy -> Bouy -> Bouy -> [Ray]
 newRays pos (Bouy p1 i1) (Bouy p2 i2) (Bouy p3 i3) =
-  [ if i2 < i3 then Ray pos away1 (i2,i3) else Ray pos away1 (i3,i2)
-  , if i1 < i3 then Ray pos away2 (i1,i3) else Ray pos away2 (i3,i1)
-  , if i1 < i2 then Ray pos away3 (i1,i2) else Ray pos away3 (i2,i1)
+  [ Ray pos (awayRay pos p1 p2 p3) (sortP (i2,i3))
+  , Ray pos (awayRay pos p2 p1 p3) (sortP (i1,i3))
+  , Ray pos (awayRay pos p3 p1 p2) (sortP (i1,i2))
   ]
-  where
-    away1 = awayRay pos p1 p2 p3
-    away2 = awayRay pos p2 p1 p3
-    away3 = awayRay pos p3 p1 p2
 
 awayRay :: Position -> Position -> Position -> Position -> Turn
 awayRay o away p q = if turnDirection p q o == turnDirection p q away
