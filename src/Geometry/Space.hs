@@ -6,6 +6,7 @@ module Geometry.Space
 , flipSide
 , flipSided
 , swapPair
+, inPair, inSide
 ) where
 
 import Pair
@@ -26,3 +27,9 @@ flipSided (p, s) = (p, flipSide s)
 
 swapPair :: Sided a -> Sided a
 swapPair (p, s) = (swap p, s)
+
+inPair :: Eq a => Sided a -> a -> Bool
+inPair ((i, j), _) x = x == i || x == j
+
+inSide :: Sided a -> Bool
+inSide (_, s) = s == In

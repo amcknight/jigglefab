@@ -59,7 +59,7 @@ buildModel sp st = do
         bs = pmap (ballI (form m)) ip
 
 innerIps :: Model c -> [P Int]
-innerIps = fmap fst . filter isIn . M.assocs . bbSides
+innerIps = fmap fst . filter inSide . M.assocs . bbSides
 
 bbSideI :: Model c -> P Int -> Side
 bbSideI m = (bbSides m M.!)
