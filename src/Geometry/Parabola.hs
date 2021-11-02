@@ -20,7 +20,7 @@ instance HasCrossPoints Parabola where
     if a1 == a2
     then if b1 == b2
          then if c1 == c2
-              then AllCross
+              then InfinteCross
               else NoCross
          else OneCross (atX p1 (-cob))
     else case compare discr 0 of
@@ -52,9 +52,9 @@ parabolaFromFocus sw (px,py)
 
 crossPointsFromFoci :: Float -> Position -> Position -> CrossPoints
 crossPointsFromFoci sw p1 p2
-  | p1 == p2 = AllCross
+  | p1 == p2 = InfinteCross
   | otherwise = case (parabolaFromFocus sw p1, parabolaFromFocus sw p2) of
-    (Nothing, Nothing) -> if fst p1 == fst p2 then AllCross else NoCross 
+    (Nothing, Nothing) -> if fst p1 == fst p2 then InfinteCross else NoCross 
     (Nothing, Just p) -> OneCross $ atX p $ fst p1
     (Just p, Nothing) -> OneCross $ atX p $ fst p2
     (Just a, Just b) -> crossPoints a b

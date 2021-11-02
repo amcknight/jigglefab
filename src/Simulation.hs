@@ -135,7 +135,7 @@ drawCrossPoints :: CrossPoints -> Picture
 drawCrossPoints (OneCross p) = drawPosAt p blue
 drawCrossPoints (TwoCross p q) = drawPosAt p blue <> drawPosAt p blue
 drawCrossPoints NoCross = error "Drawing non-points"
-drawCrossPoints AllCross = error "Drawing infinite-points"
+drawCrossPoints InfinteCross = error "Drawing infinite-points"
 
 drawLiveCrossPoint :: Position -> Picture
 drawLiveCrossPoint p = drawPosAt p magenta

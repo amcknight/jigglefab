@@ -17,7 +17,7 @@ import Geometry.Angle
 data Edge = Edge
   { seg :: Seg
   , edgeI :: P Int
-  } deriving Show
+  } deriving (Show, Eq)
 
 data Ray = Ray
   { rayPos :: Position
@@ -45,7 +45,7 @@ edgeFromRay b (Ray p dir is) = case rayCrossBound b p (simple dir) of
   NoCross -> Nothing
   OneCross q -> Just $ Edge (Seg p q) is
   TwoCross q r -> Just $ Edge (Seg q r) is
-  AllCross -> error "A line and bound can't be identical"
+  InfinteCross -> error "A line and bound can't be identical"
 
 rayDups :: [Ray] -> ([Edge], [Ray])
 rayDups rs = partitionEithers $ addRayDups (sort rs) []

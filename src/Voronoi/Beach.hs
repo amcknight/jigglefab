@@ -9,9 +9,6 @@ module Voronoi.Beach
 , processBeach
 , parabolaCrossXs
 , parabolaCross
-, height
-, newRays
-, awayRay
 ) where
 
 import qualified Data.Vector as V
@@ -218,7 +215,7 @@ parabolaCross sw p q = case crossPointsFromFoci sw p q of
     LT -> rc
     EQ -> error "Shouldn't happen I guess"
     GT -> lc
-  AllCross -> error "Identical Bouys should not be in a voronoi"
+  InfinteCross -> error "Identical Bouys should not be in a voronoi"
 
 between :: Float -> Float -> Float -> Bool
 between x a b

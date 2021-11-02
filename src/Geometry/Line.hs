@@ -7,15 +7,15 @@ module Geometry.Line
 , segInBound
 ) where
 
+import Data.Maybe (isJust)
 import Geometry.Vector
 import Geometry.Angle
 import Geometry.Bound
 import Geometry.CrossPoint
 import Debug.Trace
-import Data.Maybe (isJust)
 
-data Line = Line Position Position deriving Show
-data Seg = Seg Position Position deriving Show
+data Line = Line Position Position deriving (Show, Eq)
+data Seg = Seg Position Position deriving (Show, Eq)
 
 segB :: Seg -> Bound
 segB (Seg p q) = Bound p q

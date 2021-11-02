@@ -73,7 +73,7 @@ buildTri p1 p2 (TwoCross c1 c2) o = Just $ makeCCW $ Tri o $ Seg x1 x2
       (GT,  _) -> let (s1, s2, _) = sort4 p1 (p2,c1,c2) in (s1, s2) -- Left out right in
       ( _, GT) -> let (s1, s2, _) = sort4 p2 (p1,c1,c2) in (s1, s2) -- Right out left in
       ( _,  _) -> (p1, p2) -- Both in
-buildTri _ _ AllCross _ = error "Impossible for a circle and line to share all points"
+buildTri _ _ InfinteCross _ = error "Impossible for a circle and line to share more than two points"
 buildTri _ _ _ _ = Nothing
 
 sort4 :: Position -> (Position, Position, Position) -> (Position, Position, Position)

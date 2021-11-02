@@ -4,7 +4,7 @@ module Geometry.CrossPoint
 ) where
 import Geometry.Vector
 
-data CrossPoints = NoCross | OneCross Position | TwoCross Position Position | AllCross deriving (Show, Eq)
+data CrossPoints = NoCross | OneCross Position | TwoCross Position Position | InfinteCross deriving (Show, Eq)
 
 class HasCrossPoints a where
   -- Should be sorted by x
