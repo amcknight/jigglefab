@@ -170,7 +170,7 @@ processBouy b bch@(Beach sw ss es bs rs)
     dupB = bs V.! bi
     newBs = V.take bi bs <> V.fromList [dupB, b, dupB] <> V.drop (bi+1) bs
     newEs = sort $ shiftCrosses bi 2 (removeBrokenCircleEvent bi es) ++ newCircleEventsAt newBs [bi, bi+2] -- Could do this without re-sorting for better performance
-    newEsOnStart = sort $ newCircleEventsAt newBs [bi, bi+1, bi+2]
+    newEsOnStart = sort $ es ++ newCircleEventsAt newBs [bi, bi+1, bi+2]
 
 removeBrokenCircleEvent :: Int -> [Event] -> [Event]
 removeBrokenCircleEvent bi = filter (\case CrossEvent (Cross _ ci) -> ci /= bi; _ -> True)
