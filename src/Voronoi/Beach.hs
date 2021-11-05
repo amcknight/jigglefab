@@ -9,6 +9,8 @@ module Voronoi.Beach
 , processBeach
 , parabolaCrossXs
 , parabolaCross
+, newRays
+, awayRay
 ) where
 
 import qualified Data.Vector as V
@@ -19,10 +21,10 @@ import Geometry.Angle
 import Geometry.CrossPoint
 import Geometry.Parabola
 import Debug.Trace
-import Utils
 import Geometry.Circle
 import Voronoi.Edge
 import Pair
+import Utils
 
 data Bouy = Bouy
   { bouyPos :: Position
@@ -147,11 +149,18 @@ newRays pos (Bouy p1 i1) (Bouy p2 i2) (Bouy p3 i3) =
   ]
 
 awayRay :: Position -> Position -> Position -> Position -> Turn
-awayRay o away p q = if turnDirection p q o == turnDirection p q away
-  then dir
-  else pole dir
+awayRay o away p q
+  | o == away || o == p || o == q = error "awayRay: Origin must be distinct from other 3 points"
+  -- | not (allEq [distSq o away, distSq o p, distSq o q]) = error "Should all by positions the same distance from each other"
+  | otherwise = awayTurn (direction (away |- o)) (direction (p |- o)) (direction (q |- o))
   where
     dir = direction $ mid p q |- o
+
+awayTurn :: Turn -> Turn -> Turn -> Turn
+awayTurn away p q
+  | passesIncl p q dir == passesIncl p q away = pole dir
+  | otherwise = dir
+  where dir = (p+q)/2
 
 processBouy :: Bouy -> Beach -> Beach
 processBouy b bch@(Beach sw ss es bs rs)

@@ -14,6 +14,7 @@ module Geometry.Angle
 , simple
 , separation
 , slope
+, passesIncl
 ) where
 
 import Data.Fixed (mod')
@@ -86,3 +87,8 @@ separation t1 t2
 
 slope :: Turn -> Float 
 slope = tan . toRadian
+
+passesIncl :: Turn -> Turn -> Turn -> Bool
+passesIncl from to x
+  | from <= to = x >= from && x <= to
+  | otherwise = passesIncl from 1 x || passesIncl 0 to x

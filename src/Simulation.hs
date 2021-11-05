@@ -48,7 +48,7 @@ run = runSeeded =<< getStdGen
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
-  let struct = sevenBall   
+  let struct = threeBallInner    
   let (model, _) = runState (buildModel 3 struct) seed
   let view = View (Left struct) zeroV 200
   let frameRate = 30
@@ -84,12 +84,12 @@ update dt v = v { structOrModel = case structOrModel v of
 drawStruct :: Chem c => Struct c -> Picture
 drawStruct (Struct walls os) = Pictures $
   fmap (drawWall yellow) walls <>
-  fmap drawEdge es <>
   fmap drawOrb os <>
   fmap (drawWedge vos) ws
-  -- [drawBeach vos (processBeach (initialBeach ps) 2)]
+  -- [drawBeach vos (processBeach (initialBeach ps) 4)]
   where
-    es = voronoi $ fmap pos os
+    ps = fmap pos os
+    es = voronoi ps
     ws = tileVoronoi vos es
     vos = V.fromList os
 
