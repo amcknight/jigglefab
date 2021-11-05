@@ -60,6 +60,7 @@ library
       View
       Voronoi.Beach
       Voronoi.Edge
+      Voronoi.Event
       Voronoi.Fortune
       Voronoi.Pie
       Voronoi.Sweep

@@ -2,9 +2,10 @@ module Voronoi.BeachTest
 ( newRaysEmitFromCenter
 , awayRayPerpendicular
 ) where
+
+import Test.QuickChecks
 import Geometry.Vector
 import Voronoi.Beach
-import Test.QuickCheck
 import Geometry.Angle
 
 instance Arbitrary Bouy where

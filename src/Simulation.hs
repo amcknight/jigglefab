@@ -42,6 +42,7 @@ import Voronoi.Tri
 import Voronoi.Sweep
 import Chem.Buckle
 import Voronoi.Edge
+import Voronoi.Event
 
 run :: IO ()
 run = runSeeded =<< getStdGen
@@ -109,7 +110,7 @@ drawBeach os (Beach sw _ es bs rs) = Pictures $
     pcs = parabolaCrossXs sw bps
     xBounds = zip (minX b : pcs) (pcs ++ [maxX b])
 
-drawEvent :: Voronoi.Beach.Event -> Picture 
+drawEvent :: Voronoi.Event.Event -> Picture 
 drawEvent (BouyEvent b) = drawPosAt (pos b) cyan
 drawEvent (CrossEvent (Cross (Geometry.Circle.Circle pos rad) i)) = Color g (uncurry translate pos (circle rad)) <> drawPosAt pos g
   where g = greyN 0.5

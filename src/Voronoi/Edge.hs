@@ -2,6 +2,7 @@ module Voronoi.Edge
 ( Edge(..)
 , Ray(..)
 , edgesFromRays
+, awayRay
 ) where
 
 import Data.Maybe (mapMaybe)
@@ -62,3 +63,10 @@ addRayDups (r1:r2:rs) ers = case edgeRay r1 r2 of
       then Left $ Edge (Seg p1 p2) (i1, j1)
       else Right r1
 
+awayRay :: Position -> Position -> Position -> Position -> Turn
+awayRay o away p q
+  | o == away || o == p || o == q = error "awayRay: Origin must be distinct from other 3 points"
+  -- | not (allEq [distSq o away, distSq o p, distSq o q]) = error "Should all by positions the same distance from each other"
+  | otherwise = awayTurn (direction (away |- o)) (direction (p |- o)) (direction (q |- o))
+  where
+    dir = direction $ mid p q |- o
