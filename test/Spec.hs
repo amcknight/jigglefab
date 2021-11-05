@@ -19,5 +19,6 @@ main = quickCheck circlePointsSame
     <> quickCheck pairOneEdge
     <> quickCheck newRaysEmitFromCenter
     <> quickCheck parallelEdgesFromColinear
-    <> quickCheck rotatedPointsSame
+    -- <> quickCheck rotatedPointsSame -- FINAL BOSS TEST
     <> quickCheck rotateIntSame
+    -- <> quickCheck awayRayPerpendicular -- Fails due to floats

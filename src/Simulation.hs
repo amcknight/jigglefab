@@ -48,7 +48,7 @@ run = runSeeded =<< getStdGen
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
-  let struct = threeBallInner     
+  let struct = threeBallInner    
   let (model, _) = runState (buildModel 3 struct) seed
   let view = View (Left struct) zeroV 200
   let frameRate = 30
@@ -84,13 +84,13 @@ update dt v = v { structOrModel = case structOrModel v of
 drawStruct :: Chem c => Struct c -> Picture
 drawStruct (Struct walls os) = Pictures $
   fmap (drawWall yellow) walls <>
-  -- fmap drawEdge es <>
+  fmap drawEdge es <>
   fmap drawOrb os <>
   -- fmap (drawWedge vos) ws
-  [drawBeach vos (processBeach (initialBeach ps) 4)]
+  [drawBeach vos (processBeach (initialBeach ps) 3)]
   where
     es = voronoi ps
-    ps = fmap pos os
+    es = voronoi ps
     ws = tileVoronoi vos es
     vos = V.fromList os
 
@@ -110,7 +110,7 @@ drawBeach os (Beach sw _ es bs rs) = Pictures $
     pcs = parabolaCrossXs sw bps
     xBounds = zip (minX b : pcs) (pcs ++ [maxX b])
 
-drawEvent :: Voronoi.Beach.Event -> Picture 
+drawEvent :: Voronoi.Event.Event -> Picture 
 drawEvent (BouyEvent b) = drawPosAt (pos b) cyan
 drawEvent (CrossEvent (Cross (Geometry.Circle.Circle pos rad) i)) = Color g (uncurry translate pos (circle rad)) <> drawPosAt pos g
   where g = greyN 0.5

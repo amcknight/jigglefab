@@ -1,9 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 module Voronoi.Beach
 ( Beach(..)
-, Bouy(..)
-, Cross(..)
-, Event(..)
 , initialBeach
 , updateBeach
 , processBeach
@@ -20,45 +17,11 @@ import Geometry.Angle
 import Geometry.CrossPoint
 import Geometry.Parabola
 import Debug.Trace
-import Utils
 import Geometry.Circle
 import Voronoi.Edge
 import Pair
-
-data Bouy = Bouy
-  { bouyPos :: Position
-  , bouyI :: Int
-  } deriving Eq
-
-instance Show Bouy where
-  show (Bouy pos i) = "Bouy "++show pos++" i"++show i
-
-instance AnchorPos Bouy where
-  pos = bouyPos
-
-data Cross = Cross
-  { crossC :: Circle
-  , crossI :: Int
-  } deriving Eq
-
-instance AnchorPos Cross where
-  pos = pos . crossC
-
-instance Show Cross where
-  show (Cross c i) = "Cross "++show c++" i"++show i
-
-data Event = BouyEvent Bouy | CrossEvent Cross deriving Eq
-
-instance Show Event where
-  show (BouyEvent e) = "Event"++show e
-  show (CrossEvent e) = "Event"++show e
-
-height :: Event -> Float
-height (BouyEvent (Bouy (_,y) _)) = y
-height (CrossEvent (Cross (Circle (_,y) r) _)) = y - r
-
-instance Ord Event where
-  compare e1 e2 = compare (height e2) (height e1)
+import Utils
+import Voronoi.Event
 
 data Beach = Beach
   { sweep :: Float 
@@ -70,10 +33,6 @@ data Beach = Beach
 
 instance Show Beach where
   show (Beach sw cs es bs rs) = "Beach {s="++show sw++" stack="++show cs++" events="++show es++" bouys="++show bs++" rays="++show rs++"}"
-
-isBouyEvent :: Event -> Bool
-isBouyEvent (BouyEvent _) = True
-isBouyEvent _ = False
 
 bouyEvents :: Beach -> [Event]
 bouyEvents (Beach _ _ es _ _) = filter isBouyEvent es
@@ -147,13 +106,6 @@ newRays pos (Bouy p1 i1) (Bouy p2 i2) (Bouy p3 i3) =
   , Ray pos (awayRay pos p3 p1 p2) (sortP (i1,i2))
   ]
 
-awayRay :: Position -> Position -> Position -> Position -> Turn
-awayRay o away p q = if turnDirection p q o == turnDirection p q away
-  then dir
-  else pole dir
-  where
-    dir = direction $ mid p q |- o
-
 processBouy :: Bouy -> Beach -> Beach
 processBouy b bch@(Beach sw ss es bs rs)
   | V.null bs = Beach sw ss es (V.fromList [b]) rs
@@ -180,10 +132,9 @@ newCircleEventsAt bs is = mapMaybe (fmap CrossEvent . crossFrom3 bs) (filter not
   where notOnEdge i = i > 0 && i < length bs - 1
 
 crossFrom3 :: V.Vector Bouy -> Int -> Maybe Cross
-crossFrom3 bs bi =
-  if i1 == i2 || i1 == i3 || i2 == i3
-  then Nothing --not 3 different bouys
-  else case turnDirection p1 p2 p3 of
+crossFrom3 bs bi
+  | anyEq [i1, i2, i3] = Nothing --not 3 different bouys
+  | otherwise = case turnDirection p1 p2 p3 of
     Nothing -> Nothing -- Colinear
     Just Clockwise -> case circleFrom3 p1 p2 p3 of
       Nothing -> Nothing --colinear points

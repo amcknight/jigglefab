@@ -1,4 +1,6 @@
 .stack-work/
 .idea
 .vscode
+*-exe.prof
+flame-*.svg
 *~

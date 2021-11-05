@@ -1,7 +1,7 @@
 module Utils
 ( R
 , sort3
-, allEq
+, allEq, anyEq
 ) where
 
 import Control.Monad.State
@@ -17,3 +17,10 @@ sort3 x y z = (a,b,c)
 allEq :: Eq a => [a] -> Bool
 allEq []     = True
 allEq (x:xs) = all (== x) xs
+
+anyEq :: Ord a => [a] -> Bool
+anyEq = anyEq' . sort
+anyEq' :: Eq a => [a] -> Bool
+anyEq' [] = False
+anyEq' [x] = False
+anyEq' (x:y:xs) = x == y || anyEq' (x:xs)
