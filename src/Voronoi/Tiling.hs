@@ -1,15 +1,15 @@
 module Voronoi.Tiling
 ( Wedge(..)
 , tileVoronoi
+, buildTri
 ) where
 
 import Data.List (sortBy, sortOn, groupBy)
 import Data.Maybe (catMaybes)
+import qualified Data.Vector as V
 import Geometry.Vector
 import Geometry.Line
-import qualified Data.Vector as V
 import Orb
-import Color
 import Chem
 import Pair
 import Debug.Trace
@@ -58,24 +58,24 @@ toTris os (Edge s@(Seg p1 p2) is@(i,j)) = catMaybes
   , fmap (TriWedge j) (buildTri p1 p2 cps o2)
   ]
   where
-    -- o1 or o2 would both give same result here
-    cps = case crossPointsAtUnit (Line (p1 |- o1) (p2 |- o1)) of
-      OneCross c -> OneCross (c |+ o1)
-      TwoCross c1 c2 -> TwoCross (c1 |+ o1) (c2 |+ o1)
-      a -> a
     (o1, o2) = pmap (orbPos . (os V.!)) is
+    o = o1 -- o1 or o2 would both give same result here
+    cps = case crossPointsAtUnit (Line (p1 |- o) (p2 |- o)) of
+      OneCross c -> OneCross (c |+ o)
+      TwoCross c1 c2 -> TwoCross (c1 |+ o) (c2 |+ o)
+      a -> a
 
 buildTri :: Position -> Position -> CrossPoints -> Position -> Maybe Tri
-buildTri p1 p2 (TwoCross c1 c2) o = Just $ makeCCW $ Tri o $ Seg x1 x2
-  where
-    (x1, x2) = case (compare (distSq p1 o) 1, compare (distSq p2 o) 1) of
-      (GT, GT) -> let (s1, s2, _) = sort4 p1 (p2,c1,c2) in (s1, s2) -- Both outside but cross
-      (GT,  _) -> let (s1, s2, _) = sort4 p1 (p2,c1,c2) in (s1, s2) -- Left out right in
-      ( _, GT) -> let (s1, s2, _) = sort4 p2 (p1,c1,c2) in (s1, s2) -- Right out left in
-      ( _,  _) -> (p1, p2) -- Both in
 buildTri _ _ InfinteCross _ = error "Impossible for a circle and line to share more than two points"
+buildTri p1 p2 (TwoCross c1 c2) o = case (compare (distSq p1 o) 1, compare (distSq p2 o) 1) of
+  (GT, GT) -> if turnDirection o c1 p1 == turnDirection o c1 p2
+    then Nothing -- Both outside but don't cross
+    else let (s1, s2, _) = sort3By p1 (p2,c1,c2) in Just $ makeCCW $ Tri o $ Seg s1 s2 -- Both outside but cross
+  (GT,  _) -> let (s1, s2, _) = sort3By p1 (p2,c1,c2) in Just $ makeCCW $ Tri o $ Seg s1 s2 -- Left out right in
+  ( _, GT) -> let (s1, s2, _) = sort3By p2 (p1,c1,c2) in Just $ makeCCW $ Tri o $ Seg s1 s2 -- Right out left in
+  ( _,  _) -> Just $ makeCCW $ Tri o $ Seg p1 p2 -- Both in
 buildTri _ _ _ _ = Nothing
 
-sort4 :: Position -> (Position, Position, Position) -> (Position, Position, Position)
-sort4 out (a,b,c) = (d,e,f)
+sort3By :: Position -> (Position, Position, Position) -> (Position, Position, Position)
+sort3By out (a,b,c) = (d,e,f)
   where [d, e, f] = sortBy (\p q -> compare (distSq p out) (distSq q out)) [a,b,c] 

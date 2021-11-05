@@ -23,6 +23,9 @@ module Geometry.Vector
 , squashTurn
 , turnDirection
 , mid
+, allColinear
+, show2
+, fromBy
 ) where
 
 import Control.Monad.State
@@ -32,6 +35,7 @@ import Geometry.Space
 import Utils
 import Pair
 import Data.List (sort)
+import Debug.Trace
 
 type Vector = P Float
 type Position = Vector
@@ -51,6 +55,9 @@ instance Random Vector where
   random g = (toUnit theta, g2)
     where
       (theta, g2) = randomR (-pi, pi) g
+
+show2 :: Position -> String
+show2 (x, y) = show (truncF x 2, truncF y 2)
 
 toUnit:: Radian -> Vector
 toUnit a = (cos a, sin a)
@@ -148,6 +155,10 @@ fromTo v1 v2 n = v1 : fromTo (v1 |+ hop) v2 (n-1)
     numHops = fromIntegral n - 1
     hop = (1/numHops) |* (v2 |- v1)
 
+fromBy :: Vector -> Vector -> Int -> [Vector]
+fromBy _ _ 0 = []
+fromBy v gap n = fmap ((|+ v) . (|* gap) . fromIntegral) [0..n-1]
+
 arcFromTo :: Radian -> Vector -> Vector -> Int -> [Vector]
 arcFromTo _ _ _ 0 = []
 arcFromTo _ _ v2 1 = [v2]
@@ -183,13 +194,20 @@ radSqFromArc :: Radian -> Vector -> Vector -> Float
 radSqFromArc a v1 v2 = distSq v1 v2 / chord a ^ 2
 
 squashTurn :: Radius -> Vector -> Vector -> Turn
-squashTurn rad v1 v2 = if 2*rad <= d then 0 else toTurn (acos ((d/2)/rad))
+squashTurn rad v1 v2 = if 2*rad <= d then 0 else toTurn $ acos $ (d/2)/rad
   where d = dist v1 v2
 
 colinear :: Position -> Position -> Position -> Bool 
 colinear p q r
   | parallel (q |- p) (r |- p) = True
   | otherwise = False
+
+allColinear :: [Position] -> Bool
+allColinear [] = True
+allColinear [p] = True
+allColinear [p,q] = True
+allColinear aps@(a:b:ps) = all (withinAngle 0.00001 (dirFromA b)) (fmap dirFromA ps)
+  where dirFromA = direction . (|- a)
 
 parallel :: Vector -> Vector -> Bool 
 parallel v w = direction v == direction w || direction v == pole (direction w)

@@ -2,8 +2,9 @@ module Geometry.AngleTest
 ( degUndeg
 ) where
 
-import Geometry.Angle
 import SpecUtils
+import Geometry.Vector
+import Geometry.Angle
 
 degUndeg :: Turn -> Bool
 degUndeg t = undegrees (degrees t) == t

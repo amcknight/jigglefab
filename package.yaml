@@ -30,6 +30,7 @@ library:
     - mtl
     - random
     - vector
+    - ilist
 
 executables:
   chains-exe:

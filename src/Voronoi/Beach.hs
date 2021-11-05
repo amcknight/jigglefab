@@ -10,7 +10,7 @@ module Voronoi.Beach
 ) where
 
 import qualified Data.Vector as V
-import Data.List (sort, partition)
+import Data.List (sort, partition, sortOn)
 import Data.Maybe (mapMaybe)
 import Geometry.Vector
 import Geometry.Angle
@@ -46,21 +46,20 @@ initialBeach ps = Beach sw [] es V.empty []
     sw = height (head es) + 1
     es = sort $ BouyEvent <$> zipWith Bouy ps [0..]
 
-updateBeach :: Beach -> Beach
-updateBeach (Beach _ _ [] _ _) = error "updateBeach: No events"
-updateBeach beach@(Beach sw cs (e:es) _ _)
-  | h > sw = error "Somehow the event is occurring above the sweep line"
-  | otherwise = case e of
-    BouyEvent p -> processBouy p newBeach
-    CrossEvent c -> processCross c newBeach
-  where
-    h = height e
-    newBeach = if h == sw
-      then beach { events = es }
-      else beach { sweep = h, crossStack = [], events = es }
-
 processBeach :: Beach -> Int -> Beach
 processBeach b = (iterate updateBeach b !!)
+
+updateBeach :: Beach -> Beach
+updateBeach (Beach _ _ [] _ _) = error "updateBeach: No events"
+updateBeach beach@(Beach sw cs (e:es) bs _) = case compare h sw of
+  LT -> processEvent e $ beach { sweep = h, crossStack = [], events = es }
+  EQ -> processEvent e $ beach { events = es }
+  GT -> error $ "updateBeach: Somehow the event is occurring "++show (h-sw)++" above the sweep line"
+  where h = height e
+
+processEvent :: Event -> Beach -> Beach
+processEvent (BouyEvent p) = processBouy p
+processEvent (CrossEvent c) = processCross c
 
 processCross :: Cross -> Beach -> Beach
 processCross cr@(Cross c i) b@(Beach sw cs es bs rs)
@@ -109,12 +108,20 @@ newRays pos (Bouy p1 i1) (Bouy p2 i2) (Bouy p3 i3) =
 processBouy :: Bouy -> Beach -> Beach
 processBouy b bch@(Beach sw ss es bs rs)
   | V.null bs = Beach sw ss es (V.fromList [b]) rs
+  | sameH = case compare h bouysH of
+    LT -> Beach sw ss newEsOnStart newBs rs
+    EQ -> Beach sw ss es (V.fromList (sortOn (fst . pos) (V.toList bs ++ [b]))) rs
+    GT -> error "processBouy: Height of new bouy is above the beach bouys"
   | otherwise = Beach sw ss newEs newBs rs
   where
+    h = snd $ pos b
+    sameH = allEq $ V.toList $ fmap (snd . pos) bs
+    bouysH = snd $ pos $ V.head bs
     bi = findBouyI (bouyPos b) bs
     dupB = bs V.! bi
     newBs = V.take bi bs <> V.fromList [dupB, b, dupB] <> V.drop (bi+1) bs
     newEs = sort $ shiftCrosses bi 2 (removeBrokenCircleEvent bi es) ++ newCircleEventsAt newBs [bi, bi+2] -- Could do this without re-sorting for better performance
+    newEsOnStart = sort $ es ++ newCircleEventsAt newBs [bi, bi+1, bi+2]
 
 removeBrokenCircleEvent :: Int -> [Event] -> [Event]
 removeBrokenCircleEvent bi = filter (\case CrossEvent (Cross _ ci) -> ci /= bi; _ -> True)
@@ -127,14 +134,14 @@ crossFrom3 :: V.Vector Bouy -> Int -> Maybe Cross
 crossFrom3 bs bi
   | anyEq [i1, i2, i3] = Nothing --not 3 different bouys
   | otherwise = case turnDirection p1 p2 p3 of
+    Just CounterClockwise -> Nothing
     Nothing -> Nothing -- Colinear
-    Just Clockwise -> case circleFrom3 p1 p2 p3 of
+    _ -> case circleFrom3 p1 p2 p3 of
       Nothing -> Nothing --colinear points
       Just c ->
         if crossContainsBouy (Cross c bi) bs
         then Nothing -- Contains other bouy
         else Just $ Cross c bi
-    Just CounterClockwise -> Nothing
   where
     Bouy p1 i1 = bs V.! (bi-1)
     Bouy p2 i2 = bs V.! bi
