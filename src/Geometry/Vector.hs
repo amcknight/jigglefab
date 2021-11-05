@@ -24,6 +24,8 @@ module Geometry.Vector
 , turnDirection
 , mid
 , allColinear
+, show2
+, fromBy
 ) where
 
 import Control.Monad.State
@@ -53,6 +55,9 @@ instance Random Vector where
   random g = (toUnit theta, g2)
     where
       (theta, g2) = randomR (-pi, pi) g
+
+show2 :: Position -> String
+show2 (x, y) = show (truncF x 2, truncF y 2)
 
 toUnit:: Radian -> Vector
 toUnit a = (cos a, sin a)
@@ -149,6 +154,10 @@ fromTo v1 v2 n = v1 : fromTo (v1 |+ hop) v2 (n-1)
   where
     numHops = fromIntegral n - 1
     hop = (1/numHops) |* (v2 |- v1)
+
+fromBy :: Vector -> Vector -> Int -> [Vector]
+fromBy _ _ 0 = []
+fromBy v gap n = fmap ((|+ v) . (|* gap) . fromIntegral) [0..n-1]
 
 arcFromTo :: Radian -> Vector -> Vector -> Int -> [Vector]
 arcFromTo _ _ _ 0 = []

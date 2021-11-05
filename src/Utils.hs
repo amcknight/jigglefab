@@ -2,6 +2,7 @@ module Utils
 ( R
 , sort3
 , allEq, anyEq
+, truncF
 ) where
 
 import Control.Monad.State
@@ -24,3 +25,7 @@ anyEq' :: Eq a => [a] -> Bool
 anyEq' [] = False
 anyEq' [x] = False
 anyEq' (x:y:xs) = x == y || anyEq' (x:xs)
+
+truncF :: Float -> Int -> Float
+truncF x n = fromIntegral (floor (x * t)) / t
+  where t = 10^n

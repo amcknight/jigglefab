@@ -4,9 +4,10 @@ module Voronoi.Sweep
 , antiSweeps
 ) where
 
-import Geometry.Angle
 import Data.Maybe (mapMaybe)
 import Data.List (partition)
+import Geometry.Angle
+import Debug.Trace
 
 data Sweep = Sweep Turn Turn | FullSweep deriving Show
 
@@ -15,7 +16,7 @@ trivial (Sweep x y) = x == y
 trivial FullSweep = False
 
 antiSweeps :: [Sweep] -> [Sweep]
-antiSweeps ss = filter (not . trivial) $ case crossSweep of
+antiSweeps ss = trace (show ss) $ filter (not . trivial) $ case crossSweep of
   Nothing -> antiSweeps' 0 1 ss
   Just (Sweep end start) -> antiSweeps' start end nonCrossSweeps
   Just _ -> error "Impossible non-sweep cross sweep"

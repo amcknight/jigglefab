@@ -51,7 +51,7 @@ zooom = 200
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
-  let struct = threeBallInner 
+  let struct = threeBallInner  
   let (model, _) = runState (buildModel 3 struct) seed
   let view = View (Left struct) zeroV zooom
   let frameRate = 30
@@ -88,7 +88,7 @@ drawStruct :: Chem c => Struct c -> Picture
 drawStruct (Struct walls os) = Pictures $
   fmap (drawWall yellow) walls
   <> fmap drawOrb os
-  -- <> fmap drawEdge es
+  <> fmap drawEdge es
   <> fmap (drawWedge vos) ws
   -- <> [drawBeach vos (processBeach (initialBeach ps) 3)]
   where

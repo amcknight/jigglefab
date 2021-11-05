@@ -103,6 +103,7 @@ test-suite chains-test
       SpecUtils
       Voronoi.BeachTest
       Voronoi.FortuneTest
+      Voronoi.TilingTest
       Paths_chains
   hs-source-dirs:
       test
