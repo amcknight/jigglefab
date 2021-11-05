@@ -51,7 +51,7 @@ zooom = 200
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
-  let struct = threeBallInner  
+  let struct = movingTool   
   let (model, _) = runState (buildModel 3 struct) seed
   let view = View (Left struct) zeroV zooom
   let frameRate = 30
