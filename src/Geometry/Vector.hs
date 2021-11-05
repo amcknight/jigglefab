@@ -197,10 +197,8 @@ allColinear :: [Position] -> Bool
 allColinear [] = True
 allColinear [p] = True
 allColinear [p,q] = True
-allColinear (a:b:ps) = all (withinAngle 0.00001 dir) dirs
-  where
-    dir = direction (b |- a)
-    dirs = fmap (direction . (|- a)) ps
+allColinear aps@(a:b:ps) = all (withinAngle 0.00001 (dirFromA b)) (fmap dirFromA ps)
+  where dirFromA = direction . (|- a)
 
 parallel :: Vector -> Vector -> Bool 
 parallel v w = direction v == direction w || direction v == pole (direction w)

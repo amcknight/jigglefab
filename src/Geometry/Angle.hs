@@ -104,6 +104,6 @@ awayTurn away p q
 withinAngle :: Turn -> Turn -> Turn -> Bool
 withinAngle dt t1 t2 = rightS < dt
   where
-    topS = if s > 0.5 then s - 0.5 else s
-    rightS = if topS > 0.25 then topS - 0.25 else topS
+    rightS = if topS > 0.25 then 0.5 - topS else topS
+    topS = if s > 0.5 then 1 - s else s
     s = abs $ simple t1 - simple t2

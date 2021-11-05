@@ -88,8 +88,8 @@ drawStruct :: Chem c => Struct c -> Picture
 drawStruct (Struct walls os) = Pictures $
   fmap (drawWall yellow) walls
   <> fmap drawOrb os
-  <> fmap drawEdge es
-  -- <> fmap (drawWedge vos) ws
+  -- <> fmap drawEdge es
+  <> fmap (drawWedge vos) ws
   -- <> [drawBeach vos (processBeach (initialBeach ps) 3)]
   where
     es = voronoi ps

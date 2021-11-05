@@ -11,7 +11,6 @@ import Geometry.Angle
 import Geometry.CrossPoint
 import Voronoi.Edge
 import qualified Data.Vector as V
-import Utils
 import Data.List (sortOn)
 import qualified Data.List.Index as I
 
@@ -29,8 +28,11 @@ voronoi2 :: Position -> Position -> [Edge]
 voronoi2 p q = [Edge (midEdge p q) (0,1)]
 
 voronoiColinear :: [Position] -> [Edge] --TODO: Make this work for vertical
-voronoiColinear ps = (\((i1,p1),(i2,p2)) -> Edge (midEdge p1 p2) (i1,i2)) <$> zip sps (tail sps)
-  where sps = sortOn (fst . snd) (I.indexed ps)
+voronoiColinear ps = zipWith iPosToEdge sps (tail sps)
+  where
+    iPosToEdge :: (Int, Position) -> (Int, Position) -> Edge
+    iPosToEdge (i1,p1) (i2,p2) = Edge (midEdge p1 p2) (i1,i2)
+    sps = sortOn (fst . snd) (I.indexed ps)
 
 midEdge :: Position -> Position -> Seg
 midEdge p q = case unsidedRayCrossBound b m d of
