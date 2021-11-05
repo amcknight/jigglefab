@@ -54,9 +54,8 @@ updateBeach (Beach _ _ [] _ _) = error "updateBeach: No events"
 updateBeach beach@(Beach sw cs (e:es) bs _) = case compare h sw of
   LT -> processEvent e $ beach { sweep = h, crossStack = [], events = es }
   EQ -> processEvent e $ beach { events = es }
-  GT -> error "updateBeach: Somehow the event is occurring above the sweep line"
-  where
-    h = height e
+  GT -> error $ "updateBeach: Somehow the event is occurring "++show (h-sw)++" above the sweep line"
+  where h = height e
 
 processEvent :: Event -> Beach -> Beach
 processEvent (BouyEvent p) = processBouy p
@@ -135,14 +134,14 @@ crossFrom3 :: V.Vector Bouy -> Int -> Maybe Cross
 crossFrom3 bs bi
   | anyEq [i1, i2, i3] = Nothing --not 3 different bouys
   | otherwise = case turnDirection p1 p2 p3 of
+    Just CounterClockwise -> Nothing
     Nothing -> Nothing -- Colinear
-    Just Clockwise -> case circleFrom3 p1 p2 p3 of
+    _ -> case circleFrom3 p1 p2 p3 of
       Nothing -> Nothing --colinear points
       Just c ->
         if crossContainsBouy (Cross c bi) bs
         then Nothing -- Contains other bouy
         else Just $ Cross c bi
-    Just CounterClockwise -> Nothing
   where
     Bouy p1 i1 = bs V.! (bi-1)
     Bouy p2 i2 = bs V.! bi

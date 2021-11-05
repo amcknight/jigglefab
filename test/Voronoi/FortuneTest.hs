@@ -12,6 +12,7 @@ import Test.QuickCheck
 import Geometry.Vector
 import Voronoi.Edge
 import Geometry.Line
+import Debug.Trace
 
 singletonNoEdge :: Position -> Bool
 singletonNoEdge p = null $ voronoi [p]
@@ -20,7 +21,8 @@ pairOneEdge :: Position -> Position -> Bool
 pairOneEdge p q = length (voronoi [p,q]) == 1
 
 parallelEdgesFromColinear :: Position -> Float -> Turn -> Property
-parallelEdgesFromColinear pos scale turn = (scale /= 0.0) ==> (length (voronoi ps) == 2)
+parallelEdgesFromColinear pos scale turn = (scale /= 0.0)
+  ==> (length (voronoi ps) == 2)
   where
     gap = scale |* unitV turn
     ps = fmap ((pos |+) . (|* gap)) [0, 1, 2]

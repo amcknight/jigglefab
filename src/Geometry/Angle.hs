@@ -16,6 +16,7 @@ module Geometry.Angle
 , slope
 , passesIncl
 , awayTurn
+, withinAngle
 ) where
 
 import Data.Fixed (mod')
@@ -99,3 +100,10 @@ awayTurn away p q
   | passesIncl p q dir == passesIncl p q away = pole dir
   | otherwise = dir
   where dir = (p+q)/2
+
+withinAngle :: Turn -> Turn -> Turn -> Bool
+withinAngle dt t1 t2 = rightS < dt
+  where
+    topS = if s > 0.5 then s - 0.5 else s
+    rightS = if topS > 0.25 then topS - 0.25 else topS
+    s = abs $ simple t1 - simple t2

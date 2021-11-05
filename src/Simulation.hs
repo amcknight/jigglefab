@@ -42,15 +42,18 @@ import Voronoi.Tri
 import Voronoi.Sweep
 import Chem.Buckle
 import Voronoi.Edge
+import Voronoi.Event
 
 run :: IO ()
 run = runSeeded =<< getStdGen
 
+zooom = 200
+
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
-  let struct = threeBallInner    
+  let struct = threeBallInner 
   let (model, _) = runState (buildModel 3 struct) seed
-  let view = View (Left struct) zeroV 200
+  let view = View (Left struct) zeroV zooom
   let frameRate = 30
   play
     FullScreen
@@ -83,14 +86,14 @@ update dt v = v { structOrModel = case structOrModel v of
 
 drawStruct :: Chem c => Struct c -> Picture
 drawStruct (Struct walls os) = Pictures $
-  fmap (drawWall yellow) walls <>
-  fmap drawEdge es <>
-  fmap drawOrb os <>
-  -- fmap (drawWedge vos) ws
-  [drawBeach vos (processBeach (initialBeach ps) 3)]
+  fmap (drawWall yellow) walls
+  <> fmap drawOrb os
+  <> fmap drawEdge es
+  -- <> fmap (drawWedge vos) ws
+  -- <> [drawBeach vos (processBeach (initialBeach ps) 3)]
   where
     es = voronoi ps
-    es = voronoi ps
+    ps = fmap pos os
     ws = tileVoronoi vos es
     vos = V.fromList os
 
@@ -145,7 +148,7 @@ drawSweep :: Float -> [Picture]
 drawSweep h = [Color black $ line [(-100000, h), (100000, h)]]
 
 drawPosAt :: Position -> Color -> Picture
-drawPosAt pos c = Color c $ uncurry translate pos $ circleSolid 0.05
+drawPosAt pos c = Color c $ uncurry translate pos $ circleSolid (5/zooom)
 
 drawWedge :: Chem c => V.Vector (Orb c) -> Wedge -> Picture
 drawWedge os (PieWedge i p) = Color (colorFromOrbI os i) $ drawPie p
@@ -174,7 +177,7 @@ drawBall :: Chem c => Ball c -> Picture
 drawBall (Ball (Point p _) c) = drawOrb $ Orb p c
 
 drawOrb :: Chem c => Orb c -> Picture
-drawOrb (Orb (x,y) chem) = translate x y . Color c $ drawCircle 0.01 <> circle 1
+drawOrb (Orb (x,y) chem) = translate x y . Color c $ drawCircle (5/zooom) <> circle 1
   where c = C.toGlossColor $ chemColor chem
 
 drawWall :: Color -> Wall -> Picture

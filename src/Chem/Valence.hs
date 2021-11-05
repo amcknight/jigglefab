@@ -102,11 +102,16 @@ threeBall =
   orbStruct (Orb (10, 20) (vale 1))
 
 threeBallInner :: Struct Valence
-threeBallInner = 
-  orbStruct (Orb ( 0.1, 0) (vale 0)) <>
-  orbStruct (Orb ( 0.0, 0.6) (vale 1)) <>
-  orbStruct (Orb ( 0.2, 0.6) (vale 2)) <>
-  orbStruct (Orb (-0.2, 0.6) (vale 3))
+threeBallInner =
+  -- orbStruct (Orb ( 0.0, 0.6) (vale 1)) <>
+  -- orbStruct (Orb ( 0.2, 0.6) (vale 2)) <>
+  -- orbStruct (Orb (-0.2, 0.6) (vale 3)) <>
+  -- orbStruct (Orb ( 1.0, 0.6) (vale 1)) <>
+  -- orbStruct (Orb ( 1.2, 0.6) (vale 2)) <>
+  -- orbStruct (Orb (-1.2, 0.6) (vale 3)) <>
+  orbStruct (Orb ( 2.0, 0.6) (vale 1)) <>
+  orbStruct (Orb ( 2.2, 0.6) (vale 2)) <>
+  orbStruct (Orb (-2.2, 0.6) (vale 3))
 
 fourBall :: Struct Valence
 fourBall =

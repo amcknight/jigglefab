@@ -23,6 +23,7 @@ module Geometry.Vector
 , squashTurn
 , turnDirection
 , mid
+, allColinear
 ) where
 
 import Control.Monad.State
@@ -32,6 +33,7 @@ import Geometry.Space
 import Utils
 import Pair
 import Data.List (sort)
+import Debug.Trace
 
 type Vector = P Float
 type Position = Vector
@@ -183,13 +185,22 @@ radSqFromArc :: Radian -> Vector -> Vector -> Float
 radSqFromArc a v1 v2 = distSq v1 v2 / chord a ^ 2
 
 squashTurn :: Radius -> Vector -> Vector -> Turn
-squashTurn rad v1 v2 = if 2*rad <= d then 0 else toTurn (acos ((d/2)/rad))
+squashTurn rad v1 v2 = if 2*rad <= d then 0 else toTurn $ acos $ (d/2)/rad
   where d = dist v1 v2
 
 colinear :: Position -> Position -> Position -> Bool 
 colinear p q r
   | parallel (q |- p) (r |- p) = True
   | otherwise = False
+
+allColinear :: [Position] -> Bool
+allColinear [] = True
+allColinear [p] = True
+allColinear [p,q] = True
+allColinear (a:b:ps) = all (withinAngle 0.00001 dir) dirs
+  where
+    dir = direction (b |- a)
+    dirs = fmap (direction . (|- a)) ps
 
 parallel :: Vector -> Vector -> Bool 
 parallel v w = direction v == direction w || direction v == pole (direction w)
