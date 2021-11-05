@@ -3,9 +3,11 @@ module Voronoi.BeachTest
 , awayRayPerpendicular
 ) where
 
-import Test.QuickChecks
+import Test.QuickCheck
 import Geometry.Vector
 import Voronoi.Beach
+import Voronoi.Event
+import Voronoi.Edge
 import Geometry.Angle
 
 instance Arbitrary Bouy where

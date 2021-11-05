@@ -14,6 +14,7 @@ import Geometry.Line
 import Geometry.Bound
 import Geometry.Vector
 import Geometry.Angle
+import Utils
 
 data Edge = Edge
   { seg :: Seg
@@ -65,8 +66,6 @@ addRayDups (r1:r2:rs) ers = case edgeRay r1 r2 of
 
 awayRay :: Position -> Position -> Position -> Position -> Turn
 awayRay o away p q
-  | o == away || o == p || o == q = error "awayRay: Origin must be distinct from other 3 points"
-  -- | not (allEq [distSq o away, distSq o p, distSq o q]) = error "Should all by positions the same distance from each other"
+  | anyEq [o, away, p, q] = error "awayRay: all points should be unique"
   | otherwise = awayTurn (direction (away |- o)) (direction (p |- o)) (direction (q |- o))
-  where
-    dir = direction $ mid p q |- o
+  where dir = direction $ mid p q |- o
