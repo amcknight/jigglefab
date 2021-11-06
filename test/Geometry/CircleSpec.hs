@@ -1,10 +1,13 @@
-module Geometry.CircleTest
-( circlePointsSame
-) where
+module Geometry.CircleSpec (spec) where
 
-import Geometry.Vector
+import Test.Hspec
+import Test.Hspec.QuickCheck
+
 import Geometry.Circle
 import SpecUtils
 
-circlePointsSame :: Position -> Position -> Position -> Bool
-circlePointsSame = sym3 circleFrom3
+spec :: Spec
+spec = do
+  describe "Getting Circles form points" $ do
+    prop "The point should be equal given any order" $
+      sym3 circleFrom3

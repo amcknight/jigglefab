@@ -1,7 +1,7 @@
-module Voronoi.BeachTest
-( newRaysEmitFromCenter
-, awayRayPerpendicular
-) where
+module Voronoi.BeachSpec (spec) where
+
+import Test.Hspec
+import Test.Hspec.QuickCheck
 
 import Test.QuickCheck
 import Geometry.Vector
@@ -12,11 +12,13 @@ import Geometry.Angle
 
 instance Arbitrary Bouy where
   arbitrary = Bouy <$> arbitrary <*> arbitrary
-  
-newRaysEmitFromCenter :: Position -> Bouy -> Bouy -> Bouy -> Bool
-newRaysEmitFromCenter p b1 b2 b3 = length rs == 3 && and (fmap (\r -> pos r == p) rs)
-  where
-    rs = newRays p b1 b2 b3
 
-awayRayPerpendicular :: Position -> Position -> Position -> Position -> Property
-awayRayPerpendicular o a p q = (o /= a && o /= p && o /= q) ==> (separation (awayRay o a p q) (direction (p |- q)) == Orthogonal)
+spec :: Spec
+spec = do
+  describe "Rays" $ do
+    prop "New Rays emit from center" $
+      \p b1 b2 b3 ->
+        let rs = newRays p b1 b2 b3
+        in length rs == 3 && and (fmap (\r -> pos r == p) rs)
+    prop "Away Rays are perpendicular to line between generating points" $
+      \o a p q -> (o /= a && o /= p && o /= q) ==> separation (awayRay o a p q) (direction (p |- q)) `shouldBe` Orthogonal
