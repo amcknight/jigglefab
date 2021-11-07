@@ -41,11 +41,8 @@ type Vector = P Float
 type Position = Vector
 type Velocity = Vector
 
-instance AnchorPos Position where
-  pos = id
-
-class AnchorPos a where
-  pos :: a -> Position
+instance Near Vector where
+  near dec v1 v2 = magnitude (v2 |- v1) < 1/10^dec
 
 instance Random Vector where
   randomR ((x1,y1),(x2,y2)) g = ((x,y), g3)
@@ -55,6 +52,13 @@ instance Random Vector where
   random g = (toUnit theta, g2)
     where
       (theta, g2) = randomR (-pi, pi) g
+
+class AnchorPos a where
+  pos :: a -> Position
+  
+instance AnchorPos Position where
+  pos = id
+
 
 show2 :: Position -> String
 show2 (x, y) = show (truncF x 2, truncF y 2)

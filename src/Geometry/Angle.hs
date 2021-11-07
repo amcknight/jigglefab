@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeSynonymInstances #-}
 module Geometry.Angle
 ( Turn
 , Radian
@@ -20,8 +21,16 @@ module Geometry.Angle
 ) where
 
 import Data.Fixed (mod')
+import Utils
 
 type Turn = Float -- From 0 to 1
+
+instance Near Turn where
+  near dec t1 t2 = t < acc || t > 1 - acc
+    where
+      t = abs $ simple t1 - simple t2
+      acc = 1/10^dec
+
 type Radian = Float -- From -pi to pi
 data TurnDirection = Clockwise | CounterClockwise deriving (Show, Eq)
 data AngleType = Zero | Acute | Orthogonal | Obtuse | Opposite deriving (Show, Eq)

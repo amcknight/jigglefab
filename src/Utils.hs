@@ -3,6 +3,7 @@ module Utils
 , sort3
 , allEq, anyEq
 , truncF
+, Near(..)
 ) where
 
 import Control.Monad.State
@@ -29,3 +30,6 @@ anyEq' (x:y:xs) = x == y || anyEq' (x:xs)
 truncF :: Float -> Int -> Float
 truncF x n = fromIntegral (floor (x * t)) / t
   where t = 10^n
+
+class Near a where
+  near :: Int -> a -> a -> Bool

@@ -15,4 +15,4 @@ spec = do
     prop "Edge that would intersect circle but is not overlapping creates no Tri" $
       \p gap o ->
         let [p1, p2, c1, c2] = fromBy p gap 4
-        in  (magnitudeSq gap > 0 && not (colinear o p1 p2)) ==> isNothing (buildTri p1 p2 (TwoCross c1 c2) o)
+        in  (magnitudeSq gap > 0 && not (colinear o p1 p2)) ==> buildTri p1 p2 (TwoCross c1 c2) o `shouldSatisfy` isNothing

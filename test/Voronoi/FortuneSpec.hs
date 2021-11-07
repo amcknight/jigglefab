@@ -10,12 +10,13 @@ import Geometry.Vector
 import Voronoi.Edge
 import Geometry.Line
 import Debug.Trace
+import Utils
 
 spec :: Spec
 spec = do
   describe "Voronoi" $ do
     prop "Single Point created empty Voronoi" $
-      \p -> null $ voronoi [p]
+      \p -> voronoi [p] `shouldSatisfy` (not . null)
     prop "Pair of points creates one edge" $
       \p q -> length (voronoi [p,q]) `shouldBe` 1
     prop "Two edges from 3 colinear points" $
@@ -25,6 +26,7 @@ spec = do
         in (scale /= 0.0) ==> length (voronoi ps) `shouldBe` 2
     prop "Rotated points voronoi is same as rotated voronoi points" $
       \c ps t ->
-        let edgePoints = sort . concatMap (\(Edge (Seg p1 p2) _) -> [p1, p2])
-        in edgePoints (voronoi (fmap (rotateAround c t) ps)) `shouldBe` fmap (rotateAround c t) (edgePoints (voronoi ps))
-    
+        let edgePoints = concatMap (\(Edge (Seg p1 p2) _) -> [p1, p2])
+            vres = sort $ edgePoints (voronoi (fmap (rotateAround c t) ps))
+            rves = sort $ fmap (rotateAround c t) (edgePoints (voronoi ps))
+        in all (uncurry (near 5)) $ zip vres rves

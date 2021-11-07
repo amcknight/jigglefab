@@ -6,6 +6,7 @@ import Test.QuickCheck
 
 import Geometry.Vector
 import SpecUtils
+import Utils
 
 spec :: Spec
 spec = do
@@ -24,8 +25,8 @@ spec = do
   describe "Unit Vectors" $
     prop "Scaled unit vector is same as the original vector" $
       \v -> case unit v of
-        Nothing -> zeroV `shouldBe` v
-        Just u -> magnitude v |* u `shouldBe` v
+        Nothing -> v == zeroV
+        Just u -> near 5 (magnitude v |* u) v
   describe "Rotating Vectors" $ do
     prop "Rotating full turns shouldn't change the vector" $
       \v n -> rotate v (fromIntegral (n :: Int)) `shouldBe` v
