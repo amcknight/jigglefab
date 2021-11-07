@@ -25,7 +25,7 @@ anyEq = anyEq' . sort
 anyEq' :: Eq a => [a] -> Bool
 anyEq' [] = False
 anyEq' [x] = False
-anyEq' (x:y:xs) = x == y || anyEq' (x:xs)
+anyEq' (x:y:xs) = x == y || anyEq' (y:xs)
 
 truncF :: Float -> Int -> Float
 truncF x n = fromIntegral (floor (x * t)) / t
