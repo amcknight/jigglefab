@@ -15,10 +15,14 @@ import Data.List (sortOn)
 import qualified Data.List.Index as I
 import Utils
 
--- TODO: Needs to enforce unique points
 voronoi :: [Position] -> [Edge]
-voronoi [p,q] = voronoi2 p q
-voronoi ps
+voronoi ps = case firstDupIndices ps of 
+  Nothing -> uniqVoronoi ps
+  Just (i,j) -> error $ "Equal points given and indices: "++show i ++ " and "++show j++"."
+
+uniqVoronoi :: [Position] -> [Edge]
+uniqVoronoi [p,q] = voronoi2 p q
+uniqVoronoi ps
   | colinear 5 ps = voronoiColinear ps
   | otherwise = edgesFromRays (bufferedBound ps 1) $ voronoi' $ initialBeach ps
 

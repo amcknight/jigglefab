@@ -2,13 +2,14 @@ module Utils
 ( R
 , sort3
 , allEq, anyEq
+, firstDupIndices
 , truncF
 , Near(..)
 ) where
 
 import Control.Monad.State
 import System.Random
-import Data.List (sort)
+import Data.List (sort, elemIndex)
 
 type R a = State StdGen a
 
@@ -26,6 +27,13 @@ anyEq' :: Eq a => [a] -> Bool
 anyEq' [] = False
 anyEq' [x] = False
 anyEq' (x:y:xs) = x == y || anyEq' (y:xs)
+
+firstDupIndices :: Eq a => [a] -> Maybe (Int, Int)
+firstDupIndices [] = Nothing
+firstDupIndices [x] = Nothing
+firstDupIndices (x:xs) = case elemIndex x xs of
+  Nothing -> fmap (\(i,j) -> (i+1,j+1)) (firstDupIndices xs)
+  Just j -> Just (0, j+1)
 
 truncF :: Float -> Int -> Float
 truncF x n = fromIntegral (floor (x * t)) / t

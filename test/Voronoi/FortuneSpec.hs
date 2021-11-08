@@ -18,7 +18,7 @@ spec = do
     prop "Single Point created empty Voronoi" $
       \p -> voronoi [p] `shouldSatisfy` null
     prop "Pair of points creates one edge" $
-      \p q -> length (voronoi [p,q]) `shouldBe` 1
+      \p q -> (p /= q) ==> length (voronoi [p,q]) `shouldBe` 1
     prop "Two edges from 3 colinear points" $
       \pos scale turn ->
         let gap = scale |* unitV turn
@@ -29,4 +29,4 @@ spec = do
         let edgePoints = concatMap (\(Edge (Seg p1 p2) _) -> [p1, p2])
             vres = sort $ edgePoints (voronoi (fmap (rotateAround c t) ps))
             rves = sort $ fmap (rotateAround c t) (edgePoints (voronoi ps))
-        in all (uncurry (near 5)) $ zip vres rves
+        in not (anyEq ps) ==> all (uncurry (near 5)) $ zip vres rves
