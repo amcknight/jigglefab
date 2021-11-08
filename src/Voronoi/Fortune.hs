@@ -15,10 +15,11 @@ import Data.List (sortOn)
 import qualified Data.List.Index as I
 import Utils
 
+-- TODO: Needs to enforce unique points
 voronoi :: [Position] -> [Edge]
 voronoi [p,q] = voronoi2 p q
 voronoi ps
-  | allColinear ps = voronoiColinear ps
+  | colinear 5 ps = voronoiColinear ps
   | otherwise = edgesFromRays (bufferedBound ps 1) $ voronoi' $ initialBeach ps
 
 voronoi' :: Beach -> [Ray]
@@ -45,5 +46,6 @@ midEdge p q = case unsidedRayCrossBound b m d of
   where
     b = bufferedBound [p,q] 1
     m = mid p q
-    d = simple $ 0.25 + direction (p |- m)
+    Just dpm = direction $ p |- m
+    d = simple $ 0.25 + dpm
     

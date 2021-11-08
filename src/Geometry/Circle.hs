@@ -17,7 +17,7 @@ instance AnchorPos Circle where
   pos = circPos
 
 circleFrom3 :: Position -> Position -> Position -> Maybe Circle
-circleFrom3 p1 p2 p3 = if colinear p q r then Nothing else Just $ Circle center $ dist p center
+circleFrom3 p1 p2 p3 = if colinear 5 [p,q,r] then Nothing else Just $ Circle center $ dist p center
   where
     (p@(px,py),q@(qx,qy),r@(rx,ry)) = sort3 p1 p2 p3
     center = (-1/(2*a)) |* (b, c)

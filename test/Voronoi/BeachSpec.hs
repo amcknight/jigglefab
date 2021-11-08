@@ -10,6 +10,8 @@ import Voronoi.Event
 import Voronoi.Edge
 import Geometry.Angle
 import Utils
+import Geometry.Circle
+import Data.Maybe (isJust)
 
 instance Arbitrary Bouy where
   arbitrary = Bouy <$> arbitrary <*> arbitrary
@@ -18,11 +20,13 @@ spec :: Spec
 spec = do
   describe "Rays" $ do
     prop "New Rays emit from center" $
-      \p b1 b2 b3 ->
-        let rs = newRays p b1 b2 b3
-        in length rs == 3 && and (fmap (\r -> pos r == p) rs)
+      \b1 b2 b3 ->
+        let mc = circleFrom3 (pos b1) (pos b2) (pos b3)
+            Just (Circle p _) = mc
+            rs = newRays p b1 b2 b3
+        in isJust mc ==> length rs == 3 && and (fmap (\r -> pos r == p) rs)
     prop "Away Rays are perpendicular to line between generating points" $
-      \o a p q -> not (anyEq [o,a,p,q]) ==> 
-        let baseDir = direction (p |- q)
+      \o a p q -> not (anyEq [o,a,p,q]) && not (colinear 5 [o,p,q]) && not (colinear 5 [a,p,q])  ==> 
+        let Just baseDir = direction $ p |- q
             rayDir = awayRay o a p q
         in near 5 (simple (rayDir+0.25)) baseDir || near 5 (simple (rayDir-0.25)) baseDir

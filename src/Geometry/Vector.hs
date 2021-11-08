@@ -15,7 +15,7 @@ module Geometry.Vector
 , randomV, randomVs, randomVIn
 , (|*), (|+), (|-)
 , (|.)
-, colinear
+-- , colinear
 , fromTo, arcFromTo
 , distSq, dist
 , arcDist
@@ -23,7 +23,7 @@ module Geometry.Vector
 , squashTurn
 , turnDirection
 , mid
-, allColinear
+, colinear
 , show2
 , fromBy
 ) where
@@ -34,8 +34,9 @@ import Geometry.Angle
 import Geometry.Space
 import Utils
 import Pair
-import Data.List (sort)
+import Data.List (sort, nub)
 import Debug.Trace
+import Data.Maybe (mapMaybe)
 
 type Vector = P Float
 type Position = Vector
@@ -93,14 +94,19 @@ downRightV = downV |+ rightV
 downLeftV :: Vector
 downLeftV = downV |+ leftV
 
-direction :: Vector -> Turn 
-direction = toTurn . radians
+direction :: Vector -> Maybe Turn 
+direction v = case radians v of
+  Nothing -> Nothing
+  Just r -> Just $ toTurn r
 
-radians :: Vector -> Radian
-radians (x,y) = atan2 y x
+radians :: Vector -> Maybe Radian
+radians (0,0) = Nothing
+radians (x,y) = Just $ atan2 y x
 
 rotate :: Vector -> Turn -> Vector
-rotate v = (magnitude v |*) . unitV . simple . (direction v +)
+rotate v t = case direction v of
+  Nothing -> (0,0)
+  Just dv -> magnitude v |* unitV (simple (dv + simple t))
 
 rotateAround :: Vector -> Turn -> Vector -> Vector
 rotateAround c t v = rotate (v |- c) t |+ c
@@ -122,8 +128,8 @@ randomVs :: Float -> Int -> R [Vector]
 randomVs _ 0 = do pure mempty
 randomVs len num = do
   vel <- randomV len
-  vels <- randomVs len (num-1)
-  pure $ vel:vels
+  vels <- randomVs len $ num - 1
+  pure $ vel : vels
 
 randomVIn :: Float -> R Vector
 randomVIn maxLen = do
@@ -180,7 +186,9 @@ arcFromTo a v1 v2 n = fmap (\i -> rotateAround (i*gap) c v1) [0..numHops]
 
     rotateAround :: Radian -> Vector -> Vector -> Vector
     rotateAround a c v = let cv = v |- c
-      in c |+ (magnitude cv |* toUnit (a + radians cv))
+      in case radians cv of
+        Nothing -> c
+        Just rad -> c |+ (magnitude cv |* toUnit (a + rad))
 
 distSq :: Vector -> Vector -> Float
 distSq v1 v2 = magnitudeSq $ v2 |- v1
@@ -201,20 +209,17 @@ squashTurn :: Radius -> Vector -> Vector -> Turn
 squashTurn rad v1 v2 = if 2*rad <= d then 0 else toTurn $ acos $ (d/2)/rad
   where d = dist v1 v2
 
-colinear :: Position -> Position -> Position -> Bool 
-colinear p q r
-  | parallel (q |- p) (r |- p) = True
-  | otherwise = False
-
-allColinear :: [Position] -> Bool
-allColinear [] = True
-allColinear [p] = True
-allColinear [p,q] = True
-allColinear aps@(a:b:ps) = all (withinAngle 0.00001 (dirFromA b)) (fmap dirFromA ps)
-  where dirFromA = direction . (|- a)
-
-parallel :: Vector -> Vector -> Bool 
-parallel v w = direction v == direction w || direction v == pole (direction w)
+colinear :: Int -> [Position] -> Bool
+colinear dec ps = colinear' dec $ nub ps
+colinear' :: Int -> [Position] -> Bool
+colinear' _ [] = True
+colinear' _ [p] = True
+colinear' _ [p,q] = True
+colinear' dec aps@(a:b:ps) = all (withinAngle acc dirB) (mapMaybe dirFromA ps)
+  where
+    Just dirB = dirFromA b
+    dirFromA = direction . (|- a)
+    acc = 1/10^dec
 
 turnDirection :: Position -> Position -> Position -> Maybe TurnDirection
 turnDirection (x1,y1) (x2,y2) (x3,y3) = case compare det 0 of

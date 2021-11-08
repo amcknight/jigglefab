@@ -10,7 +10,7 @@ import Utils
 spec :: Spec
 spec = do
   describe "angle stuff" $ do
-    prop "getting degrees and converting back" $ verbose $ 
+    prop "getting degrees and converting back" $
       \t -> near 5 (undegrees (degrees t)) t
     prop "symmetric separation" $
       sym2 separation

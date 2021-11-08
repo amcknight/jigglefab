@@ -50,7 +50,11 @@ antiPies :: [Pie] -> [Pie]
 antiPies ps = fmap (Pie (pos (head ps))) . antiSweeps . sortOn (\(Sweep t _) -> t) . fmap (\(Pie _ s) -> s) $ ps
 
 triToPie :: Tri -> Pie
-triToPie (Tri o (Seg p q)) = Pie o $ Sweep (direction (p |- o)) (direction (q |- o))
+triToPie (Tri o (Seg p q)) = case (direction (p |- o), direction (q |- o)) of
+  (Nothing,Nothing) -> error "Degenerate Tri can't be converted to Pie"
+  (Nothing, _) -> error "Degenerate Tri gives empty Pie but this also shouldn't happen. p == o"
+  (_, Nothing) -> error "Degenerate Tri gives empty Pie but this also shouldn't happen. q == o"
+  (Just dpo, Just dqo) -> Pie o $ Sweep dpo dqo
 
 toTris :: Chem c => V.Vector (Orb c) -> Edge -> [Wedge]
 toTris os (Edge s@(Seg p1 p2) is@(i,j)) = catMaybes

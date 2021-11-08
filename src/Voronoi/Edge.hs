@@ -67,5 +67,10 @@ addRayDups (r1:r2:rs) ers = case edgeRay r1 r2 of
 awayRay :: Position -> Position -> Position -> Position -> Turn
 awayRay o away p q
   | anyEq [o, away, p, q] = error "awayRay: all points should be unique"
-  | otherwise = awayTurn (direction (away |- o)) (direction (p |- o)) (direction (q |- o))
-  where dir = direction $ mid p q |- o
+  | otherwise = awayTurn dao dpo dqo
+  where
+    -- Nothing cses ruled out by anEq condition
+    Just dmo = direction $ mid p q |- o
+    Just dao = direction $ away |- o
+    Just dpo = direction $ p |- o
+    Just dqo = direction $ q |- o

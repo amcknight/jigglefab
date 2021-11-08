@@ -77,7 +77,7 @@ rayCrossBound bnd@(Bound (mxX,mxY) (mnX,mnY)) p@(x,y) dir
     SouthEast -> closer pForMaxX pForMinY
   | length onBound < 2 = NoCross
   | length onBound > 2 = error "TODO: Three crosspoints on the bound. Possible only in very edgy cases"
-  | otherwise = case separation dir (direction (b1 |- p)) of
+  | otherwise = case separation dir dirB1 of
     Zero -> TwoCross b1 b2
     Acute -> TwoCross b1 b2
     _ -> NoCross 
@@ -98,6 +98,9 @@ rayCrossBound bnd@(Bound (mxX,mxY) (mnX,mnY)) p@(x,y) dir
     mxYXIn = mxYX < mxX && mxYX > mnX
     onBound = fmap snd $ filter fst $ zip [mnXYIn, mxXYIn, mnYXIn, mxYXIn] [pForMinX, pForMaxX, pForMinY, pForMaxY]
     [b1, b2] = onBound -- Only used after checking length is two
+    dirB1 = case direction $ b1 |- p of
+      Nothing -> error "TODO: Point is exactly on bound. This shouldn't be possible?"
+      Just d -> d
 
     closer :: Position -> Position -> Position
     closer a b = if distSq p a < distSq p b then a else b
@@ -142,11 +145,11 @@ segInBound bnd@(Bound (mxX,mxY) (mnX,mnY)) (Seg p@(px,py) q@(qx,qy))
   | isIn bnd p && isIn bnd q = Just $ Seg p q
   | length onBound < 2 = Nothing -- Completely outside
   | length onBound > 2 = error "Three crosspoints on the bound. Possible only in very edgy cases"
-  | isIn bnd p = case separation (direction (q |- p)) (direction (b1 |- p)) of
+  | isIn bnd p = case separation dqp dbp of
     Zero -> Just $ Seg p b1
     Acute -> Just $ Seg p b1
     _ -> Just $ Seg p b2
-  | isIn bnd q = case separation (direction (p |- q)) (direction (b1 |- q)) of
+  | isIn bnd q = case separation dpq dbq of
     Zero -> Just $ Seg q b1
     Acute -> Just $ Seg q b1
     _ -> Just $ Seg q b2
@@ -168,3 +171,8 @@ segInBound bnd@(Bound (mxX,mxY) (mnX,mnY)) (Seg p@(px,py) q@(qx,qy))
     mxYXIn = mxYX < mxX && mxYX > mnX
     onBound = fmap snd $ filter fst $ zip [mnXYIn, mxXYIn, mnYXIn, mxYXIn] [pForMinX, pForMaxX, pForMinY, pForMaxY]
     [b1, b2] = onBound -- Only used after checking the length is 2 so should be ok
+    -- Nothing cases ruled out by earlier cases
+    Just dqp = direction $ q |- p
+    Just dpq = direction $ p |- q
+    Just dbp = direction $ b1 |- p
+    Just dbq = direction $ b1 |- q

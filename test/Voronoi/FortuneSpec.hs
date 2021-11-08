@@ -16,7 +16,7 @@ spec :: Spec
 spec = do
   describe "Voronoi" $ do
     prop "Single Point created empty Voronoi" $
-      \p -> voronoi [p] `shouldSatisfy` (not . null)
+      \p -> voronoi [p] `shouldSatisfy` null
     prop "Pair of points creates one edge" $
       \p q -> length (voronoi [p,q]) `shouldBe` 1
     prop "Two edges from 3 colinear points" $
