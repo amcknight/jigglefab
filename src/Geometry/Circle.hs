@@ -13,7 +13,7 @@ data Circle = Circle
   , circRad :: Radius
   } deriving (Show, Eq)
 
-instance AnchorPos Circle where
+instance HasPos Circle where
   pos = circPos
 
 circleFrom3 :: Position -> Position -> Position -> Maybe Circle

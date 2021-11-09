@@ -9,5 +9,5 @@ data Orb c = Orb
   , orbChem :: c
   } deriving Show
 
-instance AnchorPos (Orb c) where
+instance HasPos (Orb c) where
   pos = orbPos

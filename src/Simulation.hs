@@ -51,9 +51,9 @@ zooom = 200
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
-  let struct = sevenBall    
+  let struct = threeBallInner    
   let (model, _) = runState (buildModel 3 struct) seed
-  let view = View (Left struct) zeroV zooom
+  let view = View (Right model) zeroV zooom
   let frameRate = 30
   play
     FullScreen
@@ -89,13 +89,12 @@ drawStruct (Struct walls os) = Pictures $
   fmap (drawWall yellow) walls
   <> fmap drawOrb os
   <> fmap drawEdge es
-  <> fmap (drawWedge vos) ws
+  <> fmap (drawOrbWedge (V.fromList os)) ws
   -- <> [drawBeach vos (processBeach (initialBeach ps) 3)]
   where
     es = voronoi ps
     ps = fmap pos os
-    ws = tileVoronoi vos es
-    vos = V.fromList os
+    ws = tileVoronoi (V.fromList ps) es
 
 drawEdge :: Edge -> Picture
 drawEdge (Edge s _) = Color white $ drawSeg s
@@ -150,9 +149,13 @@ drawSweep h = [Color black $ line [(-100000, h), (100000, h)]]
 drawPosAt :: Position -> Color -> Picture
 drawPosAt pos c = Color c $ uncurry translate pos $ circleSolid (5/zooom)
 
-drawWedge :: Chem c => V.Vector (Orb c) -> Wedge -> Picture
-drawWedge os (PieWedge i p) = Color (colorFromOrbI os i) $ drawPie p
-drawWedge os (TriWedge i t) = Color (colorFromOrbI os i) $ drawTri t
+drawOrbWedge :: Chem c => V.Vector (Orb c) -> Wedge -> Picture
+drawOrbWedge os (PieWedge i p) = Color (colorFromOrbI os i) $ drawPie p
+drawOrbWedge os (TriWedge i t) = Color (colorFromOrbI os i) $ drawTri t
+
+drawBallWedge :: Chem c => V.Vector (Ball c) -> Wedge -> Picture
+drawBallWedge bs (PieWedge i p) = Color (colorFromBallI bs i) $ drawPie p
+drawBallWedge bs (TriWedge i t) = Color (colorFromBallI bs i) $ drawTri t
 
 drawPie :: Pie -> Picture
 drawPie (Pie o (Sweep from to)) = drawArcAt o from to
@@ -164,14 +167,28 @@ drawTri (Tri o (Seg p q)) = polygon [o, p, q]
 colorFromOrbI :: Chem c => V.Vector (Orb c) -> Int -> Color
 colorFromOrbI os i = C.toGlossColor $ chemColor $ orbChem $ os V.! i
 
+colorFromBallI :: Chem c => V.Vector (Ball c) -> Int -> Color
+colorFromBallI bs i = C.toGlossColor $ chemColor $ chem $ bs V.! i
+
 drawModel :: Chem c => Model c -> Picture
 drawModel m = drawForm (form m) <> Pictures (fmap (drawBond (form m)) (innerIps m))
 
 drawForm :: Chem c => Form c -> Picture
-drawForm f = Pictures $ ws ++ bs
+drawForm f = Pictures $ ws ++ tiles
   where
     ws = toList $ fmap (drawWall yellow) (walls f)
-    bs = fmap drawBall (toList (balls f))
+    -- bs = fmap drawBall (toList (balls f))
+    es = voronoi $ toList $ pos <$> balls f
+    tiles = drawBallWedge (balls f) <$> tileVoronoi (fmap pos (balls f)) es
+     -- fmap (drawWall yellow) walls
+  -- <> fmap drawOrb os
+  -- <> fmap drawEdge es
+  -- <> fmap (drawWedge vos) ws
+  -- where
+  --   es = voronoi ps
+  --   ps = fmap pos os
+  --   ws = tileVoronoi vos es
+  --   vos = V.fromList os
 
 drawBall :: Chem c => Ball c -> Picture
 drawBall (Ball (Point p _) c) = drawOrb $ Orb p c

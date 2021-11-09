@@ -21,7 +21,7 @@ data Point = Point
   , vel :: Velocity
   } deriving Show
 
-instance AnchorPos Point where
+instance HasPos Point where
   pos = pointPos
 
 instance Mover Point where

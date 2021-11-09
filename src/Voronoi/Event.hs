@@ -16,7 +16,7 @@ data Bouy = Bouy
 instance Show Bouy where
   show (Bouy pos i) = "Bouy "++show pos++" i"++show i
 
-instance AnchorPos Bouy where
+instance HasPos Bouy where
   pos = bouyPos
 
 data Cross = Cross
@@ -24,7 +24,7 @@ data Cross = Cross
   , crossI :: Int
   } deriving Eq
 
-instance AnchorPos Cross where
+instance HasPos Cross where
   pos = pos . crossC
 
 instance Show Cross where

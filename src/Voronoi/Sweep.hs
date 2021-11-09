@@ -16,7 +16,7 @@ trivial (Sweep x y) = x == y
 trivial FullSweep = False
 
 antiSweeps :: [Sweep] -> [Sweep]
-antiSweeps ss = trace (show ss) $ filter (not . trivial) $ case crossSweep of
+antiSweeps ss = filter (not . trivial) $ case crossSweep of
   Nothing -> antiSweeps' 0 1 ss
   Just (Sweep end start) -> antiSweeps' start end nonCrossSweeps
   Just _ -> error "Impossible non-sweep cross sweep"

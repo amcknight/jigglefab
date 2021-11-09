@@ -97,27 +97,27 @@ twoBallInner =
 threeBall :: Struct Valence
 threeBall =
   wallStruct (VLine 1200) <>
-  orbStruct (Orb (0,-2) (vale 1)) <>
-  orbStruct (Orb (20,-3) (vale 1)) <>
+  orbStruct (Orb ( 0, -2) (vale 1)) <>
+  orbStruct (Orb (20, -3) (vale 1)) <>
   orbStruct (Orb (10, 20) (vale 1))
 
 threeBallInner :: Struct Valence
 threeBallInner =
-  orbStruct (Orb ( 1.0, 0.6) (vale 2)) <>
-  orbStruct (Orb ( 1.0, 1.2) (vale 2)) <>
+  orbStruct (Orb ( 1.1, 0.6) (vale 1)) <>
+  orbStruct (Orb ( 1.0, 0.2) (vale 2)) <>
   orbStruct (Orb ( 1.0,-0.3) (vale 3))
 
 fourBall :: Struct Valence
 fourBall =
-  orbStruct (Orb (0,-2) (vale 1)) <>
-  orbStruct (Orb (20,-3) (vale 1)) <>
+  orbStruct (Orb ( 0, -2) (vale 1)) <>
+  orbStruct (Orb (20, -3) (vale 1)) <>
   orbStruct (Orb (10, 20) (vale 1)) <>
   orbStruct (Orb (14, 20) (vale 1))
 
 fourBallInner :: Struct Valence
 fourBallInner = 
   orbStruct (Orb zeroV (vale 1)) <>
-  orbStruct (Orb (0.2, 0.6) (vale 2)) <>
+  orbStruct (Orb ( 0.2, 0.6) (vale 2)) <>
   orbStruct (Orb (-0.3, 0.3) (vale 3)) <>
   orbStruct (Orb (-0.7, 1.1) (vale 4))
 
@@ -125,7 +125,7 @@ sevenBall :: Struct Valence
 sevenBall = 
   orbStruct (Orb (-0.54, 0.51) (vale 1)) <>
   orbStruct (Orb (-0.36, 0.05) (vale 1)) <>
-  orbStruct (Orb ( 0.2, 0.7) (vale 2)) <>
+  orbStruct (Orb ( 0.20, 0.70) (vale 2)) <>
   orbStruct (Orb (-0.73, 1.14) (vale 1)) <>
   orbStruct (Orb (-0.27, 0.68) (vale 3)) <>
   orbStruct (Orb ( 0.3, 0.6) (vale 4)) <>

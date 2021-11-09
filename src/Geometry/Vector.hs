@@ -3,7 +3,7 @@
 module Geometry.Vector
 ( Vector
 , Position, Velocity
-, AnchorPos(..)
+, HasPos(..)
 , zeroV
 , unit, direction, radians
 , unitV
@@ -54,10 +54,10 @@ instance Random Vector where
     where
       (theta, g2) = randomR (-pi, pi) g
 
-class AnchorPos a where
+class HasPos a where
   pos :: a -> Position
   
-instance AnchorPos Position where
+instance HasPos Position where
   pos = id
 
 

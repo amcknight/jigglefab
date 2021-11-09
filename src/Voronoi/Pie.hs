@@ -11,5 +11,5 @@ data Pie = Pie
   , pieSweep :: Sweep
   } deriving Show
 
-instance AnchorPos Pie where
+instance HasPos Pie where
   pos = piePos

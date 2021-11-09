@@ -13,5 +13,5 @@ data View c = View
   , zoom :: Float
   }
 
-instance AnchorPos (View c) where
+instance HasPos (View c) where
   pos = center

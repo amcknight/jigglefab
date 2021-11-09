@@ -27,7 +27,7 @@ data Ray = Ray
   , rayI :: P Int
    } deriving (Show, Eq)
 
-instance AnchorPos Ray where
+instance HasPos Ray where
   pos = rayPos
 
 instance Ord Ray where

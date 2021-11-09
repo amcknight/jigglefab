@@ -18,5 +18,5 @@ makeCCW (Tri o (Seg p q)) = Tri o $ case turnDirection o p q of
   Just Clockwise -> Seg q p
   Just CounterClockwise -> Seg p q
 
-instance AnchorPos Tri where
+instance HasPos Tri where
   pos = triPos

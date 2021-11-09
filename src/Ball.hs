@@ -1,7 +1,5 @@
 module Ball
-( Ball (Ball)
-, point
-, chem
+( Ball (..)
 , buildBall
 , buildBalls
 ) where
@@ -12,11 +10,15 @@ import Time
 import Orb
 import Geometry.Vector
 import Utils
+import Chem
 
 data Ball c = Ball
   { point :: Point
   , chem :: c
   } deriving Show
+
+instance HasPos (Ball c) where
+  pos = pos . point
 
 instance Mover (Ball c) where
   move dt (Ball p c) = Ball (move dt p) c

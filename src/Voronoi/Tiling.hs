@@ -18,6 +18,7 @@ import Voronoi.Pie
 import Voronoi.Tri
 import Voronoi.Sweep
 import Voronoi.Edge
+import Color
 
 data Wedge = TriWedge Int Tri | PieWedge Int Pie deriving Show
 
@@ -25,21 +26,21 @@ wedgeI :: Wedge -> Int
 wedgeI (TriWedge i _) = i
 wedgeI (PieWedge i _) = i
 
-tileVoronoi :: Chem c => V.Vector (Orb c) -> [Edge] -> [Wedge]
-tileVoronoi os es = ts ++ toPies os ts
-  where ts = concatMap (toTris os) es
+tileVoronoi :: V.Vector Position -> [Edge] -> [Wedge]
+tileVoronoi ps es = ts ++ toPies ps ts
+  where ts = concatMap (toTris ps) es
 
-toPies :: V.Vector (Orb c) -> [Wedge] -> [Wedge]
-toPies os = concat . toPies' (V.toList (V.indexed os)) . groupBy (\t1 t2 -> wedgeI t1 == wedgeI t2) . sortOn wedgeI
+toPies :: V.Vector Position -> [Wedge] -> [Wedge]
+toPies ps = concat . toPies' (V.toList (V.indexed ps)) . groupBy (\t1 t2 -> wedgeI t1 == wedgeI t2) . sortOn wedgeI
 
-toPies' :: [(Int, Orb c)] -> [[Wedge]] -> [[Wedge]]
+toPies' :: [(Int, Position)] -> [[Wedge]] -> [[Wedge]]
 toPies' [] [] = []
 toPies' [] _ = error "Out of Orbs but still have Tris with Orb indices"
-toPies' ((i,o):ios) [] = extractPie i (orbPos o) [] : toPies' ios []
+toPies' ((i,p):ips) [] = extractPie i p [] : toPies' ips []
 toPies' _ ([]:_) = error "Somehow we have an empty Tri list"
-toPies' ((i,o):ios) (ts:tss) = case compare i (wedgeI (head ts)) of
-   LT -> extractPie i (orbPos o) [] : toPies' ios (ts:tss)
-   EQ -> extractPie i (orbPos o) ts : toPies' ios tss
+toPies' ((i,p):ips) (ts:tss) = case compare i (wedgeI (head ts)) of
+   LT -> extractPie i p [] : toPies' ips (ts:tss)
+   EQ -> extractPie i p ts : toPies' ips tss
    GT -> error "Orb index should never be above Tri index"
 
 extractPie :: Int -> Position -> [Wedge] -> [Wedge]
@@ -56,13 +57,13 @@ triToPie (Tri o (Seg p q)) = case (direction (p |- o), direction (q |- o)) of
   (_, Nothing) -> error "Degenerate Tri gives empty Pie but this also shouldn't happen. q == o"
   (Just dpo, Just dqo) -> Pie o $ Sweep dpo dqo
 
-toTris :: Chem c => V.Vector (Orb c) -> Edge -> [Wedge]
-toTris os (Edge s@(Seg p1 p2) is@(i,j)) = catMaybes
+toTris :: V.Vector Position -> Edge -> [Wedge]
+toTris ps (Edge s@(Seg p1 p2) is@(i,j)) = catMaybes
   [ fmap (TriWedge i) (buildTri p1 p2 cps o1)
   , fmap (TriWedge j) (buildTri p1 p2 cps o2)
   ]
   where
-    (o1, o2) = pmap (orbPos . (os V.!)) is
+    (o1, o2) = pmap (ps V.!) is
     o = o1 -- o1 or o2 would both give same result here
     cps = case crossPointsAtUnit (Line (p1 |- o) (p2 |- o)) of
       OneCross c -> OneCross (c |+ o)
