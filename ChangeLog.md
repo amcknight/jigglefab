@@ -1,4 +1,6 @@
 # Changelog for chains
 
 ## Unreleased changes
-- Functioning chemistry experiments
+- A bunch of experimental chemistries explicitly defined
+- Initial testing frameowrk using QuickCheck
+- Voronoi-based visualizations for symmetry
