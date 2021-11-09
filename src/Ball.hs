@@ -10,7 +10,6 @@ import Time
 import Orb
 import Geometry.Vector
 import Utils
-import Chem
 
 data Ball c = Ball
   { point :: Point
