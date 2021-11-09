@@ -43,16 +43,17 @@ import Voronoi.Sweep
 import Chem.Buckle
 import Voronoi.Edge
 import Voronoi.Event
+import Chem.Load
 
 run :: IO ()
 run = runSeeded =<< getStdGen
 
-zooom = 200
+zooom = 100
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
-  let struct = threeBallInner    
-  let (model, _) = runState (buildModel 3 struct) seed
+  let struct = load
+  let (model, _) = runState (buildModel 0.01 struct) seed
   let view = View (Right model) zeroV zooom
   let frameRate = 30
   play

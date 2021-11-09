@@ -39,16 +39,10 @@ instance Chem Valence where
     | otherwise    = Exchange (cs, Out)
   prereact (cs, In) = tie cs
   prereact (cs, Out) = cs
-  chemColor (Valence w _)
-    | w == 0 = blue 
-    | w == 1 = red 
-    | w == 2 = mix yellow red 
-    | w == 3 = yellow 
-    | otherwise = mix blue cyan
-  -- chemColor ch = case desire ch of
-  --   EQ -> grey
-  --   GT -> red
-  --   LT -> blue
+  chemColor ch = case desire ch of
+    EQ -> grey
+    GT -> red
+    LT -> blue
 
 vale :: Int -> Valence
 vale w = Valence w 0
