@@ -26,7 +26,8 @@ spec = do
             rs = newRays p b1 b2 b3
         in isJust mc ==> length rs == 3 && and (fmap (\r -> pos r == p) rs)
     prop "Away Rays are perpendicular to line between generating points" $
-      \o a p q -> not (anyEq [o,a,p,q]) && not (colinear 5 [o,p,q]) && not (colinear 5 [a,p,q])  ==> 
-        let Just baseDir = direction $ p |- q
+      \a p q -> not (colinear 5 [a,p,q]) ==> 
+        let Just (Circle o _) = circleFrom3 a p q
+            Just baseDir = direction $ p |- q
             rayDir = awayRay o a p q
         in near 5 (simple (rayDir+0.25)) baseDir || near 5 (simple (rayDir-0.25)) baseDir

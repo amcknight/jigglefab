@@ -2,7 +2,7 @@ module Voronoi.FortuneSpec (spec) where
 
 import Test.Hspec
 import Test.Hspec.QuickCheck
-import Data.List (sort)
+import Data.List (sort, permutations)
 import Voronoi.Fortune
 import Geometry.Angle
 import Test.QuickCheck
@@ -24,9 +24,8 @@ spec = do
         let gap = scale |* unitV turn
             ps = fmap ((pos |+) . (|* gap)) [0, 1, 2]
         in (scale /= 0.0) ==> length (voronoi ps) `shouldBe` 2
-    prop "Rotated points voronoi is same as rotated voronoi points" $
-      \c ps t ->
-        let edgePoints = concatMap (\(Edge (Seg p1 p2) _) -> [p1, p2])
-            vres = sort $ edgePoints (voronoi (fmap (rotateAround c t) ps))
-            rves = sort $ fmap (rotateAround c t) (edgePoints (voronoi ps))
-        in not (anyEq ps) ==> all (uncurry (near 5)) $ zip vres rves
+    prop "Voronoi of Points should be same as reversed points" $
+      \ps -> not (anyEq ps) ==> and $ zipWith (near 5) (edgePoints (voronoi ps)) (edgePoints (voronoi (reverse ps)))
+
+edgePoints :: [Edge] -> [Position]
+edgePoints = sort . concatMap (\(Edge (Seg p1 p2) _) -> [p1, p2])
