@@ -12,7 +12,7 @@ module Geometry.Space
 import Pair
 import Data.Tuple
 
-type Radius = Float
+type Radius = Double
 data Ortho = Vertical | Horizontal deriving (Eq, Show)
 data Side = Out | In deriving (Show, Eq, Ord)
 type Sided a = (P a, Side)

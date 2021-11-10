@@ -6,9 +6,9 @@ module Time
 , move
 ) where
 
-type Time = Float
-type Duration = Float
-type Speed = Float
+type Time = Double
+type Duration = Double
+type Speed = Double
 
 class Mover a where
   move :: Duration -> a -> a

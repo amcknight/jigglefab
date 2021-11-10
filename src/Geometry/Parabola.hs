@@ -10,9 +10,9 @@ import Geometry.CrossPoint
 import Debug.Trace
 
 data Parabola = Parabola
-  { sharpness :: Float
-  , downLeftness :: Float
-  , upness :: Float
+  { sharpness :: Double
+  , downLeftness :: Double
+  , upness :: Double
   } deriving (Show, Eq)
 
 instance HasCrossPoints Parabola where
@@ -38,10 +38,10 @@ instance HasCrossPoints Parabola where
       xRight = sqrt discr - 0.5*boa
       xLeft = - sqrt discr - 0.5*boa
 
-atX :: Parabola -> Float -> Position
+atX :: Parabola -> Double -> Position
 atX (Parabola a b c) x = (x, a*x^2 + b*x + c)
 
-parabolaFromFocus :: Float -> Position -> Maybe Parabola
+parabolaFromFocus :: Double -> Position -> Maybe Parabola
 parabolaFromFocus sw (px,py)
   | py == sw = Nothing
   | otherwise = Just $ Parabola sh dl u
@@ -50,7 +50,7 @@ parabolaFromFocus sw (px,py)
     dl = -2 * px * sh
     u = (px^2 + py^2 - sw^2) * sh
 
-crossPointsFromFoci :: Float -> Position -> Position -> CrossPoints
+crossPointsFromFoci :: Double -> Position -> Position -> CrossPoints
 crossPointsFromFoci sw p1 p2
   | p1 == p2 = InfinteCross
   | otherwise = case (parabolaFromFocus sw p1, parabolaFromFocus sw p2) of

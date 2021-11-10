@@ -104,7 +104,7 @@ bonkTime s (Rock (Circle c r)) p = case hitTimes r (Point c zeroV, p) of
     Out -> Just t1
     In -> Just t2
 
-bonkTime1d :: Float -> Float -> Float -> Maybe Time
+bonkTime1d :: Double -> Double -> Double -> Maybe Time
 bonkTime1d st dyn v = case compare t 0 of
   GT -> Just t
   _ -> Nothing

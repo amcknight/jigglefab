@@ -33,7 +33,7 @@ minus (Point p1 v1, Point p2 v2) = Point (p1 |- p2) (v1 |- v2)
 side :: P Point -> Side
 side ps = if furtherThan 1 ps then Out else In
 
-furtherThan :: Float -> P Point -> Bool
+furtherThan :: Double -> P Point -> Bool
 furtherThan d ps
   | uncurry distSq (pmap pos ps) > d^2 = True
   | otherwise = False
@@ -55,8 +55,9 @@ bounce (p1, p2) = (p3, p4)
     to1 = velTransferTo p2 (pos p1)
     to2 = velTransferTo p1 (pos p2)
 
+-- TODO Use a ClosestPointOnLine that works with Doubles
 velTransferTo :: Point -> Position -> Velocity
-velTransferTo (Point p1 v1) p2 = closestPointOnLine zeroV (p1 |- p2) v1
+velTransferTo (Point p1 v1) p2 = pmap realToFrac $ closestPointOnLine (0,0) (pmap realToFrac (p1 |- p2)) (pmap realToFrac v1)
 
 birthPoint :: Point -> Point -> Point
 birthPoint (Point p1 v1) (Point p2 v2) = Point newP newV

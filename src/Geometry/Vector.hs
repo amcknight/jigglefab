@@ -15,7 +15,6 @@ module Geometry.Vector
 , randomV, randomVs, randomVIn
 , (|*), (|+), (|-)
 , (|.)
--- , colinear
 , fromTo, arcFromTo
 , distSq, dist
 , arcDist
@@ -38,7 +37,7 @@ import Data.List (sort, nub)
 import Debug.Trace
 import Data.Maybe (mapMaybe)
 
-type Vector = P Float
+type Vector = P Double
 type Position = Vector
 type Velocity = Vector
 
@@ -111,27 +110,27 @@ rotate v t = case direction v of
 rotateAround :: Vector -> Turn -> Vector -> Vector
 rotateAround c t v = rotate (v |- c) t |+ c
 
-magnitudeSq :: Vector -> Float
+magnitudeSq :: Vector -> Double
 magnitudeSq v = v |. v
 
-magnitude :: Vector -> Float 
+magnitude :: Vector -> Double 
 magnitude = sqrt . magnitudeSq
 
-randomV :: Float -> R Vector
+randomV :: Double -> R Vector
 randomV len = do
   seed <- get
   let (unit, newSeed) = random seed
   put newSeed
   pure $ len |* unit
 
-randomVs :: Float -> Int -> R [Vector]
+randomVs :: Double -> Int -> R [Vector]
 randomVs _ 0 = do pure mempty
 randomVs len num = do
   vel <- randomV len
   vels <- randomVs len $ num - 1
   pure $ vel : vels
 
-randomVIn :: Float -> R Vector
+randomVIn :: Double -> R Vector
 randomVIn maxLen = do
   seed <- get
   let (lenFactor, vSeed) = randomR (0.0, 1.0) seed
@@ -142,7 +141,7 @@ reflect :: Ortho -> Vector -> Vector
 reflect Vertical (x,y) = (-x,y)
 reflect Horizontal (x,y) = (x,-y)
 
-(|*) :: Float -> Vector -> Vector
+(|*) :: Double -> Vector -> Vector
 (|*) scale = pmap (scale *)
 
 (|-) :: Vector -> Vector -> Vector
@@ -151,10 +150,10 @@ reflect Horizontal (x,y) = (x,-y)
 (|+) :: Vector -> Vector -> Vector
 (|+) = pairwise (+)
 
-(|.) :: Vector -> Vector -> Float
+(|.) :: Vector -> Vector -> Double
 (|.) (x1,y1) (x2,y2) = x1*x2 + y1*y2
 
-pairwise :: (Float -> Float -> Float) -> Vector -> Vector -> Vector
+pairwise :: (Double -> Double -> Double) -> Vector -> Vector -> Vector
 pairwise f (x1, y1) (x2, y2) = (f x1 x2, f y1 y2)
 
 fromTo :: Vector -> Vector -> Int -> [Vector]
@@ -190,19 +189,19 @@ arcFromTo a v1 v2 n = fmap (\i -> rotateAround (i*gap) c v1) [0..numHops]
         Nothing -> c
         Just rad -> c |+ (magnitude cv |* toUnit (a + rad))
 
-distSq :: Vector -> Vector -> Float
+distSq :: Vector -> Vector -> Double
 distSq v1 v2 = magnitudeSq $ v2 |- v1
 
-dist :: Vector -> Vector -> Float
+dist :: Vector -> Vector -> Double
 dist v1 v2 = magnitude $ v2 |- v1
 
-arcDist :: Radian -> Vector -> Vector -> Float 
+arcDist :: Radian -> Vector -> Vector -> Double 
 arcDist a v1 v2 = a * sqrt (radSqFromArc a v1 v2)
 
 negOpp :: Vector -> Vector
 negOpp (x,y) = (-y, x)
 
-radSqFromArc :: Radian -> Vector -> Vector -> Float
+radSqFromArc :: Radian -> Vector -> Vector -> Double
 radSqFromArc a v1 v2 = distSq v1 v2 / chord a ^ 2
 
 squashTurn :: Radius -> Vector -> Vector -> Turn

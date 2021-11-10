@@ -36,7 +36,7 @@ instance Show Event where
   show (BouyEvent e) = "Event"++show e
   show (CrossEvent e) = "Event"++show e
 
-height :: Event -> Float
+height :: Event -> Double
 height (BouyEvent (Bouy (_,y) _)) = y
 height (CrossEvent (Cross (Circle (_,y) r) _)) = y - r
 

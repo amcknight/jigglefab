@@ -24,7 +24,7 @@ import Utils
 import Voronoi.Event
 
 data Beach = Beach
-  { sweep :: Float 
+  { sweep :: Double 
   , crossStack :: [(Int, Int, Int)]
   , events :: [Event]
   , bouys :: V.Vector Bouy
@@ -151,22 +151,22 @@ findBouyI :: Position -> V.Vector Bouy -> Int
 findBouyI (px,py) bs
   | V.null bs = error "Searching for bouy in empty bouy list"
   | otherwise = findBouyI' px $ parabolaCrossXs py $ V.toList $ fmap bouyPos bs
-findBouyI' :: Float -> [Float] -> Int
+findBouyI' :: Double -> [Double] -> Int
 findBouyI' x [] = 0
 findBouyI' x (cx:xs) = case compare x cx of
   LT -> 0
   EQ -> 0
   GT -> 1 + findBouyI' x xs
 
-parabolaCrossXs :: Float -> [Position] -> [Float]
+parabolaCrossXs :: Double -> [Position] -> [Double]
 parabolaCrossXs _ [] = []
 parabolaCrossXs _ [b] = []
 parabolaCrossXs sw bs = zipWith (parabolaCrossX sw) bs (tail bs)
 
-parabolaCrossX :: Float -> Position -> Position -> Float
+parabolaCrossX :: Double -> Position -> Position -> Double
 parabolaCrossX sw p q = fst $ parabolaCross sw p q
 
-parabolaCross :: Float -> Position -> Position -> Position
+parabolaCross :: Double -> Position -> Position -> Position
 parabolaCross sw p q = case crossPointsFromFoci sw p q of
   NoCross -> error "All Bouy parabolas should have at least one cross point"
   OneCross c -> c
@@ -176,7 +176,7 @@ parabolaCross sw p q = case crossPointsFromFoci sw p q of
     GT -> lc
   InfinteCross -> error "Identical Bouys should not be in a voronoi"
 
-between :: Float -> Float -> Float -> Bool
+between :: Double -> Double -> Double -> Bool
 between x a b
   | b < a = between x b a
   | otherwise = a <= x && x <= b

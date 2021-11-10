@@ -48,12 +48,13 @@ import Chem.Load
 run :: IO ()
 run = runSeeded =<< getStdGen
 
+zooom :: Double
 zooom = 100
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
   let struct = load
-  let (model, _) = runState (buildModel 0.01 struct) seed
+  let (model, _) = runState (buildModel 1000 struct) seed
   let view = View (Right model) zeroV zooom
   let frameRate = 30
   play
@@ -66,7 +67,7 @@ runSeeded seed = do
     update
 
 draw :: Chem c => View c -> Picture
-draw v = uncurry translate (pos v) $ scale z z $ case sm of
+draw v = uncurry translate (pmap realToFrac (pos v)) $ scale (realToFrac z) (realToFrac z) $ case sm of
   Left s -> drawStruct s
   Right m -> drawModel m
   where
@@ -80,10 +81,10 @@ event e v = case e of
   EventMotion pos -> v
   EventResize _ -> v
 
-update :: Chem c => Duration -> View c -> View c
+update :: Chem c => Float -> View c -> View c
 update dt v = v { structOrModel = case structOrModel v of
    Left s -> Left s
-   Right s -> Right $ step dt s }
+   Right s -> Right $ step (realToFrac dt) s }
 
 drawStruct :: Chem c => Struct c -> Picture
 drawStruct (Struct walls os) = Pictures $
@@ -115,21 +116,22 @@ drawBeach os (Beach sw _ es bs rs) = Pictures $
 
 drawEvent :: Voronoi.Event.Event -> Picture 
 drawEvent (BouyEvent b) = drawPosAt (pos b) cyan
-drawEvent (CrossEvent (Cross (Geometry.Circle.Circle pos rad) i)) = Color g (uncurry translate pos (circle rad)) <> drawPosAt pos g
+drawEvent (CrossEvent (Cross (Geometry.Circle.Circle pos rad) i)) =
+  Color g (uncurry translate (pmap realToFrac pos) (circle (realToFrac rad))) <> drawPosAt pos g
   where g = greyN 0.5
 
-drawBouy :: Chem c => V.Vector (Orb c) -> Float -> (Float, Float) -> Bouy -> Picture
+drawBouy :: Chem c => V.Vector (Orb c) -> Double -> (Double, Double) -> Bouy -> Picture
 drawBouy cs sweep xBound (Bouy pos@(x,y) i) = drawPosAt pos c <> Color c p
   where
     p = drawParabola pos sweep xBound
     c = C.toGlossColor $ chemColor $ orbChem $ cs V.! i
 
-drawParabola :: Position -> Float -> (Float, Float) -> Picture
+drawParabola :: Position -> Double -> (Double, Double) -> Picture
 drawParabola focal sweep (mnX,mxX) = case parabolaFromFocus sweep focal of
   Nothing -> blank
-  Just p -> line $ fmap (atX p) [mnX,(mnX+0.01)..mxX]
+  Just p -> line $ fmap (pmap realToFrac . atX p) [mnX,(mnX+0.01)..mxX]
 
-drawParabCrosses :: Float -> V.Vector Bouy -> [Picture]
+drawParabCrosses :: Double -> V.Vector Bouy -> [Picture]
 drawParabCrosses sw bs =
   fmap drawCrossPoints (zipWith (crossPointsFromFoci sw) ps (tail ps)) <> 
   fmap drawLiveCrossPoint (zipWith (parabolaCross sw) ps (tail ps))
@@ -144,11 +146,11 @@ drawCrossPoints InfinteCross = error "Drawing infinite-points"
 drawLiveCrossPoint :: Position -> Picture
 drawLiveCrossPoint p = drawPosAt p magenta
 
-drawSweep :: Float -> [Picture]
-drawSweep h = [Color black $ line [(-100000, h), (100000, h)]]
+drawSweep :: Double -> [Picture]
+drawSweep h = [Color black $ line [(-100000, realToFrac h), (100000, realToFrac h)]]
 
 drawPosAt :: Position -> Color -> Picture
-drawPosAt pos c = Color c $ uncurry translate pos $ circleSolid (5/zooom)
+drawPosAt pos c = Color c $ uncurry translate (pmap realToFrac pos) $ circleSolid (realToFrac (5/zooom))
 
 drawOrbWedge :: Chem c => V.Vector (Orb c) -> Wedge -> Picture
 drawOrbWedge os (PieWedge i p) = Color (colorFromOrbI os i) $ drawPie p
@@ -163,7 +165,7 @@ drawPie (Pie o (Sweep from to)) = drawArcAt o from to
 drawPie (Pie o FullSweep) = drawArcAt o 0 1
 
 drawTri :: Tri -> Picture
-drawTri (Tri o (Seg p q)) = polygon [o, p, q]
+drawTri (Tri o (Seg p q)) = polygon $ fmap (pmap realToFrac) [o, p, q]
 
 colorFromOrbI :: Chem c => V.Vector (Orb c) -> Int -> Color
 colorFromOrbI os i = C.toGlossColor $ chemColor $ orbChem $ os V.! i
@@ -195,29 +197,29 @@ drawBall :: Chem c => Ball c -> Picture
 drawBall (Ball (Point p _) c) = drawOrb $ Orb p c
 
 drawOrb :: Chem c => Orb c -> Picture
-drawOrb (Orb (x,y) chem) = translate x y . Color c $ drawCircle (5/zooom) <> circle 1
+drawOrb (Orb (x,y) chem) = translate (realToFrac x) (realToFrac y) . Color c $ drawCircle (5/zooom) <> circle 1
   where c = C.toGlossColor $ chemColor chem
 
 drawWall :: Color -> Wall -> Picture
-drawWall color (HLine y) = Color color $ line [(-10000, y), (10000, y)]
-drawWall color (VLine x) = Color color $ line [(x, -10000), (x, 10000)]
-drawWall color (Rock (Geometry.Circle.Circle (x,y) rad)) = Color color $ translate x y $ circle rad
+drawWall color (HLine y) = Color color $ line [(-10000, realToFrac y), (10000, realToFrac y)]
+drawWall color (VLine x) = Color color $ line [(realToFrac x, -10000), (realToFrac x, 10000)]
+drawWall color (Rock (Geometry.Circle.Circle (x,y) rad)) = Color color $ translate (realToFrac x) (realToFrac y) $ circle (realToFrac rad)
 
 drawBond :: Form c -> P Int -> Picture
-drawBond f ip = Color white $ line [p1, p2]
+drawBond f ip = Color white $ line [pmap realToFrac p1, pmap realToFrac p2]
   where (p1, p2) = pmap (pos . point . ballI f) ip
 
 drawArcAt :: Position -> Turn -> Turn -> Picture
-drawArcAt p from to = uncurry translate p $ case compare f t of
-   LT -> arcSolid f t 1
+drawArcAt p from to = uncurry translate (pmap realToFrac p) $ case compare f t of
+   LT -> arcSolid (realToFrac f) (realToFrac t) 1
    EQ -> error "Exactly equal from to shouldn't happen?"
-   GT -> arcSolid f 360 1 <> arcSolid 0 t 1
+   GT -> arcSolid (realToFrac f) 360 1 <> arcSolid 0 (realToFrac t) 1
    where
      f = degrees from
      t = degrees to
 
 drawCircle :: Radius -> Picture
-drawCircle = circleSolid
+drawCircle = circleSolid . realToFrac
 
 drawSeg :: Seg -> Picture
-drawSeg (Seg p q) = line [p, q]
+drawSeg (Seg p q) = line [pmap realToFrac p, pmap realToFrac q]

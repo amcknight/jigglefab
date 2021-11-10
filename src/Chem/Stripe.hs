@@ -58,7 +58,7 @@ longStruct = string0 <>
     string29
   where
     size = 1000
-    rad = 50 :: Float
+    rad = 50 :: Double
     speed = rad*3
     left = size |* leftV
     right = size |* rightV

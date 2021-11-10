@@ -35,7 +35,7 @@ firstDupIndices (x:xs) = case elemIndex x xs of
   Nothing -> fmap (\(i,j) -> (i+1,j+1)) (firstDupIndices xs)
   Just j -> Just (0, j+1)
 
-truncF :: Float -> Int -> Float
+truncF :: Double -> Int -> Double
 truncF x n = fromIntegral (floor (x * t)) / t
   where t = 10^n
 

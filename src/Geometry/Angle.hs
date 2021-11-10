@@ -23,7 +23,7 @@ module Geometry.Angle
 import Data.Fixed (mod')
 import Utils
 
-type Turn = Float -- From 0 to 1
+type Turn = Double -- From 0 to 1
 
 instance Near Turn where
   near dec t1 t2 = t < acc || t > 1 - acc
@@ -31,7 +31,7 @@ instance Near Turn where
       t = abs $ simple t1 - simple t2
       acc = 1/10^dec
 
-type Radian = Float -- From -pi to pi
+type Radian = Double -- From -pi to pi
 data TurnDirection = Clockwise | CounterClockwise deriving (Show, Eq)
 data AngleType = Zero | Acute | Orthogonal | Obtuse | Opposite deriving (Show, Eq)
 data Compass = East | NorthEast | North | NorthWest | West | SouthWest | South | SouthEast deriving (Show, Eq)
@@ -49,7 +49,7 @@ compass t
   | otherwise = error "Invalid direction"
   where dir = simple t
 
-tau :: Float
+tau :: Double
 tau = 2*pi
 
 toRadian :: Turn -> Radian
@@ -58,10 +58,10 @@ toRadian = (tau*)
 toTurn :: Radian -> Turn
 toTurn = simple . (/tau)
 
-degrees :: Turn -> Float
+degrees :: Turn -> Double
 degrees = (360*)
 
-undegrees :: Float -> Turn
+undegrees :: Double -> Turn
 undegrees = (/360)
 
 pole :: Turn -> Turn
@@ -76,7 +76,7 @@ up = 0.25
 down :: Turn
 down = 0.75
 
-chord :: Radian -> Float 
+chord :: Radian -> Double 
 chord = (2*) . sin . (/2)
 
 simple :: Turn -> Turn
@@ -96,7 +96,7 @@ separation t1 t2
     rawSep = abs (simple t1 - simple t2)
     sep = if rawSep > 0.5 then 1 - rawSep else rawSep
 
-slope :: Turn -> Float 
+slope :: Turn -> Double 
 slope = tan . toRadian
 
 passesIncl :: Turn -> Turn -> Turn -> Bool

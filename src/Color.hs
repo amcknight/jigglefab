@@ -18,10 +18,10 @@ data RGB = RGB
   , b::Int
   } deriving (Show, Eq)
 
-data Color = Grey Float | Color
+data Color = Grey Double | Color
   { h::Turn
-  , s::Float 
-  , v::Float
+  , s::Double 
+  , v::Double
   } deriving (Show, Eq)
 
 black :: Color
@@ -80,17 +80,21 @@ toRGB (Color h s v) = RGB (toVal (r'+m)) (toVal (g'+m)) (toVal (b'+m))
       | h < 6/6 = (c,0,x)
       | otherwise = error "Hue can't be greater than 1"
 
-toVal :: Float -> Int
+toVal :: Double -> Int
 toVal = round . (255*)
 
-fromVal :: Int -> Float
+fromVal :: Int -> Double
 fromVal = (/255) . fromIntegral
 
 rgbToColor :: RGB -> C.Color
-rgbToColor (RGB r g b) = C.makeColor (fromVal r) (fromVal g) (fromVal b) 1
+rgbToColor (RGB r g b) = C.makeColor
+  (realToFrac (fromVal r))
+  (realToFrac (fromVal g))
+  (realToFrac (fromVal b))
+  1
 
 toGlossColor :: Color -> C.Color 
 toGlossColor = rgbToColor . toRGB
 
-avg :: Float -> Float -> Float 
+avg :: Double -> Double -> Double 
 avg a b = (a+b)/2

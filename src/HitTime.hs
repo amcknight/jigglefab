@@ -19,7 +19,7 @@ toList (OutAndInHit t1 t2) = [(t1, Out), (t2, In)]
 hitTimes :: Radius -> P Point -> CircleHitTime
 hitTimes rad ps = maybe NoHit times root
   where
-    times :: Float -> CircleHitTime
+    times :: Double -> CircleHitTime
     times r
       -- Inferring the Side from the time
       | highT < 0 = NoHit
@@ -28,7 +28,7 @@ hitTimes rad ps = maybe NoHit times root
       where
         (lowT, highT) = sortP $ pmap (/speedSq) (r - s, -r - s)
 
-    safeRoot :: Float -> Maybe Float
+    safeRoot :: Double -> Maybe Double
     safeRoot x = case compare x 0 of
       LT -> Nothing
       EQ -> Just 0
