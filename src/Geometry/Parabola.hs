@@ -3,11 +3,13 @@ module Geometry.Parabola
 , crossPointsFromFoci
 , parabolaFromFocus
 , atX
+, parabPoss
 ) where
     
 import Geometry.Vector
 import Geometry.CrossPoint
 import Debug.Trace
+import Pair
 
 data Parabola = Parabola
   { sharpness :: Double
@@ -58,3 +60,8 @@ crossPointsFromFoci sw p1 p2
     (Nothing, Just p) -> OneCross $ atX p $ fst p1
     (Just p, Nothing) -> OneCross $ atX p $ fst p2
     (Just a, Just b) -> crossPoints a b
+
+parabPoss :: Parabola -> (Double, Double) -> Double -> [Position]
+parabPoss p (mnX,mxX) res = fmap (atX p) xs
+  where
+    xs = [mnX,(mnX+res)..mxX]

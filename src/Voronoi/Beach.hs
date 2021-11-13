@@ -54,7 +54,7 @@ updateBeach (Beach _ _ [] _ _) = error "updateBeach: No events"
 updateBeach beach@(Beach sw cs (e:es) bs _) = case compare h sw of
   LT -> processEvent e $ beach { sweep = h, crossStack = [], events = es }
   EQ -> processEvent e $ beach { events = es }
-  GT -> error $ "updateBeach: Somehow the event is occurring "++show (h-sw)++" above the sweep line"
+  GT -> trace ("Warning: updateBeach: Somehow the event is occurring "++show (h-sw)++" above the sweep line") $ beach { events = es }
   where h = height e
 
 processEvent :: Event -> Beach -> Beach
@@ -87,9 +87,7 @@ shiftCrosses :: Int -> Int -> [Event] -> [Event]
 shiftCrosses i by = fmap (\case CrossEvent c -> CrossEvent (shiftCross c); e -> e)
   where
     shiftCross :: Cross -> Cross
-    shiftCross (Cross c ci) = if ci >= i
-      then Cross c $ ci + by
-      else Cross c ci
+    shiftCross (Cross c ci) = Cross c $ if ci >= i then ci + by else ci
 
 crossContainsBouy :: Cross -> V.Vector Bouy -> Bool
 crossContainsBouy (Cross (Circle cp r) i) bs = any (\(Bouy p j) -> j /= li && j /= mi && j /= ri && distSq cp p < r^2) bs

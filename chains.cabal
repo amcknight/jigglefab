@@ -37,6 +37,7 @@ library
       Chem.Stripe
       Chem.Valence
       Color
+      Draw
       Form
       Geometry.Angle
       Geometry.Bound
