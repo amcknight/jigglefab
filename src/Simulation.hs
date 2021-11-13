@@ -98,9 +98,6 @@ drawStruct (Struct walls os) = Pictures $
     ps = fmap pos os
     ws = tileVoronoi (V.fromList ps) es
 
-drawEdge :: Edge -> Picture
-drawEdge (Edge s _) = Color white $ drawSeg s
-
 drawBeach :: Chem c => V.Vector (Orb c) -> Beach -> Picture
 drawBeach os (Beach sw _ es bs rs) = Pictures $
   fmap drawEvent es <>
@@ -111,7 +108,7 @@ drawBeach os (Beach sw _ es bs rs) = Pictures $
     ops = V.toList $ fmap pos os
     bps = V.toList $ fmap pos bs
     b = bufferedBound ops 1
-    pcs = parabolaCrossXs sw bps
+    pcs = filter (\x -> x > minX b && x < maxX b) $ parabolaCrossXs sw bps
     xBounds = zip (minX b : pcs) (pcs ++ [maxX b])
 
 drawEvent :: Voronoi.Event.Event -> Picture
@@ -127,9 +124,9 @@ drawBouy cs sweep xBound (Bouy pos@(x,y) i) = drawPosAt pos c <> Color c p
     c = C.toGlossColor $ chemColor $ orbChem $ cs V.! i
 
 drawParabola :: Position -> Double -> (Double, Double) -> Picture
-drawParabola focal sweep (mnX,mxX) = case parabolaFromFocus sweep focal of
+drawParabola focal sweep xBound = case parabolaFromFocus sweep focal of
   Nothing -> trace "Warning: blank parabola" blank
-  Just p -> toLine $ parabPoss p (mnX,mxX) 0.01 -- TODO: Should be sensitive to zooom
+  Just p -> toLine $ parabPoss p xBound 0.01 -- TODO: Should be sensitive to zooom
 
 drawParabCrosses :: Double -> V.Vector Bouy -> [Picture]
 drawParabCrosses sw bs =
@@ -207,6 +204,9 @@ drawArcAt p from to = toTranslate p $ case compare f t of
    where
      f = degrees from
      t = degrees to
+
+drawEdge :: Edge -> Picture
+drawEdge = Color white . drawSeg . seg
 
 drawSeg :: Seg -> Picture
 drawSeg (Seg p q) = toLine [p, q]

@@ -153,7 +153,11 @@ segInBound bnd@(Bound (mxX,mxY) (mnX,mnY)) (Seg p@(px,py) q@(qx,qy))
     Zero -> Just $ Seg q b1
     Acute -> Just $ Seg q b1
     _ -> Just $ Seg q b2
-  | otherwise = Nothing
+  | otherwise = case lineCrossBound bnd (Line p q) of
+    NoCross -> Nothing
+    OneCross _ -> Nothing
+    TwoCross s1 s2 -> Just $ Seg s1 s2
+    InfinteCross -> error "Segment can't cross bound in infinite places"
   where
     s = (qy-py)/(qx-px) -- breaks on vertical or horizontal
     b = py - s * px
@@ -176,3 +180,30 @@ segInBound bnd@(Bound (mxX,mxY) (mnX,mnY)) (Seg p@(px,py) q@(qx,qy))
     Just dpq = direction $ p |- q
     Just dbp = direction $ b1 |- p
     Just dbq = direction $ b1 |- q
+
+lineCrossBound :: Bound -> Line -> CrossPoints
+lineCrossBound bnd@(Bound (mxX,mxY) (mnX,mnY)) (Line p@(px,py) q@(qx,qy)) = case length onBound of
+  0 -> NoCross  -- Completely outside
+  1 -> OneCross $ head onBound
+  2 -> TwoCross b1 b2
+  _ -> error "3+ crosspoints on the bound is impossible for a line"
+  where
+    s = (qy - py)/(qx - px) -- breaks on horizontal
+    b = py - s * px
+    mnXY = s * mnX + b
+    mxXY = s * mxX + b
+    mnYX = (mnY-b) / s
+    mxYX = (mxY-b) / s
+    pForMinX = (mnX, mnXY)
+    pForMinY = (mnYX, mnY)
+    pForMaxX = (mxX, mxXY)
+    pForMaxY = (mxYX, mxY)
+    mnXYIn = mnXY < mxY && mnXY > mnY
+    mxXYIn = mxXY < mxY && mxXY > mnY
+    mnYXIn = mnYX < mxX && mnYX > mnX
+    mxYXIn = mxYX < mxX && mxYX > mnX
+    onBound = fmap snd $ filter fst $ zip [mnXYIn, mxXYIn, mnYXIn, mxYXIn] [pForMinX, pForMaxX, pForMinY, pForMaxY]
+    [b1, b2] = onBound -- Only used after checking length is two
+    dirB1 = case direction $ b1 |- p of
+      Nothing -> error "TODO: Point is exactly on bound. This shouldn't be possible?"
+      Just d -> d

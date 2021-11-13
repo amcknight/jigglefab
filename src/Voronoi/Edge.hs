@@ -15,6 +15,7 @@ import Geometry.Bound
 import Geometry.Vector
 import Geometry.Angle
 import Utils
+import Debug.Trace
 
 data Edge = Edge
   { seg :: Seg

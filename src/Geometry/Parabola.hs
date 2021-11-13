@@ -62,6 +62,4 @@ crossPointsFromFoci sw p1 p2
     (Just a, Just b) -> crossPoints a b
 
 parabPoss :: Parabola -> (Double, Double) -> Double -> [Position]
-parabPoss p (mnX,mxX) res = fmap (atX p) xs
-  where
-    xs = [mnX,(mnX+res)..mxX]
+parabPoss p (mnX,mxX) res = fmap (atX p) [mnX,(mnX+res)..mxX]

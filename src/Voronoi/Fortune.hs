@@ -52,4 +52,3 @@ midEdge p q = case unsidedRayCrossBound b m d of
     m = mid p q
     Just dpm = direction $ p |- m
     d = simple $ 0.25 + dpm
-    
