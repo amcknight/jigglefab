@@ -44,18 +44,21 @@ import Chem.Buckle
 import Voronoi.Edge
 import Voronoi.Event
 import Chem.Load
+import Draw
 
 run :: IO ()
 run = runSeeded =<< getStdGen
 
 zooom :: Double
-zooom = 100
+zooom = 300
+speeed :: Double
+speeed = 0.01
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
-  let struct = load
-  let (model, _) = runState (buildModel 1000 struct) seed
-  let view = View (Right model) zeroV zooom
+  let struct = threeBallInner
+  let (model, _) = runState (buildModel speeed struct) seed
+  let view = View (Left struct) zeroV zooom
   let frameRate = 30
   play
     FullScreen
@@ -90,9 +93,9 @@ drawStruct :: Chem c => Struct c -> Picture
 drawStruct (Struct walls os) = Pictures $
   fmap (drawWall yellow) walls
   <> fmap drawOrb os
-  -- <> fmap drawEdge es
-  -- <> fmap (drawOrbWedge (V.fromList os)) ws
-  <> [drawBeach (V.fromList os) (processBeach (initialBeach ps) 6)]
+  <> fmap drawEdge es
+  <> fmap (drawOrbWedge (V.fromList os)) ws
+  -- <> [drawBeach (V.fromList os) (processBeach (initialBeach ps) 4)]
   where
     es = voronoi ps
     ps = fmap pos os
@@ -174,11 +177,11 @@ drawModel :: Chem c => Model c -> Picture
 drawModel m = drawForm (form m) <> Pictures (fmap (drawBond (form m)) (innerIps m))
 
 drawForm :: Chem c => Form c -> Picture
-drawForm f = Pictures $ ws ++ tiles
+drawForm (Form ws bs) = Pictures $ wPics ++ bPics
   where
-    ws = toList $ fmap (drawWall yellow) (walls f)
-    es = voronoi $ toList $ pos <$> balls f
-    tiles = drawBallWedge (balls f) <$> tileVoronoi (fmap pos (balls f)) es
+    wPics = toList $ fmap (drawWall yellow) ws
+    es = voronoi $ toList $ fmap pos bs
+    bPics = drawBallWedge bs <$> tileVoronoi (fmap pos bs) es
 
 drawBall :: Chem c => Ball c -> Picture
 drawBall (Ball (Point p _) c) = drawOrb $ Orb p c

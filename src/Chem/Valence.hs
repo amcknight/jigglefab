@@ -97,9 +97,9 @@ threeBall =
 
 threeBallInner :: Struct Valence
 threeBallInner =
-  orbStruct (Orb ( 1.1, 0.6) (vale 1)) <>
-  orbStruct (Orb ( 1.0, 0.2) (vale 2)) <>
-  orbStruct (Orb ( 1.0,-0.3) (vale 3))
+  orbStruct (Orb ( 0.5, 0.02) (vale 1)) <>
+  orbStruct (Orb ( 1.1,-0.01) (vale 0)) <>
+  orbStruct (Orb ( 1.9, 0.01) (vale 2))
 
 fourBall :: Struct Valence
 fourBall =
