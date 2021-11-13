@@ -59,7 +59,6 @@ class HasPos a where
 instance HasPos Position where
   pos = id
 
-
 show2 :: Position -> String
 show2 (x, y) = show (truncF x 2, truncF y 2)
 
