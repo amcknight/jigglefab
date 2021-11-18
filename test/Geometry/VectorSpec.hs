@@ -16,7 +16,7 @@ spec = do
     prop "Midpoint is colinear with two given vectors" $
       \p q -> colinear 5 [p, q, mid p q]
     prop "Lines have colinear vectors" $
-      \p gap -> (magnitudeSq gap > 0) ==> colinear 5 $ fromBy p gap 3
+      \p gap -> magnitudeSq gap > 0 ==> colinear 5 $ fromBy p gap 3
   describe "Sums" $ do
     prop "Sum of two vectors is sum of the midpoint twice" $
       \p q -> p |+ q `shouldBe` 2 |* mid p q
@@ -36,4 +36,4 @@ spec = do
         in colinear 5 ps
   describe "Lines of Vectors" $ do
     prop "Length of line is correct as given" $
-      \p gap n -> (n >= 0) ==> length (fromBy p gap n) `shouldBe` n
+      \p gap n -> n >= 0 ==> length (fromBy p gap n) `shouldBe` n

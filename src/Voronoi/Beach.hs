@@ -54,7 +54,7 @@ updateBeach (Beach _ _ [] _ _) = error "updateBeach: No events"
 updateBeach beach@(Beach sw cs (e:es) bs _) = case compare h sw of
   LT -> processEvent e $ beach { sweep = h, crossStack = [], events = es }
   EQ -> processEvent e $ beach { events = es }
-  GT -> trace ("Warning: updateBeach: Somehow the event is occurring "++show (h-sw)++" above the sweep line") $ beach { events = es }
+  GT -> trace ("Warning: updateBeach: Somehow the event is occurring "++show (h-sw)++" above the sweep line") $ processEvent e $ beach { events = es }
   where h = height e
 
 processEvent :: Event -> Beach -> Beach

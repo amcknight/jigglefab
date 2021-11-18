@@ -16,4 +16,4 @@ spec = do
       \p gap ->
         let [p1, p2, c1, c2] = fromBy p gap 4
             o = mid p2 c1 |+ rotate (p2 |- c1) 0.25 -- Arbitrary non-colinear point
-        in  (magnitudeSq gap > 0) ==> buildTri p1 p2 (TwoCross c1 c2) o `shouldSatisfy` isNothing
+        in  magnitudeSq gap > 0 ==> buildTri p1 p2 (TwoCross c1 c2) o `shouldSatisfy` isNothing
