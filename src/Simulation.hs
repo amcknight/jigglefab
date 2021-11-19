@@ -50,13 +50,13 @@ run :: IO ()
 run = runSeeded =<< getStdGen
 
 zooom :: Double
-zooom = 1000
+zooom = 100
 speeed :: Double
 speeed = 0.01
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
-  let struct = fourBall
+  let struct = sevenBall
   let (model, _) = runState (buildModel speeed struct) seed
   let view = View (Left struct) zeroV zooom
   let frameRate = 30
