@@ -29,7 +29,7 @@ import Geometry.Vector
 import Struct
 import Orb
 import Chem.Sem
-import Voronoi.Tiling
+import Tiling
 import Voronoi.Fortune
 import Geometry.Line
 import Geometry.Parabola
@@ -50,13 +50,13 @@ run :: IO ()
 run = runSeeded =<< getStdGen
 
 zooom :: Double
-zooom = 300
+zooom = 1000
 speeed :: Double
 speeed = 0.01
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
-  let struct = threeBallInner
+  let struct = fourBall
   let (model, _) = runState (buildModel speeed struct) seed
   let view = View (Left struct) zeroV zooom
   let frameRate = 30

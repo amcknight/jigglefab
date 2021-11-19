@@ -39,34 +39,17 @@ library
       Color
       Draw
       Form
-      Geometry.Angle
-      Geometry.Bound
-      Geometry.Circle
-      Geometry.CrossPoint
-      Geometry.Line
-      Geometry.Parabola
-      Geometry.Space
-      Geometry.Vector
       Hit
       HitTime
       Model
       Orb
-      Pair
       Point
       Simulation
       Struct
       StructLibrary
+      Tiling
       Time
-      Utils
       View
-      Voronoi.Beach
-      Voronoi.Edge
-      Voronoi.Event
-      Voronoi.Fortune
-      Voronoi.Pie
-      Voronoi.Sweep
-      Voronoi.Tiling
-      Voronoi.Tri
       Wall
   other-modules:
       Paths_chains
@@ -75,6 +58,7 @@ library
   build-depends:
       base >=4.7 && <5
     , containers
+    , geo2d
     , gloss
     , ilist
     , mtl
@@ -98,13 +82,8 @@ test-suite chains-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      Geometry.AngleSpec
-      Geometry.CircleSpec
-      Geometry.VectorSpec
       SpecUtils
-      Voronoi.BeachSpec
-      Voronoi.FortuneSpec
-      Voronoi.TilingSpec
+      TilingSpec
       Paths_chains
   hs-source-dirs:
       test
@@ -113,5 +92,6 @@ test-suite chains-test
       QuickCheck
     , base >=4.7 && <5
     , chains
+    , geo2d
     , hspec
   default-language: Haskell2010

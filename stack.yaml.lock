@@ -3,7 +3,18 @@
 # For more information, please see the documentation at:
 #   https://docs.haskellstack.org/en/stable/lock_files
 
-packages: []
+packages:
+- completed:
+    name: geo2d
+    version: 0.0.1
+    git: https://github.com/amcknight/geo2d
+    pantry-tree:
+      size: 1932
+      sha256: fd8b47d7a2d311fc53df2b4120ca5e2c4f373d1f32d395b3fa39011c28bf6a49
+    commit: 9ab13e83271951025f5c9f90495fdf6c509a5e45
+  original:
+    git: https://github.com/amcknight/geo2d
+    commit: 9ab13e83271951025f5c9f90495fdf6c509a5e45
 snapshots:
 - completed:
     size: 586286

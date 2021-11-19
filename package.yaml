@@ -31,6 +31,7 @@ library:
     - random
     - vector
     - ilist
+    - geo2d
 
 executables:
   chains-exe:
@@ -53,5 +54,6 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - chains
+    - geo2d
     - hspec
     - QuickCheck
