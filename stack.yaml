@@ -1,4 +1,5 @@
-resolver: lts-18.16
+resolver: lts-18.27
 extra-deps:
-- git: https://github.com/amcknight/geo2d
-  commit: 9ab13e83271951025f5c9f90495fdf6c509a5e45
+#  - ../geo2d # FOR LOCAL. DOESN"T SEEM TO WORK THO
+ - git: https://github.com/amcknight/geo2d
+   commit: add091d2290b9fb1f7b4b59d8cfa283f4bf14f93

@@ -45,20 +45,23 @@ import Voronoi.Edge
 import Voronoi.Event
 import Chem.Load
 import Draw
+import Chem.Stripe
+import Chem.Peano
+import Chem.Encode
 
 run :: IO ()
 run = runSeeded =<< getStdGen
 
 zooom :: Double
-zooom = 100
+zooom = 50
 speeed :: Double
-speeed = 0.01
+speeed = 10
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
-  let struct = sevenBall
+  let struct = turnbuckle
   let (model, _) = runState (buildModel speeed struct) seed
-  let view = View (Left struct) zeroV zooom
+  let view = View (Right model) zeroV zooom
   let frameRate = 30
   play
     FullScreen
@@ -177,7 +180,7 @@ drawModel :: Chem c => Model c -> Picture
 drawModel m = drawForm (form m) <> Pictures (fmap (drawBond (form m)) (innerIps m))
 
 drawForm :: Chem c => Form c -> Picture
-drawForm (Form ws bs) = Pictures $ wPics ++ bPics
+drawForm (Form ws bs) = Pictures $ wPics ++ bPics -- <> fmap drawEdge es
   where
     wPics = toList $ fmap (drawWall yellow) ws
     es = voronoi $ toList $ fmap pos bs

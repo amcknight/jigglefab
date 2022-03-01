@@ -54,7 +54,7 @@ load :: Struct Load
 load = walls <> wire -- <> ribo
   where
     slack = 3
-    boxSize = 6
+    boxSize = 10
     start = boxSize |* leftV
     end = boxSize |* rightV
     mid = 0.5 |* (start |+ end)

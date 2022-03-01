@@ -38,22 +38,22 @@ instance Chem Encode where
   chemColor (Dup (Once Blue)) = mix cyan yellow
 
 instance InnerChem Encode where
-  innerReact (Wire Off, Wire a) = InExchange (Wire a, Wire Off)
-  innerReact (Wire Off, Port Out (On s)) = InExchange (Wire (On s), Port Out Off)
-  innerReact (Wire Off, Sync (Emit s)) = InExchange (Wire (On s), Sync Open)
-  innerReact (Wire Off, Dup (Once s)) = InExchange (Wire (On s), Dup Ready)
-  innerReact (Wire Off, Dup (Twice s)) = InExchange (Wire (On s), Dup (Once s))
-  innerReact (Wire (On s), Port In Off) = InExchange (Wire Off, Port In (On s))
-  innerReact (Wire (On s), Eat) = InExchange (Wire Off, Eat)
-  innerReact (Wire (On s), Sync Open) = InExchange (Wire Off, Sync (Hold s))
-  innerReact (Wire (On s), Dup Ready) = InExchange (Wire Off, Dup (Twice s))
-  innerReact (Port Out Off, Sync (Emit s)) = InExchange (Port Out (On s), Sync Open)
-  innerReact (Port Out Off, Dup (Once s)) = InExchange (Port Out (On s), Dup Ready)
-  innerReact (Port Out Off, Dup (Twice s)) = InExchange (Port Out (On s), Dup (Once s))
-  innerReact (Port In (On s), Eat) = InExchange (Port In Off, Eat)
-  innerReact (Port In (On s), Sync Open) = InExchange (Port In Off, Sync (Hold s))
-  innerReact (Port In (On s), Dup Ready) = InExchange (Port In Off, Dup (Twice s))
-  innerReact (Sync (Hold s1), Sync (Hold s2)) = InExchange (Sync (Emit s1), Sync (Emit s2))
+  innerReact (Wire Off,       Wire a) =          InExchange (Wire a,          Wire Off)
+  innerReact (Wire Off,       Port Out (On s)) = InExchange (Wire (On s),     Port Out Off)
+  innerReact (Wire Off,       Sync (Emit s)) =   InExchange (Wire (On s),     Sync Open)
+  innerReact (Wire Off,       Dup (Once s)) =    InExchange (Wire (On s),     Dup Ready)
+  innerReact (Wire Off,       Dup (Twice s)) =   InExchange (Wire (On s),     Dup (Once s))
+  innerReact (Wire (On s),    Port In Off) =     InExchange (Wire Off,        Port In (On s))
+  innerReact (Wire (On s),    Eat) =             InExchange (Wire Off,        Eat)
+  innerReact (Wire (On s),    Sync Open) =       InExchange (Wire Off,        Sync (Hold s))
+  innerReact (Wire (On s),    Dup Ready) =       InExchange (Wire Off,        Dup (Twice s))
+  innerReact (Port Out Off,   Sync (Emit s)) =   InExchange (Port Out (On s), Sync Open)
+  innerReact (Port Out Off,   Dup (Once s)) =    InExchange (Port Out (On s), Dup Ready)
+  innerReact (Port Out Off,   Dup (Twice s)) =   InExchange (Port Out (On s), Dup (Once s))
+  innerReact (Port In (On s), Eat) =             InExchange (Port In Off,     Eat)
+  innerReact (Port In (On s), Sync Open) =       InExchange (Port In Off,     Sync (Hold s))
+  innerReact (Port In (On s), Dup Ready) =       InExchange (Port In Off,     Dup (Twice s))
+  innerReact (Sync (Hold s1), Sync (Hold s2)) =  InExchange (Sync (Emit s1),  Sync (Emit s2))
   innerReact cs = InExchange cs
   allowThru sc = False
 
@@ -137,7 +137,7 @@ encoder = walls <> prewire <> dup4 <> postdupWire <> blueAnd <> bridge <> split 
   where
     speed = 5
     slack = 3
-    boxSize = 1000
+    boxSize = 20
     start = boxSize |* leftV
     end = boxSize |* rightV
     mid = 0.5 |* (start |+ end)

@@ -9,15 +9,15 @@ packages:
     version: 0.0.1
     git: https://github.com/amcknight/geo2d
     pantry-tree:
-      size: 1932
-      sha256: fd8b47d7a2d311fc53df2b4120ca5e2c4f373d1f32d395b3fa39011c28bf6a49
-    commit: 9ab13e83271951025f5c9f90495fdf6c509a5e45
+      size: 1931
+      sha256: 7d91622fa7b9f00f6a8f9c8622fd3ee338316f7a94b2f3edeac4a6fbb6869fbc
+    commit: add091d2290b9fb1f7b4b59d8cfa283f4bf14f93
   original:
     git: https://github.com/amcknight/geo2d
-    commit: 9ab13e83271951025f5c9f90495fdf6c509a5e45
+    commit: add091d2290b9fb1f7b4b59d8cfa283f4bf14f93
 snapshots:
 - completed:
-    size: 586286
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/18/16.yaml
-    sha256: cdead65fca0323144b346c94286186f4969bf85594d649c49c7557295675d8a5
-  original: lts-18.16
+    size: 590102
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/18/27.yaml
+    sha256: 79a786674930a89301b0e908fad2822a48882f3d01486117693c377b8edffdbe
+  original: lts-18.27
