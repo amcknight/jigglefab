@@ -12,13 +12,13 @@ Subject to drastic changes. Consider these rough thoughts about future functiona
 - Encoding of chemistries
 - Encoding of models
 - General Editor
-- - Select from different chemistries
-- - Save and Load models
+  - Select from different chemistries
+  - Save and Load models
 - A set of demo capacities
 
 ## Version 0.4
 - Sub-circuits Editor
-- - Parts can be loaded, rotated, expanded, combined, snapped together
+  - Parts can be loaded, rotated, expanded, combined, snapped together
 
 ## Beyond
 - Rendering for large models
