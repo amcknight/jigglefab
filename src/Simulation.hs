@@ -48,7 +48,6 @@ import Draw
 import Chem.Stripe
 import Chem.Peano
 import Chem.Encode
-import ChemSelector
 
 run :: IO ()
 run = runSeeded =<< getStdGen
@@ -63,7 +62,7 @@ runSeeded seed = do
   let struct = turnbuckle
   let (model, nextSeed) = runState (buildModel speeed struct) seed
   -- let view = View (Left struct) zeroV zooom
-  let view = View (Right model) nextSeed zeroV zooom
+  let view = View (Right model) nextSeed Nothing zeroV zooom
   let frameRate = 30
   play
     FullScreen
@@ -75,17 +74,20 @@ runSeeded seed = do
     update
 
 draw :: Chem c => View c -> Picture
-draw v = toTranslate (pos v) $ toScale z z $ case sm of
-  Left s -> drawStruct s
-  Right m -> drawModel m
+draw v = Pictures [toTranslate (pos v) $ toScale z z drawBoard, drawMenu]
   where
-    sm = structOrModel v
+    drawBoard = case structOrModel v of
+      Left s -> drawStruct s
+      Right m -> drawModel m
+    drawMenu = case editState v of
+      Nothing -> blank
+      Just mpos -> drawOverlay v encodeMetaChem
     z = zoom v
 
 event :: Chem c => Graphics.Gloss.Interface.IO.Interact.Event -> View c -> View c
-event e v = trace (show e) $ case e of
+event e v = case e of
   EventKey (MouseButton LeftButton) Down _ pos -> v
-  EventKey (MouseButton RightButton) Down _ pos -> v -- TODO: SHould activate chemselector
+  EventKey (MouseButton RightButton) Down _ pos -> setOverlayOn (pmap realToFrac pos) v
   EventKey (Char '=') Down _ _ -> zoomHop Out v
   EventKey (Char '-') Down _ _ -> zoomHop In v
   EventKey (SpecialKey KeySpace) Down _ _ -> togglePlay speeed v
@@ -227,5 +229,7 @@ drawEdge = Color white . drawSeg . seg
 drawSeg :: Seg -> Picture
 drawSeg (Seg p q) = toLine [p, q]
 
-drawChemSelector :: Position -> ChemSelector -> Picture
-drawChemSelector p o = toTranslate p $ drawOverlay o
+drawOverlay :: View c -> Type -> Picture
+drawOverlay v (Type name _) = case editState v of
+  Nothing -> blank
+  Just mpos -> toTranslate mpos $ toCircle 300

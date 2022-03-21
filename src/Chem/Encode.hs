@@ -1,6 +1,7 @@
 module Chem.Encode
 ( Encode (..)
 , encoder
+, encodeMetaChem
 ) where
 
 import Chem
@@ -17,6 +18,16 @@ data Active = Off | On Sig deriving (Show, Eq, Ord)
 data Sync = Open | Hold Sig | Emit Sig deriving (Show, Eq, Ord)
 data Dup = Ready | Once Sig | Twice Sig deriving (Show, Eq, Ord)
 data Encode = Wire Active | Port Side Active | Eat | Sync Sync | Dup Dup deriving (Show, Eq, Ord)
+
+encodeMetaChem :: Type
+encodeMetaChem = encode
+  where
+    sig = Type "Sig" [Con "Red" [], Con "Blue" []]
+    active = Type "Active" [Con "Off" [], Con "On" [sig]]
+    side = Type "Side" [Con "Out" [], Con "In" []]
+    sync = Type "Sync" [Con "Open" [], Con "Hold" [sig], Con "Emit" [sig]]
+    dup = Type "Dup" [Con "Ready" [], Con "Once" [sig], Con "Twice" [sig]]
+    encode = Type "Encode" [Con "Wire" [active], Con "Port" [side, active], Con "Eat" [], Con "Sync" [sync], Con "Dup" [dup]]
 
 instance Chem Encode where
   chemColor (Wire Off) = grey

@@ -36,7 +36,6 @@ library
       Chem.Sem
       Chem.Stripe
       Chem.Valence
-      ChemSelector
       Color
       Draw
       Form

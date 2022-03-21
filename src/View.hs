@@ -2,6 +2,7 @@ module View
   ( View(..)
   , panHop, zoomHop
   , togglePlay
+  , setOverlayOn
   )
 where
 
@@ -19,6 +20,7 @@ import Debug.Trace
 data View c = View
   { structOrModel :: Either (Struct c) (Model c)
   , seed :: StdGen
+  , editState :: Maybe Position
   , center :: Position
   , zoom :: Double
   }
@@ -38,5 +40,8 @@ zoomHop s view = case s of
 
 togglePlay :: Chem c => Speed -> View c -> View c
 togglePlay sp view = case structOrModel view of
-  Left s ->  view { structOrModel = Right (evalState (buildModel sp s) (seed view)) }
-  Right m -> view { structOrModel = Left (extractStruct (form m)) }
+  Left s ->  view {structOrModel = Right (evalState (buildModel sp s) (seed view))}
+  Right m -> view {structOrModel = Left (extractStruct (form m))}
+
+setOverlayOn :: Position -> View c -> View c
+setOverlayOn p view = view {editState = Just p}
