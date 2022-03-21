@@ -48,6 +48,7 @@ import Draw
 import Chem.Stripe
 import Chem.Peano
 import Chem.Encode
+import ChemSelector
 
 run :: IO ()
 run = runSeeded =<< getStdGen
@@ -82,8 +83,9 @@ draw v = toTranslate (pos v) $ toScale z z $ case sm of
     z = zoom v
 
 event :: Chem c => Graphics.Gloss.Interface.IO.Interact.Event -> View c -> View c
-event e v = case e of
+event e v = trace (show e) $ case e of
   EventKey (MouseButton LeftButton) Down _ pos -> v
+  EventKey (MouseButton RightButton) Down _ pos -> v -- TODO: SHould activate chemselector
   EventKey (Char '=') Down _ _ -> zoomHop Out v
   EventKey (Char '-') Down _ _ -> zoomHop In v
   EventKey (SpecialKey KeySpace) Down _ _ -> togglePlay speeed v
@@ -224,3 +226,6 @@ drawEdge = Color white . drawSeg . seg
 
 drawSeg :: Seg -> Picture
 drawSeg (Seg p q) = toLine [p, q]
+
+drawChemSelector :: Position -> ChemSelector -> Picture
+drawChemSelector p o = toTranslate p $ drawOverlay o

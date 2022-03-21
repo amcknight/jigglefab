@@ -3,10 +3,9 @@ Subject to drastic changes. Consider these rough thoughts about future functiona
 
 ## Version 0.2
 - Basic Editor
-- - Place dormant wires
-- - Pause and Play
-- - Basic chemistry side menu
-- - Modify a ball to have selected chemistry
+- - Place dormant wires orbs individually
+- - Single chemistry side menu
+- - Modify a orb to have selected chemistry
 
 ## Version 0.3
 - Encoding of chemistries
@@ -14,12 +13,14 @@ Subject to drastic changes. Consider these rough thoughts about future functiona
 - General Editor
 - - Select from different chemistries
 - - Save and Load models
-- A set of demo capacities
+- - Draw out wire chains
+- A set of initial demo capacities
 
 ## Version 0.4
 - Sub-circuits Editor
 - - Parts can be loaded, rotated, expanded, combined, snapped together
 
 ## Beyond
+- Chemistry Editor
 - Rendering for large models
 - Demo of a universal constructor

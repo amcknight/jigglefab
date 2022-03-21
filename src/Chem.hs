@@ -5,6 +5,7 @@ module Chem
 , InReactant(..)
 , Chem, react, prereact, chemColor
 , InnerChem, innerReact, allowThru, thruReact
+, Type(..), Con(..)
 ) where
 
 import Geometry.Space
@@ -63,3 +64,16 @@ class Chem c => InnerChem c where
   thruReact :: P c -> P c
   default thruReact :: P c -> P c
   thruReact = id
+
+data Con = Con String [Type]
+data Type = Type String [Con]
+
+getType :: Type
+getType = encode
+  where
+    sig = Type "Sig" [Con "Red" [], Con "Blue" []]
+    active = Type "Active" [Con "Off" [], Con "On" [sig]]
+    side = Type "Side" [Con "Out" [], Con "In" []]
+    sync = Type "Sync" [Con "Open" [], Con "Hold" [sig], Con "Emit" [sig]]
+    dup = Type "Dup" [Con "Ready" [], Con "Once" [sig], Con "Twice" [sig]]
+    encode = Type "Encode" [Con "Wire" [active], Con "Port" [side, active], Con "Eat" [], Con "Sync" [sync], Con "Dup" [dup]]
