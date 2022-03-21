@@ -2,6 +2,9 @@
 
 ## Unreleased changes
 
+## v0.1.2
+- Added stop and start toggling using spacebar
+
 ## v0.1.1
 - Added key based zoom and pan
 

@@ -2,6 +2,7 @@ module Ball
 ( Ball (..)
 , buildBall
 , buildBalls
+, extractOrb
 ) where
 
 import Pair
@@ -29,3 +30,6 @@ buildBall sp (Orb p c) = do
 
 buildBalls :: P Point -> P a -> P (Ball a)
 buildBalls (p1, p2) (c1, c2) = (Ball p1 c1, Ball p2 c2)
+
+extractOrb :: Ball c -> Orb c
+extractOrb (Ball (Point pos _) c) = Orb pos c

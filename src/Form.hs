@@ -1,6 +1,7 @@
 module Form
 ( Form (..)
 , buildForm
+, extractStruct
 , wallForm, ballForm
 , wallI, ballI
 , wbSide, bbSide
@@ -26,6 +27,7 @@ import Struct
 import Utils
 import Orb
 import Geometry.Circle
+import Data.Vector (toList)
 
 data Form c = Form
   { walls :: V.Vector Wall
@@ -38,7 +40,7 @@ instance Mover (Form c) where
 instance Semigroup (Form c) where
   (<>) (Form w1 b1) (Form w2 b2) = Form (w1 <> w2) (b1 <> b2)
 instance Monoid (Form c) where
-  mempty = Form V.empty V.empty 
+  mempty = Form V.empty V.empty
 
 buildForm :: Speed -> Struct c -> R (Form c)
 buildForm sp (Struct ws os) = do
@@ -51,6 +53,9 @@ buildForm sp (Struct ws os) = do
       b <- buildBall sp o
       rest <- buildBallsForm sp os
       pure $ ballForm b <> rest
+
+extractStruct :: Form c -> Struct c
+extractStruct f = Struct (toList (walls f)) (toList (fmap extractOrb (balls f)))
 
 wallForm :: Wall -> Form c
 wallForm w = Form (V.fromList [w]) V.empty

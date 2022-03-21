@@ -5,13 +5,13 @@ cabal-version: 1.12
 -- see: https://github.com/sol/hpack
 
 name:           chains
-version:        0.1.1.0
+version:        0.1.2
 description:    Please see the README on GitHub at <https://github.com/githubuser/chains#readme>
 homepage:       https://github.com/githubuser/chains#readme
 bug-reports:    https://github.com/githubuser/chains/issues
 author:         Andrew McKnight
 maintainer:     thedonk@gmail.com
-copyright:      2021 Andrew McKnight
+copyright:      2022 Andrew McKnight
 license:        BSD3
 build-type:     Simple
 extra-source-files:

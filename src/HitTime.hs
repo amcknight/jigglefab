@@ -1,7 +1,7 @@
 module HitTime
 ( CircleHitTime(..)
 , hitTimes
-, toList
+, asList
 ) where
 
 import Time
@@ -11,10 +11,10 @@ import Point
 import Geometry.Vector
 
 data CircleHitTime = NoHit | InHit Time | OutAndInHit Time Time
-toList :: CircleHitTime -> [(Time, Side)]
-toList NoHit = []
-toList (InHit t) = [(t, In)]
-toList (OutAndInHit t1 t2) = [(t1, Out), (t2, In)]
+asList :: CircleHitTime -> [(Time, Side)]
+asList NoHit = []
+asList (InHit t) = [(t, In)]
+asList (OutAndInHit t1 t2) = [(t1, Out), (t2, In)]
 
 hitTimes :: Radius -> P Point -> CircleHitTime
 hitTimes rad ps = maybe NoHit times root

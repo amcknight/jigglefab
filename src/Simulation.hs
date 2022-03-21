@@ -60,9 +60,9 @@ speeed = 10
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
   let struct = turnbuckle
-  let (model, _) = runState (buildModel speeed struct) seed
+  let (model, nextSeed) = runState (buildModel speeed struct) seed
   -- let view = View (Left struct) zeroV zooom
-  let view = View (Right model) zeroV zooom
+  let view = View (Right model) nextSeed zeroV zooom
   let frameRate = 30
   play
     FullScreen
@@ -81,21 +81,19 @@ draw v = toTranslate (pos v) $ toScale z z $ case sm of
     sm = structOrModel v
     z = zoom v
 
-event :: Graphics.Gloss.Interface.IO.Interact.Event -> View c -> View c
+event :: Chem c => Graphics.Gloss.Interface.IO.Interact.Event -> View c -> View c
 event e v = case e of
   EventKey (MouseButton LeftButton) Down _ pos -> v
-  EventKey (Char '=') Down _ _ -> v {zoom = zoom v * zhop}
-  EventKey (Char '-') Down _ _ -> v {zoom = zoom v / zhop}
-  EventKey (SpecialKey KeyLeft) Down _ _ ->  v {center = center v |- (hop |* leftV)}
-  EventKey (SpecialKey KeyRight) Down _ _ -> v {center = center v |- (hop |* rightV)}
-  EventKey (SpecialKey KeyUp) Down _ _ ->    v {center = center v |- (hop |* upV)}
-  EventKey (SpecialKey KeyDown) Down _ _ ->  v {center = center v |- (hop |* downV)}
-  EventKey {} -> trace (show e) v
+  EventKey (Char '=') Down _ _ -> zoomHop Out v
+  EventKey (Char '-') Down _ _ -> zoomHop In v
+  EventKey (SpecialKey KeySpace) Down _ _ -> togglePlay speeed v
+  EventKey (SpecialKey KeyLeft) Down _ _ ->  panHop leftV v
+  EventKey (SpecialKey KeyRight) Down _ _ -> panHop rightV v
+  EventKey (SpecialKey KeyUp) Down _ _ ->    panHop upV v
+  EventKey (SpecialKey KeyDown) Down _ _ ->  panHop downV v
+  EventKey {} -> v
   EventMotion pos -> v
   EventResize _ -> v
-  where
-    hop = 150
-    zhop = 1.25
 
 update :: Chem c => Float -> View c -> View c
 update dt v = v { structOrModel = case structOrModel v of
