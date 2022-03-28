@@ -1,6 +1,5 @@
 module View
   ( View(..)
-  , EditState(..)
   , panHop, zoomHop
   , togglePlay
   , setOverlayOn
@@ -17,19 +16,18 @@ import Time
 import Control.Monad.State
 import Chem
 import Debug.Trace
+import Overlay
 
 data View c = View
   { structOrModel :: Either (Struct c) (Model c)
   , seed :: StdGen
-  , editState :: EditState
+  , overlay :: Overlay
   , center :: Position
   , zoom :: Double
   }
 
 instance HasPos (View c) where
   pos = center
-
-data EditState = NoEdit | EditAt Position Token
 
 panHop :: Geometry.Vector.Vector -> View c -> View c
 panHop dirV view = view {center = center view |+ (hop |* dirV)}
@@ -47,4 +45,4 @@ togglePlay sp view = case structOrModel view of
   Right m -> view {structOrModel = Left (extractStruct (form m))}
 
 setOverlayOn :: Position -> View c -> View c
-setOverlayOn p view = view {editState = EditAt p []}
+setOverlayOn p view = view {overlay = Overlay p []}

@@ -48,6 +48,7 @@ import Draw
 import Chem.Stripe
 import Chem.Peano
 import Chem.Encode
+import Overlay
 
 run :: IO ()
 run = runSeeded =<< getStdGen
@@ -57,12 +58,15 @@ zooom = 50
 speeed :: Double
 speeed = 10
 
+metaChem :: Type
+metaChem = encodeMetaChem
+
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
   let struct = turnbuckle
   let (model, nextSeed) = runState (buildModel speeed struct) seed
   -- let view = View (Left struct) zeroV zooom
-  let view = View (Right model) nextSeed NoEdit zeroV zooom
+  let view = View (Right model) nextSeed NoOverlay zeroV zooom
   let frameRate = 30
   play
     FullScreen
@@ -79,7 +83,7 @@ draw v = Pictures [toTranslate (pos v) $ toScale z z drawBoard, drawMenu]
     drawBoard = case structOrModel v of
       Left s -> drawStruct s
       Right m -> drawModel m
-    drawMenu = drawOverlay v encodeMetaChem
+    drawMenu = drawOverlay v metaChem
     z = zoom v
 
 event :: Chem c => Graphics.Gloss.Interface.IO.Interact.Event -> View c -> View c
@@ -94,7 +98,7 @@ event e v = case e of
   EventKey (SpecialKey KeyUp) Down _ _ ->    panHop upV v
   EventKey (SpecialKey KeyDown) Down _ _ ->  panHop downV v
   EventKey {} -> v
-  EventMotion _ -> v
+  EventMotion mpos -> v {overlay = updateOverlay metaChem (pmap realToFrac mpos) (overlay v)}
   EventResize _ -> v
 
 update :: Chem c => Float -> View c -> View c
@@ -228,20 +232,19 @@ drawSeg :: Seg -> Picture
 drawSeg (Seg p q) = toLine [p, q]
 
 drawOverlay :: View c -> Type -> Picture
-drawOverlay v ty = case editState v of
-  NoEdit -> blank
-  EditAt mpos tk -> toTranslate mpos $ drawSuboverlay 0 ty tk 0 1
+drawOverlay v ty = case overlay v of
+  NoOverlay -> blank
+  Overlay pos tk -> toTranslate pos $ drawSuboverlay 0 ty tk (0,1)
 
-drawSuboverlay :: Int -> Type -> Token -> Turn -> Turn -> Picture
-drawSuboverlay depth ty tkPrefix d0 d1 = scale rad rad $ Pictures $ zipWith (drawSlice ty) cs rs
+drawSuboverlay :: Int -> Type -> Token -> P Turn -> Picture
+drawSuboverlay depth ty tkPrefix r = scale rad rad $ Pictures $ zipWith (drawSlice ty) cs rs
   where
     cs = fmap (\name -> tkPrefix ++ [name]) (conNames ty)
-    rs = ranges d0 d1 $ length cs
-    rad = fromIntegral $ (depth + 1) * thickness
-    thickness = 150
+    rs = ranges r $ length cs
+    rad = realToFrac $ fromIntegral (depth + 1) * overlayThinkness
 
-ranges :: Turn -> Turn -> Int -> [P Turn]
-ranges d0 d1 n = zip turns $ tail turns
+ranges :: P Turn -> Int -> [P Turn]
+ranges (d0,d1) n = zip turns $ tail turns
   where
     turns = fmap (/fn) [d0 .. d1 * fn]
     fn = fromIntegral n

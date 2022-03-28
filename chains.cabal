@@ -43,6 +43,7 @@ library
       HitTime
       Model
       Orb
+      Overlay
       Point
       Simulation
       Struct
