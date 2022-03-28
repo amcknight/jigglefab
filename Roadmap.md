@@ -2,9 +2,10 @@
 Subject to drastic changes. Consider these rough thoughts about future functionality.
 
 ## Version 0.2
+- Common chemistry representation type
 - Basic Editor
 - - Place dormant wires orbs individually
-- - Single chemistry side menu
+- - Single chemistry menu
 - - Modify a orb to have selected chemistry
 
 ## Version 0.3

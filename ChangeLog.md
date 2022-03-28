@@ -2,6 +2,10 @@
 
 ## Unreleased changes
 
+## v0.1.3
+- Added an element selection overlay
+- Added a comuniversal chemistry data type
+
 ## v0.1.2
 - Added stop and start toggling using spacebar
 

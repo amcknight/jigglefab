@@ -5,7 +5,8 @@ module Chem
 , InReactant(..)
 , Chem, react, prereact, chemColor
 , InnerChem, innerReact, allowThru, thruReact
-, Type(..), Con(..)
+, Type(..), Con(..), Token(..)
+, conNames
 ) where
 
 import Geometry.Space
@@ -65,5 +66,12 @@ class Chem c => InnerChem c where
   default thruReact :: P c -> P c
   thruReact = id
 
-data Con = Con String [Type]
-data Type = Type String [Con]
+data Con = Con
+  { name :: String
+  , ts :: [Type]
+  }
+newtype Type = Type [Con]
+type Token = [String]
+
+conNames :: Type -> [String]
+conNames (Type cs) = fmap name cs

@@ -81,7 +81,7 @@ draw v = Pictures [toTranslate (pos v) $ toScale z z drawBoard, drawMenu]
       Right m -> drawModel m
     drawMenu = case editState v of
       Nothing -> blank
-      Just mpos -> drawOverlay v encodeMetaChem
+      Just mpos -> drawOverlay v encodeMetaChem []
     z = zoom v
 
 event :: Chem c => Graphics.Gloss.Interface.IO.Interact.Event -> View c -> View c
@@ -229,7 +229,30 @@ drawEdge = Color white . drawSeg . seg
 drawSeg :: Seg -> Picture
 drawSeg (Seg p q) = toLine [p, q]
 
-drawOverlay :: View c -> Type -> Picture
-drawOverlay v (Type name _) = case editState v of
+drawOverlay :: View c -> Type -> Token -> Picture
+drawOverlay v ty tkPrefix = case editState v of
   Nothing -> blank
-  Just mpos -> toTranslate mpos $ toCircle 300
+  Just mpos -> toTranslate mpos $ drawSuboverlay 0 ty tkPrefix 0 1
+
+drawSuboverlay :: Int -> Type -> Token -> Turn -> Turn -> Picture
+drawSuboverlay depth ty tkPrefix d0 d1 = trace (show rs) $ scale rad rad $ Pictures $ zipWith (drawSlice ty) cs rs
+  where
+    cs = fmap (\name -> tkPrefix ++ [name]) (conNames ty)
+    rs = ranges d0 d1 $ length cs
+    rad = fromIntegral $ (depth + 1) * thickness
+    thickness = 150
+
+ranges :: Turn -> Turn -> Int -> [P Turn]
+ranges d0 d1 n = zip turns $ tail turns
+  where
+    turns = fmap (/fn) [d0 .. d1 * fn]
+    fn = fromIntegral n
+
+drawSlice :: Type -> Token -> P Turn -> Picture
+drawSlice ty tk (f, t) = Pictures
+  [ color (C.toGlossColor (metaChemColor tk)) (toArcSolid d0 d1 1)
+  , color black $ toSectorWire d0 d1 1
+  ]
+  where
+    d0 = degrees f
+    d1 = degrees t
