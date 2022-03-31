@@ -13,6 +13,7 @@ import Color
 import Geometry.Vector
 import Struct
 import Orb
+import DataType
 
 data Sig = Red | Blue deriving (Show, Eq, Ord)
 data Active = Off | On Sig deriving (Show, Eq, Ord)
@@ -20,8 +21,8 @@ data Sync = Open | Hold Sig | Emit Sig deriving (Show, Eq, Ord)
 data Dup = Ready | Once Sig | Twice Sig deriving (Show, Eq, Ord)
 data Encode = Wire Active | Port Side Active | Eat | Sync Sync | Dup Dup deriving (Show, Eq, Ord)
 
-encodeMetaChem :: Type
-encodeMetaChem = encode
+encodeMetaChem :: Con
+encodeMetaChem = topCon encode
   where
     sig = Type [Con "Red" [], Con "Blue" []]
     active = Type [Con "Off" [], Con "On" [sig]]

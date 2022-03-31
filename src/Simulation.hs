@@ -49,6 +49,7 @@ import Chem.Stripe
 import Chem.Peano
 import Chem.Encode
 import Overlay
+import DataType
 
 run :: IO ()
 run = runSeeded =<< getStdGen
@@ -58,7 +59,7 @@ zooom = 50
 speeed :: Double
 speeed = 10
 
-metaChem :: Type
+metaChem :: Con
 metaChem = encodeMetaChem
 
 runSeeded :: StdGen -> IO ()
@@ -231,17 +232,24 @@ drawEdge = Color white . drawSeg . seg
 drawSeg :: Seg -> Picture
 drawSeg (Seg p q) = toLine [p, q]
 
-drawOverlay :: View c -> Type -> Picture
-drawOverlay v ty = case overlay v of
+drawOverlay :: View c -> Con -> Picture
+drawOverlay v c = case overlay v of
   NoOverlay -> blank
-  Overlay pos tk -> toTranslate pos $ drawSuboverlay 0 ty tk (0,1)
+  Overlay pos tk -> toTranslate pos $ scale s s $ Pictures $ drawSuboverlay [] tk c (0,1)
+  where s = realToFrac overlayThinkness
 
-drawSuboverlay :: Int -> Type -> Token -> P Turn -> Picture
-drawSuboverlay depth ty tkPrefix r = scale rad rad $ Pictures $ zipWith (drawSlice ty) cs rs
+-- Try this as a Zipper?
+drawSuboverlay :: Token -> Token -> Con -> P Turn -> [Picture]
+drawSuboverlay preTk tk c r = ( case tk of
+  [] -> []
+  (name:postTk) -> case con c name of
+    Nothing -> error "Can't draw Overlay where Token not matching the Con"
+    Just (nextI, nextC) -> drawSuboverlay (preTk ++ [name]) postTk nextC (rs!!nextI)
+  ) ++ zipWith drawSlice subTks rs
   where
-    cs = fmap (\name -> tkPrefix ++ [name]) (conNames ty)
-    rs = ranges r $ length cs
-    rad = realToFrac $ fromIntegral (depth + 1) * overlayThinkness
+    subTks = fmap (\n -> preTk ++ [n]) names
+    rs = ranges r $ length names
+    names = conNames c
 
 ranges :: P Turn -> Int -> [P Turn]
 ranges (d0,d1) n = zip turns $ tail turns
@@ -249,11 +257,12 @@ ranges (d0,d1) n = zip turns $ tail turns
     turns = fmap (/fn) [d0 .. d1 * fn]
     fn = fromIntegral n
 
-drawSlice :: Type -> Token -> P Turn -> Picture
-drawSlice ty tk (f, t) = Pictures
-  [ color (C.toGlossColor (metaChemColor tk)) (toArcSolid d0 d1 1)
-  , color black $ toSectorWire d0 d1 1
+drawSlice :: Token -> P Turn -> Picture
+drawSlice tk (f, t) = Pictures
+  [ color (C.toGlossColor (metaChemColor tk)) (toArcSolid d0 d1 rad)
+  , color black $ toSectorWire d0 d1 rad
   ]
   where
+    rad = fromIntegral $ length tk
     d0 = degrees f
     d1 = degrees t

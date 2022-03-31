@@ -37,6 +37,7 @@ library
       Chem.Stripe
       Chem.Valence
       Color
+      DataType
       Draw
       Form
       Hit

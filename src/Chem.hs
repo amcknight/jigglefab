@@ -5,8 +5,6 @@ module Chem
 , InReactant(..)
 , Chem, react, prereact, chemColor
 , InnerChem, innerReact, allowThru, thruReact
-, Type(..), Con(..), Token(..)
-, conNames, conI, con, subcons
 ) where
 
 import Geometry.Space
@@ -65,29 +63,3 @@ class Chem c => InnerChem c where
   thruReact :: P c -> P c
   default thruReact :: P c -> P c
   thruReact = id
-
-data Con = Con { name :: String, ts :: [Type] }
-newtype Type = Type { cs :: [Con] }
-type Token = [String]
-
-conNames :: Type -> [String]
-conNames (Type cs) = fmap name cs
-
-conI :: Con -> String -> Maybe Int
-conI c = conI' (concatMap cs (ts c)) 0
-conI' :: [Con] -> Int -> String -> Maybe Int
-conI' [] _ n' = Nothing
-conI' (Con n _ : cs) i n' = if n == n'
-  then Just i
-  else conI' cs (i+1) n'
-
-con :: Con -> String -> Maybe Con
-con c = con' $ concatMap cs $ ts c
-con' :: [Con] -> String -> Maybe Con
-con' [] n' = Nothing
-con' (c@(Con n _) : cs) n' = if n == n'
-  then Just c
-  else con' cs n'
-
-subcons :: Con -> [Con]
-subcons (Con _ tys) = concatMap cs tys
