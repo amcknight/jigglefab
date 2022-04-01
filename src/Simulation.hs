@@ -253,11 +253,7 @@ drawSuboverlay preTk tk c r = ( case tk of
 
 ranges :: P Turn -> Int -> [P Turn]
 ranges (d0,d1) n = zip turns $ tail turns
-  where
-    turns = fmap (\i -> d0 + width * fromIntegral i / fn) [0..n]
-    step = width / fromIntegral n
-    width = d1-d0
-    fn = fromIntegral n
+  where turns = fmap (\i -> d0 + (d1-d0) * fromIntegral i / fromIntegral n) [0..n]
 
 drawSlice :: Token -> P Turn -> Picture
 drawSlice tk (f, t) = Pictures

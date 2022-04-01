@@ -22,8 +22,8 @@ updateOverlay c mpos o@(Overlay opos tk) = case dir of
   Nothing -> o
   Just justDir -> case compare layer (length tk + 1) of
     GT -> NoOverlay
-    EQ -> if minDir <= justDir && maxDir >= justDir 
-          then Overlay opos $ case expandTk c tk (minDir, maxDir) justDir of
+    EQ -> if minDir <= justDir && justDir <= maxDir 
+          then Overlay opos $ case expandTk c (minDir, maxDir) justDir tk of
              Nothing -> error "Impossible case since this is covered by above conditions"
              Just newTk -> newTk
           else NoOverlay
@@ -38,18 +38,15 @@ updateOverlay c mpos o@(Overlay opos tk) = case dir of
     mag = magnitude v
     v = mpos |- opos
 
-expandTk :: Con -> Token -> P Turn -> Turn -> Maybe Token
-expandTk c tk (from, to) dir = if from <= dir && dir <= to
-  then Just $ tk ++ case mbNames of
-    Nothing -> []
-    Just ns -> [ns!!nameI]
+expandTk :: Con -> P Turn -> Turn -> Token -> Maybe Token
+expandTk c (from, to) dir tk = if from <= dir && dir <= to
+  then Just $ tk ++ maybe [] (\ns -> [ns!!nameI]) mbNames
   else Nothing
   where
     nameI = floor $ fromIntegral numNames * (dir - from) / (to - from)
     numNames = maybe 0 length mbNames
-    mbNames = case getCon c tk of
-       Nothing -> Nothing
-       Just nextC -> Just $ conNames nextC
+    mbNames =conNames <$> getCon c tk
+    x = getCon c tk
 
 overlayRange :: Con -> Token -> P Turn -> P Turn
 overlayRange c [] r = r

@@ -2,12 +2,13 @@ module DataType
 ( Type(..), Con(..), Token(..)
 , topCon, conNames, con, getCon, subcons
 ) where
+import Debug.Trace
 
-newtype Root = Root Type
 data Con = Con { name :: String, ts :: [Type] }
 newtype Type = Type { cs :: [Con] }
 type Token = [String]
 
+-- TODO: show these datatypes better
 instance Show Con where
   show c = unwords $ ["Con", name c] ++ fmap show (ts c)
 instance Show Type where
@@ -32,7 +33,7 @@ con' (c@(Con n _) : cs) i n' = if n == n'
   else con' cs (i+1) n'
 
 getCon :: Con -> Token -> Maybe Con
-getCon c [] = if isTopCon c then Just c else Nothing
+getCon c [] = Just c
 getCon c (n:ns) = case con c n of
   Nothing -> Nothing
   Just (_, scon) -> getCon scon ns
