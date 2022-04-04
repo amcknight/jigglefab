@@ -3,6 +3,7 @@ module View
   , panHop, zoomHop
   , togglePlay
   , setOverlayOn
+  , click
   )
 where
 
@@ -17,11 +18,13 @@ import Control.Monad.State
 import Chem
 import Debug.Trace
 import Overlay
+import DataType
 
 data View c = View
   { structOrModel :: Either (Struct c) (Model c)
   , seed :: StdGen
   , overlay :: Overlay
+  , tip :: Token
   , center :: Position
   , zoom :: Double
   }
@@ -46,3 +49,10 @@ togglePlay sp view = case structOrModel view of
 
 setOverlayOn :: Position -> View c -> View c
 setOverlayOn p view = view {overlay = Overlay p []}
+
+click :: Position -> Con -> View c -> View c
+click _ c v = case overlay v of
+  NoOverlay -> v
+  Overlay _ tk -> if isLeafAt c tk
+    then v {overlay = NoOverlay, tip = tk}
+    else v {overlay = NoOverlay}

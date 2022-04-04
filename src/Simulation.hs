@@ -61,13 +61,15 @@ speeed = 10
 
 metaChem :: Con
 metaChem = encodeMetaChem
+neutral :: Token
+neutral = ["Wire", "Off"]
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
   let struct = turnbuckle
   let (model, nextSeed) = runState (buildModel speeed struct) seed
   -- let view = View (Left struct) zeroV zooom
-  let view = View (Right model) nextSeed NoOverlay zeroV zooom
+  let view = View (Right model) nextSeed NoOverlay neutral zeroV zooom
   let frameRate = 30
   play
     FullScreen
@@ -89,8 +91,8 @@ draw v = Pictures [toTranslate (pos v) $ toScale z z drawBoard, drawMenu]
 
 event :: Chem c => Graphics.Gloss.Interface.IO.Interact.Event -> View c -> View c
 event e v = case e of
-  EventKey (MouseButton LeftButton) Down _ pos -> v
-  EventKey (MouseButton RightButton) Down _ pos -> setOverlayOn (pmap realToFrac pos) v
+  EventKey (MouseButton LeftButton) Down _ mpos -> click (pmap realToFrac mpos) metaChem v
+  EventKey (MouseButton RightButton) Down _ mpos -> setOverlayOn (pmap realToFrac mpos) v
   EventKey (Char '=') Down _ _ -> zoomHop Out v
   EventKey (Char '-') Down _ _ -> zoomHop In v
   EventKey (SpecialKey KeySpace) Down _ _ -> togglePlay speeed v

@@ -1,8 +1,8 @@
 module DataType
 ( Type(..), Con(..), Token(..)
 , topCon, conNames, con, getCon, subcons
+, isLeaf, isLeafAt
 ) where
-import Debug.Trace
 
 data Con = Con { name :: String, ts :: [Type] }
 newtype Type = Type { cs :: [Con] }
@@ -40,3 +40,9 @@ getCon c (n:ns) = case con c n of
 
 subcons :: Con -> [Con]
 subcons (Con _ tys) = concatMap cs tys
+
+isLeafAt :: Con -> Token -> Bool
+isLeafAt c tk = maybe False isLeaf $ getCon c tk
+
+isLeaf :: Con -> Bool
+isLeaf (Con _ ts) = null $ concatMap cs ts
