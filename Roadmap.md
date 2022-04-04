@@ -3,10 +3,10 @@ Subject to drastic changes. Consider these rough thoughts about future functiona
 
 ## Version 0.2
 - Basic Editor
-- - Place dormant wires
-- - Pause and Play
-- - Basic chemistry side menu
-- - Modify a ball to have selected chemistry
+  - Place dormant wires
+  - Run what was created
+  - Pause and Play
+  - Basic chemistry side menu
 
 ## Version 0.3
 - Encoding of chemistries
