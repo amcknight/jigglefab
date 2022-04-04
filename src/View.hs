@@ -2,6 +2,7 @@ module View
   ( View(..)
   , panHop, zoomHop
   , togglePlay
+  , setOverlayOn
   )
 where
 
@@ -15,10 +16,12 @@ import Time
 import Control.Monad.State
 import Chem
 import Debug.Trace
+import Overlay
 
 data View c = View
   { structOrModel :: Either (Struct c) (Model c)
   , seed :: StdGen
+  , overlay :: Overlay
   , center :: Position
   , zoom :: Double
   }
@@ -27,16 +30,19 @@ instance HasPos (View c) where
   pos = center
 
 panHop :: Geometry.Vector.Vector -> View c -> View c
-panHop dirV view = view {center = center view |- (hop |* dirV)}
+panHop dirV view = view {center = center view |+ (hop |* dirV)}
   where hop = 150
 
 zoomHop :: Side -> View c -> View c
 zoomHop s view = case s of
   Out -> view {zoom = zoom view * zhop}
-  In -> view {zoom = zoom view * (-zhop)}
+  In -> view {zoom = zoom view * (1/zhop)}
   where zhop = 1.25
 
 togglePlay :: Chem c => Speed -> View c -> View c
 togglePlay sp view = case structOrModel view of
-  Left s -> view { structOrModel = Right (evalState (buildModel sp s) (seed view)) }
-  Right m -> view { structOrModel = Left (extractStruct (form m)) }
+  Left s ->  view {structOrModel = Right (evalState (buildModel sp s) (seed view))}
+  Right m -> view {structOrModel = Left (extractStruct (form m))}
+
+setOverlayOn :: Position -> View c -> View c
+setOverlayOn p view = view {overlay = Overlay p []}

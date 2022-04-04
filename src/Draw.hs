@@ -2,7 +2,7 @@ module Draw
 ( toTranslate
 , toScale
 , toLine, toPolygon
-, toArcSolid
+, toSectorWire, toArcSolid
 , toCircle, toCircleSolid
 ) where
 import Geometry.Vector
@@ -20,6 +20,9 @@ toLine = line . fmap (pmap realToFrac)
 
 toPolygon :: [Position] -> Picture
 toPolygon = polygon . fmap (pmap realToFrac)
+
+toSectorWire :: Double -> Double -> Double -> Picture
+toSectorWire f t rad = sectorWire (realToFrac f) (realToFrac t) (realToFrac rad)
 
 toArcSolid :: Double -> Double -> Double -> Picture
 toArcSolid f t rad = arcSolid (realToFrac f) (realToFrac t) (realToFrac rad)

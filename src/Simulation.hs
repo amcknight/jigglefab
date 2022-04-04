@@ -48,6 +48,8 @@ import Draw
 import Chem.Stripe
 import Chem.Peano
 import Chem.Encode
+import Overlay
+import DataType
 
 run :: IO ()
 run = runSeeded =<< getStdGen
@@ -57,12 +59,15 @@ zooom = 50
 speeed :: Double
 speeed = 10
 
+metaChem :: Con
+metaChem = encodeMetaChem
+
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
   let struct = turnbuckle
   let (model, nextSeed) = runState (buildModel speeed struct) seed
   -- let view = View (Left struct) zeroV zooom
-  let view = View (Right model) nextSeed zeroV zooom
+  let view = View (Right model) nextSeed NoOverlay zeroV zooom
   let frameRate = 30
   play
     FullScreen
@@ -74,16 +79,18 @@ runSeeded seed = do
     update
 
 draw :: Chem c => View c -> Picture
-draw v = toTranslate (pos v) $ toScale z z $ case sm of
-  Left s -> drawStruct s
-  Right m -> drawModel m
+draw v = Pictures [toTranslate (pos v) $ toScale z z drawBoard, drawMenu]
   where
-    sm = structOrModel v
+    drawBoard = case structOrModel v of
+      Left s -> drawStruct s
+      Right m -> drawModel m
+    drawMenu = drawOverlay v metaChem
     z = zoom v
 
 event :: Chem c => Graphics.Gloss.Interface.IO.Interact.Event -> View c -> View c
 event e v = case e of
   EventKey (MouseButton LeftButton) Down _ pos -> v
+  EventKey (MouseButton RightButton) Down _ pos -> setOverlayOn (pmap realToFrac pos) v
   EventKey (Char '=') Down _ _ -> zoomHop Out v
   EventKey (Char '-') Down _ _ -> zoomHop In v
   EventKey (SpecialKey KeySpace) Down _ _ -> togglePlay speeed v
@@ -92,7 +99,7 @@ event e v = case e of
   EventKey (SpecialKey KeyUp) Down _ _ ->    panHop upV v
   EventKey (SpecialKey KeyDown) Down _ _ ->  panHop downV v
   EventKey {} -> v
-  EventMotion pos -> v
+  EventMotion mpos -> v {overlay = updateOverlay metaChem (pmap realToFrac mpos) (overlay v)}
   EventResize _ -> v
 
 update :: Chem c => Float -> View c -> View c
@@ -224,3 +231,36 @@ drawEdge = Color white . drawSeg . seg
 
 drawSeg :: Seg -> Picture
 drawSeg (Seg p q) = toLine [p, q]
+
+drawOverlay :: View c -> Con -> Picture
+drawOverlay v c = case overlay v of
+  NoOverlay -> blank
+  Overlay pos tk -> toTranslate pos $ scale s s $ Pictures $ drawSuboverlay [] tk c (0,1)
+  where s = realToFrac overlayThinkness
+
+-- Try this as a Zipper?
+drawSuboverlay :: Token -> Token -> Con -> P Turn -> [Picture]
+drawSuboverlay preTk tk c r = ( case tk of
+  [] -> []
+  (name:postTk) -> case con c name of
+    Nothing -> error "Can't draw Overlay where Token not matching the Con"
+    Just (nextI, nextC) -> drawSuboverlay (preTk ++ [name]) postTk nextC (rs!!nextI)
+  ) ++ zipWith drawSlice subTks rs
+  where
+    subTks = fmap (\n -> preTk ++ [n]) names
+    rs = ranges r $ length names
+    names = conNames c
+
+ranges :: P Turn -> Int -> [P Turn]
+ranges (d0,d1) n = zip turns $ tail turns
+  where turns = fmap (\i -> d0 + (d1-d0) * fromIntegral i / fromIntegral n) [0..n]
+
+drawSlice :: Token -> P Turn -> Picture
+drawSlice tk (f, t) = Pictures
+  [ color (C.toGlossColor (metaChemColor tk)) (toArcSolid d0 d1 rad)
+  , color black $ toSectorWire d0 d1 rad
+  ]
+  where
+    rad = fromIntegral $ length tk
+    d0 = degrees f
+    d1 = degrees t

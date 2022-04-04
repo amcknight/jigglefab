@@ -1,6 +1,8 @@
 module Chem.Encode
 ( Encode (..)
 , encoder
+, encodeMetaChem
+, metaChemColor
 ) where
 
 import Chem
@@ -11,12 +13,43 @@ import Color
 import Geometry.Vector
 import Struct
 import Orb
+import DataType
 
 data Sig = Red | Blue deriving (Show, Eq, Ord)
 data Active = Off | On Sig deriving (Show, Eq, Ord)
 data Sync = Open | Hold Sig | Emit Sig deriving (Show, Eq, Ord)
 data Dup = Ready | Once Sig | Twice Sig deriving (Show, Eq, Ord)
 data Encode = Wire Active | Port Side Active | Eat | Sync Sync | Dup Dup deriving (Show, Eq, Ord)
+
+encodeMetaChem :: Con
+encodeMetaChem = topCon encode
+  where
+    sig = Type [Con "Red" [], Con "Blue" []]
+    active = Type [Con "Off" [], Con "On" [sig]]
+    side = Type [Con "Out" [], Con "In" []]
+    sync = Type [Con "Open" [], Con "Hold" [sig], Con "Emit" [sig]]
+    dup = Type [Con "Ready" [], Con "Once" [sig], Con "Twice" [sig]]
+    encode = Type [Con "Wire" [active], Con "Port" [side, active], Con "Eat" [], Con "Sync" [sync], Con "Dup" [dup]]
+
+metaChemColor :: Token -> Color
+metaChemColor ["Wire", "Off"] = grey
+metaChemColor ["Wire", "On", "Red"] = mix red grey
+metaChemColor ["Wire", "On", "Blue"] = mix cyan grey
+metaChemColor ["Port", "Off"] = green 
+metaChemColor ["Port", "On", "Red"] = mix red green
+metaChemColor ["Port", "On", "Blue"] = mix cyan green
+metaChemColor ["Eat"] = black 
+metaChemColor ["Sync", "Open"] = blue 
+metaChemColor ["Sync", "Hold", "Red"] = mix red blue
+metaChemColor ["Sync", "Hold", "Blue"] = mix cyan blue
+metaChemColor ["Sync", "Emit", "Red"] = mix white $ mix red blue
+metaChemColor ["Sync", "Emit", "Blue"] = mix white $ mix cyan blue
+metaChemColor ["Dup", "Ready"] = yellow 
+metaChemColor ["Dup", "Twice", "Red"] = mix red $ mix red yellow
+metaChemColor ["Dup", "Once", "Red"] = mix red yellow
+metaChemColor ["Dup", "Twice", "Blue"] = mix cyan $ mix cyan yellow
+metaChemColor ["Dup", "Once", "Blue"] = mix cyan yellow
+metaChemColor _ = white
 
 instance Chem Encode where
   chemColor (Wire Off) = grey

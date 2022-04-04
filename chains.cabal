@@ -37,12 +37,14 @@ library
       Chem.Stripe
       Chem.Valence
       Color
+      DataType
       Draw
       Form
       Hit
       HitTime
       Model
       Orb
+      Overlay
       Point
       Simulation
       Struct
