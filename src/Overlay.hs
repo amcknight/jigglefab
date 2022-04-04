@@ -40,7 +40,7 @@ expandTk c (from, to) dir tk = case getCon c tk of
   Just con -> let
     nameI = floor $ fromIntegral (length names) * (dir - from) / (to - from)
     names = conNames con
-    in if from <= dir && dir <= to
+    in if from <= dir && dir <= to && not (null names)
       then Just $ tk ++ (\ns -> [ns!!nameI]) names
       else Nothing
 
