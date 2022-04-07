@@ -3,7 +3,7 @@ module View
   , panHop, zoomHop
   , togglePlay
   , setOverlayOn
-  , click
+  , click, rightClick
   )
 where
 
@@ -19,6 +19,7 @@ import Chem
 import Debug.Trace
 import Overlay
 import DataType
+import Pair
 
 data View c = View
   { structOrModel :: Either (Struct c) (Model c)
@@ -56,3 +57,8 @@ click _ c v = case overlay v of
   Overlay _ tk -> if isLeafAt c tk
     then v {overlay = NoOverlay, tip = tk}
     else v {overlay = NoOverlay}
+
+rightClick :: Position -> View c -> View c
+rightClick mpos v = case structOrModel v of
+  Left _ -> setOverlayOn mpos v
+  Right _ -> v {overlay = NoOverlay}

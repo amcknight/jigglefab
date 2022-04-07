@@ -4,8 +4,6 @@ Subject to drastic changes. Consider these rough thoughts about future functiona
 ## Version 0.2
 - Common chemistry representation type
 - Basic Editor
-- - Select a chem from the overlay
-- - Display current chem selection
 - - Display chem names in Overlay
 - - Place orbs individually
 - - Modify an orb to have selected chemistry

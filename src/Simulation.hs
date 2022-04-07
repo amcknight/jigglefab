@@ -81,18 +81,19 @@ runSeeded seed = do
     update
 
 draw :: Chem c => View c -> Picture
-draw v = Pictures [toTranslate (pos v) $ toScale z z drawBoard, drawMenu]
-  where
-    drawBoard = case structOrModel v of
-      Left s -> drawStruct s
-      Right m -> drawModel m
-    drawMenu = drawOverlay v metaChem
-    z = zoom v
+draw v = case structOrModel v of
+      Left s -> Pictures
+        [ toTranslate (pos v) $ toScale z z $ drawStruct s
+        , drawOverlay v metaChem
+        , drawSidebar v metaChem
+        ]
+      Right m -> toTranslate (pos v) $ toScale z z $ drawModel m
+  where z = zoom v
 
 event :: Chem c => Graphics.Gloss.Interface.IO.Interact.Event -> View c -> View c
 event e v = case e of
   EventKey (MouseButton LeftButton) Down _ mpos -> click (pmap realToFrac mpos) metaChem v
-  EventKey (MouseButton RightButton) Down _ mpos -> setOverlayOn (pmap realToFrac mpos) v
+  EventKey (MouseButton RightButton) Down _ mpos -> rightClick (pmap realToFrac mpos) v
   EventKey (Char '=') Down _ _ -> zoomHop Out v
   EventKey (Char '-') Down _ _ -> zoomHop In v
   EventKey (SpecialKey KeySpace) Down _ _ -> togglePlay speeed v
@@ -266,3 +267,7 @@ drawSlice tk (f, t) = Pictures
     rad = fromIntegral $ length tk
     d0 = degrees f
     d1 = degrees t
+
+-- TODO: Remove all these magic numbers
+drawSidebar :: View c -> Con -> Picture
+drawSidebar v c = translate 1850 1000 $ color (C.toGlossColor (metaChemColor (tip v))) $ toCircleSolid 50

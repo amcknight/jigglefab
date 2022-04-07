@@ -2,6 +2,11 @@
 
 ## Unreleased changes
 
+## v0.1.4
+- Can select elements from overlay
+- Shows the current element in top right
+- Overlay and sidebar only show in Struct view
+
 ## v0.1.3
 - Added an element selection overlay
 - Added a universal chemistry data type
