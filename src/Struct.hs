@@ -1,6 +1,7 @@
 module Struct
 ( Struct(..)
 , wallStruct, orbStruct
+, addOrb
 ) where
 
 import Wall
@@ -21,3 +22,6 @@ wallStruct w = Struct [w] []
 
 orbStruct :: Orb c -> Struct c
 orbStruct o = Struct [] [o]
+
+addOrb :: Orb c -> Struct c -> Struct c
+addOrb o s = s {orbs = o : orbs s}

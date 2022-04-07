@@ -20,6 +20,7 @@ import Debug.Trace
 import Overlay
 import DataType
 import Pair
+import Orb
 
 data View c = View
   { structOrModel :: Either (Struct c) (Model c)
@@ -52,8 +53,12 @@ setOverlayOn :: Position -> View c -> View c
 setOverlayOn p view = view {overlay = Overlay p []}
 
 click :: Position -> Con -> View c -> View c
-click _ c v = case overlay v of
-  NoOverlay -> v
+click mpos c v = case overlay v of
+  NoOverlay -> case structOrModel v of
+    Left st -> case getCon c $ tip v of
+      Nothing -> error $ "Invalid TIP: " ++ show (tip v)
+      Just con -> v -- v {structOrModel = Left $ addOrb (Orb mpos con) st} TODO: This will only work if using Metachem instead of chem everywhere
+    Right mo -> v
   Overlay _ tk -> if isLeafAt c tk
     then v {overlay = NoOverlay, tip = tk}
     else v {overlay = NoOverlay}
