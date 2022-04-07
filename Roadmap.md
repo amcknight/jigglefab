@@ -4,9 +4,12 @@ Subject to drastic changes. Consider these rough thoughts about future functiona
 ## Version 0.2
 - Common chemistry representation type
 - Basic Editor
-- - Place dormant wires orbs individually
-- - Single chemistry menu
-- - Modify a orb to have selected chemistry
+- - Select a chem from the overlay
+- - Display current chem selection
+- - Display chem names in Overlay
+- - Place orbs individually
+- - Modify an orb to have selected chemistry
+- - Delete orbs
 
 ## Version 0.3
 - Encoding of chemistries
