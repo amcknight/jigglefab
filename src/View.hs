@@ -1,9 +1,12 @@
 module View
   ( View(..)
+  , Mode(..)
+  , RunView(..)
   , panHop, zoomHop
   , togglePlay
   , setOverlayOn
   , click, rightClick
+  , mouseMove
   )
 where
 
@@ -16,20 +19,20 @@ import System.Random
 import Time
 import Control.Monad.State
 import Chem
-import Debug.Trace
 import Overlay
 import DataType
-import Pair
-import Orb
+import EditView
+import RunView
 
 data View c = View
-  { structOrModel :: Either (Struct c) (Model c)
-  , seed :: StdGen
-  , overlay :: Overlay
-  , tip :: Token
+  { mode :: Mode
+  , editView :: EditView c
+  , runView :: RunView c
   , center :: Position
   , zoom :: Double
   }
+
+data Mode = Edit | Run
 
 instance HasPos (View c) where
   pos = center
@@ -45,25 +48,31 @@ zoomHop s view = case s of
   where zhop = 1.25
 
 togglePlay :: Chem c => Speed -> View c -> View c
-togglePlay sp view = case structOrModel view of
-  Left s ->  view {structOrModel = Right (evalState (buildModel sp s) (seed view))}
-  Right m -> view {structOrModel = Left (extractStruct (form m))}
-
-setOverlayOn :: Position -> View c -> View c
-setOverlayOn p view = view {overlay = Overlay p []}
+togglePlay sp v = case mode v of
+  Edit -> v {mode = Run, runView = (runView v) {model = evalState (buildModel sp (struct (editView v))) (seed (runView v))}}
+  Run ->  v {mode = Edit, editView = (editView v) {overlay = NoOverlay, struct = extractStruct $ form $ model $ runView v}}
 
 click :: Position -> Con -> View c -> View c
-click mpos c v = case overlay v of
-  NoOverlay -> case structOrModel v of
-    Left st -> case getCon c $ tip v of
-      Nothing -> error $ "Invalid TIP: " ++ show (tip v)
-      Just con -> v -- v {structOrModel = Left $ addOrb (Orb mpos con) st} TODO: This will only work if using Metachem instead of chem everywhere
-    Right mo -> v
-  Overlay _ tk -> if isLeafAt c tk
-    then v {overlay = NoOverlay, tip = tk}
-    else v {overlay = NoOverlay}
+click mpos c v = case mode v of
+  Edit -> let ev = editView v
+    in case overlay ev of
+      NoOverlay -> case getCon c $ tip ev of
+        Nothing -> error $ "Invalid TIP: " ++ show (tip ev)
+        Just con -> v -- v {style = Left $ addOrb (Orb mpos con) st} TODO: This will only work if using Metachem instead of chem everywhere
+      Overlay _ tk -> if isLeafAt c tk
+        then v {editView = ev {tip = tk}}
+        else v
+  _ -> v
 
 rightClick :: Position -> View c -> View c
-rightClick mpos v = case structOrModel v of
-  Left _ -> setOverlayOn mpos v
-  Right _ -> v {overlay = NoOverlay}
+rightClick mpos v = case mode v of
+  Edit -> v {editView = setOverlayOn mpos $ editView v}
+  _ -> v
+
+mouseMove :: Position -> Con -> View c -> View c
+mouseMove mpos c v = case mode v of
+  Edit -> let ev = editView v
+    in case overlay ev of
+      NoOverlay -> v
+      Overlay _ _ -> v {editView = ev {overlay = updateOverlay c mpos $ overlay ev}}
+  _ -> v

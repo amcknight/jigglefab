@@ -6,7 +6,9 @@ Subject to drastic changes. Consider these rough thoughts about future functiona
 - Basic Editor
 - - Display chem names in Overlay
 - - Place orbs individually
+- - Show hover-over outline of orbs and overlay options
 - - Modify an orb to have selected chemistry
+- - Move orbs
 - - Delete orbs
 
 ## Version 0.3

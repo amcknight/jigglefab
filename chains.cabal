@@ -39,6 +39,7 @@ library
       Color
       DataType
       Draw
+      EditView
       Form
       Hit
       HitTime
@@ -46,6 +47,7 @@ library
       Orb
       Overlay
       Point
+      RunView
       Simulation
       Struct
       StructLibrary

@@ -11,7 +11,6 @@ import qualified Data.Vector as V
 import qualified Color as C
 import Geometry.Circle
 import Geometry.Space
-import Time
 import Point
 import Ball
 import Pair
@@ -50,6 +49,7 @@ import Chem.Peano
 import Chem.Encode
 import Overlay
 import DataType
+import EditView
 
 run :: IO ()
 run = runSeeded =<< getStdGen
@@ -68,8 +68,7 @@ runSeeded :: StdGen -> IO ()
 runSeeded seed = do
   let struct = turnbuckle
   let (model, nextSeed) = runState (buildModel speeed struct) seed
-  -- let view = View (Left struct) zeroV zooom
-  let view = View (Right model) nextSeed NoOverlay neutral zeroV zooom
+  let view = View Run (EditView NoOverlay neutral struct) (RunView nextSeed model) zeroV zooom
   let frameRate = 30
   play
     FullScreen
@@ -79,16 +78,6 @@ runSeeded seed = do
     draw
     event
     update
-
-draw :: Chem c => View c -> Picture
-draw v = case structOrModel v of
-      Left s -> Pictures
-        [ toTranslate (pos v) $ toScale z z $ drawStruct s
-        , drawOverlay v metaChem
-        , drawSidebar v metaChem
-        ]
-      Right m -> toTranslate (pos v) $ toScale z z $ drawModel m
-  where z = zoom v
 
 event :: Chem c => Graphics.Gloss.Interface.IO.Interact.Event -> View c -> View c
 event e v = case e of
@@ -102,13 +91,28 @@ event e v = case e of
   EventKey (SpecialKey KeyUp) Down _ _ ->    panHop upV v
   EventKey (SpecialKey KeyDown) Down _ _ ->  panHop downV v
   EventKey {} -> v
-  EventMotion mpos -> v {overlay = updateOverlay metaChem (pmap realToFrac mpos) (overlay v)}
+  EventMotion mpos -> mouseMove (pmap realToFrac mpos) metaChem v
   EventResize _ -> v
 
 update :: Chem c => Float -> View c -> View c
-update dt v = v { structOrModel = case structOrModel v of
-   Left s -> Left s
-   Right s -> Right $ step (realToFrac dt) s }
+update dt v = case mode v of
+  Edit -> v
+  Run -> v {runView = (runView v) {model = step (realToFrac dt) (model (runView v))}}
+
+draw :: Chem c => View c -> Picture
+draw v = case mode v of
+  Edit -> drawEditView (pos v) (zoom v) (editView v)
+  Run -> drawRunView (pos v) (zoom v) (runView v)
+
+drawEditView :: Chem c => Position -> Double -> EditView c -> Picture
+drawEditView p z ev = Pictures
+  [ toTranslate p $ toScale z z $ drawStruct $ struct ev
+  , drawOverlay metaChem $ overlay ev
+  , drawSidebar metaChem $ tip ev
+  ]
+
+drawRunView :: Chem c => Position -> Double -> RunView c -> Picture
+drawRunView p z rv = toTranslate p $ toScale z z $ drawModel $ model rv
 
 drawStruct :: Chem c => Struct c -> Picture
 drawStruct (Struct walls os) = Pictures $
@@ -235,8 +239,8 @@ drawEdge = Color white . drawSeg . seg
 drawSeg :: Seg -> Picture
 drawSeg (Seg p q) = toLine [p, q]
 
-drawOverlay :: View c -> Con -> Picture
-drawOverlay v c = case overlay v of
+drawOverlay :: Con -> Overlay -> Picture
+drawOverlay c o = case o of
   NoOverlay -> blank
   Overlay pos tk -> toTranslate pos $ scale s s $ Pictures $ drawSuboverlay [] tk c (0,1)
   where s = realToFrac overlayThinkness
@@ -269,5 +273,5 @@ drawSlice tk (f, t) = Pictures
     d1 = degrees t
 
 -- TODO: Remove all these magic numbers
-drawSidebar :: View c -> Con -> Picture
-drawSidebar v c = translate 1850 1000 $ color (C.toGlossColor (metaChemColor (tip v))) $ toCircleSolid 50
+drawSidebar :: Con -> Token -> Picture
+drawSidebar c tk = translate 1850 1000 $ color (C.toGlossColor (metaChemColor tk)) $ toCircleSolid 50
