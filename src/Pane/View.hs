@@ -1,28 +1,24 @@
-module View
+module Pane.View
   ( View(..)
   , Mode(..)
-  , RunView(..)
   , panHop, zoomHop
   , togglePlay
   , setOverlayOn
   , click, rightClick
   , mouseMove
-  )
-where
+  ) where
 
 import Model
 import Geometry.Vector
-import Struct
 import Geometry.Space
 import Form
-import System.Random
 import Time
 import Control.Monad.State
 import Chem
 import Overlay
 import DataType
-import EditView
-import RunView
+import Pane.EditView
+import Pane.RunView
 
 data View c = View
   { mode :: Mode

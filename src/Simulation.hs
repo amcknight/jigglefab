@@ -23,7 +23,6 @@ import Chem.Valence
 import Debug.Trace
 import Graphics.Gloss
 import Graphics.Gloss.Interface.IO.Interact
-import View
 import Geometry.Vector
 import Struct
 import Orb
@@ -49,7 +48,9 @@ import Chem.Peano
 import Chem.Encode
 import Overlay
 import DataType
-import EditView
+import Pane.View
+import Pane.EditView
+import Pane.RunView
 
 run :: IO ()
 run = runSeeded =<< getStdGen

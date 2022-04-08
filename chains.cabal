@@ -39,21 +39,22 @@ library
       Color
       DataType
       Draw
-      EditView
       Form
       Hit
       HitTime
       Model
       Orb
       Overlay
+      Pane.EditView
+      Pane.Pane
+      Pane.RunView
+      Pane.View
       Point
-      RunView
       Simulation
       Struct
       StructLibrary
       Tiling
       Time
-      View
       Wall
   other-modules:
       Paths_chains
