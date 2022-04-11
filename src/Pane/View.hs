@@ -4,8 +4,8 @@ module Pane.View
   , panHop, zoomHop
   , togglePlay
   , setOverlayOn
-  , click, rightClick
-  , mouseMove
+  , lClick, rClick
+  , mMove
   ) where
 
 import Model
@@ -19,6 +19,8 @@ import Overlay
 import DataType
 import Pane.EditView
 import Pane.RunView
+import Pane.Pane
+import qualified Control.Arrow as Pane.Pane
 
 data View c = View
   { mode :: Mode
@@ -45,30 +47,23 @@ zoomHop s view = case s of
 
 togglePlay :: Chem c => Speed -> View c -> View c
 togglePlay sp v = case mode v of
-  Edit -> v {mode = Run, runView = (runView v) {model = evalState (buildModel sp (struct (editView v))) (seed (runView v))}}
-  Run ->  v {mode = Edit, editView = (editView v) {overlay = NoOverlay, struct = extractStruct $ form $ model $ runView v}}
+  Edit -> v {mode = Run, runView = rv {model = evalState (buildModel sp (struct ev)) (seed rv)}}
+  Run ->  v {mode = Edit, editView = ev {overlay = (overlay ev) {overlayState = Nothing}, struct = extractStruct $ form $ model rv}}
+  where
+    ev = editView v
+    rv = runView v
 
-click :: Position -> Con -> View c -> View c
-click mpos c v = case mode v of
-  Edit -> let ev = editView v
-    in case overlay ev of
-      NoOverlay -> case getCon c $ tip ev of
-        Nothing -> error $ "Invalid TIP: " ++ show (tip ev)
-        Just con -> v -- v {style = Left $ addOrb (Orb mpos con) st} TODO: This will only work if using Metachem instead of chem everywhere
-      Overlay _ tk -> if isLeafAt c tk
-        then v {editView = ev {tip = tk}}
-        else v
-  _ -> v
+lClick :: Position -> Con -> View c -> View c
+lClick mpos c v = case mode v of
+  Edit -> v {editView = leftClick mpos $ editView v}
+  Run  -> v {runView = leftClick mpos $ runView v}
 
-rightClick :: Position -> View c -> View c
-rightClick mpos v = case mode v of
-  Edit -> v {editView = setOverlayOn mpos $ editView v}
-  _ -> v
+rClick :: Position -> View c -> View c
+rClick mpos v = case mode v of
+  Edit -> v {editView = rightClick mpos $ editView v}
+  Run  -> v {runView = rightClick mpos $ runView v}
 
-mouseMove :: Position -> Con -> View c -> View c
-mouseMove mpos c v = case mode v of
-  Edit -> let ev = editView v
-    in case overlay ev of
-      NoOverlay -> v
-      Overlay _ _ -> v {editView = ev {overlay = updateOverlay c mpos $ overlay ev}}
-  _ -> v
+mMove :: Position -> Con -> View c -> View c
+mMove mpos c v = case mode v of
+  Edit -> v {editView = mouseMove mpos $ editView v}
+  Run -> v {runView = mouseMove mpos $ runView v}

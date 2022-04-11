@@ -1,57 +1,65 @@
 module Overlay
 ( Overlay(..)
-, overlayThinkness
+, overlayThickness
 , updateOverlay
 ) where
 
 import Geometry.Vector
-import Chem
 import Geometry.Angle
 import Pair
-import Debug.Trace
 import DataType
 
-data Overlay = NoOverlay | Overlay Position Token
+data Overlay = Overlay
+  { overlayCon :: Con
+  , overlayState :: Maybe (TkPart, Position)
+  }
 
-overlayThinkness :: Double
-overlayThinkness = 150
+overlayThickness :: Double
+overlayThickness = 150
 
-updateOverlay :: Con -> Position -> Overlay -> Overlay
-updateOverlay c mpos NoOverlay = NoOverlay
-updateOverlay c mpos o@(Overlay opos tk) = case dir of
-  Nothing -> o
-  Just justDir -> case compare layer $ length tk of
-    GT -> case expandTk c (overlayRange c tk) justDir tk of
-      Nothing -> NoOverlay
-      Just newTk -> Overlay opos newTk
-    EQ -> case expandTk c (overlayRange c (init tk)) justDir (init tk) of
-      Nothing -> NoOverlay
-      Just newTk -> Overlay opos newTk
-    LT -> Overlay opos $ init tk
-  where
-    layer = ceiling $ mag / overlayThinkness
+updateOverlay :: Position -> Overlay -> Overlay
+updateOverlay mpos o@(Overlay c s) = case s of
+  Nothing -> Overlay c Nothing
+  Just (tkp, opos) -> let
+    layer = ceiling $ mag / overlayThickness
     dir = direction v
     mag = magnitude v
     v = mpos |- opos
+    in case dir of
+      Nothing -> o
+      Just justDir -> updateOverlay' c tkp opos layer
 
-expandTk :: Con -> P Turn -> Turn -> Token -> Maybe Token
-expandTk c (from, to) dir tk = case getCon c tk of
-  Nothing -> error $ "Type Error in Token: " ++ show tk
-  Just con -> let
-    nameI = floor $ fromIntegral (length names) * (dir - from) / (to - from)
-    names = conNames con
-    in if from <= dir && dir <= to && not (null names)
-      then Just $ tk ++ (\ns -> [ns!!nameI]) names
-      else Nothing
+updateOverlay' :: Con -> TkPart -> Position -> Int -> Overlay
+updateOverlay' c tkp opos layer = case compare layer $ numNames tkp of
+  GT -> case extendTkPart c tkp of
+    Nothing -> Overlay c Nothing
+    Just newTkp -> Overlay c $ Just (newTkp, opos)
+  EQ -> case extendTkPart c reducedTkp of
+    Nothing -> Overlay c Nothing
+    Just newTkp -> Overlay c $ Just (newTkp, opos)
+  LT -> Overlay c $ Just (reducedTkp, opos)
+  where 
+    reducedTkp = case reduceTkPart tkp of
+      Nothing -> error "Trying to reduce tkp when unreducable"
+      Just t -> t
 
-overlayRange :: Con -> Token -> P Turn
-overlayRange c tk = overlayRange' c tk (0,1)
-overlayRange' :: Con -> Token -> P Turn -> P Turn
-overlayRange' c [] r = r
-overlayRange' c (n:ns) (from, to) = case con c n of
-  Nothing -> error $ "Searching for non-existent chemical token: " ++ n
-  Just (i, nextC) -> let
-    step = (to - from) / fromIntegral (length (subcons c))
-    newFrom = from + fromIntegral i * step
-    newTo = newFrom + step
-    in overlayRange' nextC ns (newFrom, newTo)
+  -- GT -> case extendTkPartByPos c (overlayRange c tkp) justDir tkp of
+  --   Nothing -> Overlay c Nothing
+  --   Just newTkp -> Overlay c $ Just (newTkp, opos)
+  -- EQ -> case extendTkPartByPos c (overlayRange c reducedTkp) justDir reducedTkp of
+  --   Nothing -> Overlay c Nothing
+  --   Just newTkp -> Overlay c $ Just (newTkp, opos)
+  -- LT -> Overlay c $ Just (reducedTkp, opos)
+  -- where reducedTkp = reduceTkPart tkp
+
+-- overlayRange :: Con -> Token -> P Turn
+-- overlayRange c tk = overlayRange' c tk (0,1)
+-- overlayRange' :: Con -> Token -> P Turn -> P Turn
+-- overlayRange' c [] r = r
+-- overlayRange' c (n:ns) (from, to) = case con c n of
+--   Nothing -> error $ "Searching for non-existent chemical token: " ++ n
+--   Just (i, nextC) -> let
+--     step = (to - from) / fromIntegral (length (subcons c))
+--     newFrom = from + fromIntegral i * step
+--     newTo = newFrom + step
+--     in overlayRange' nextC ns (newFrom, newTo)

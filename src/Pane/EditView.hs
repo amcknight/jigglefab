@@ -8,12 +8,6 @@ import Overlay
 import Geometry.Vector
 import DataType
 import Pane.Pane
-import Draw
-import Graphics.Gloss
-import Chem
-import qualified Data.Map as V
-import Voronoi.Fortune
-import Tiling (tileVoronoi)
 
 data EditView c = EditView
   { overlay :: Overlay
@@ -22,9 +16,19 @@ data EditView c = EditView
   }
 
 setOverlayOn :: Position -> EditView c -> EditView c
-setOverlayOn p ev = ev {overlay = Overlay p []}
+setOverlayOn p ev = ev {overlay = Overlay (overlayCon (overlay ev)) (Just (H, p))}
 
 instance Pane (EditView c) where
-  leftClick _ = id
+  leftClick mpos ev = case s of
+    Nothing -> ev --TODO: This should add an orb but will only work after using metachem everywhere
+    Just (tkp, opos) -> case toToken tkp of
+      Nothing -> ev
+      Just tk -> ev {tip = tk}
+    where (Overlay c s) = overlay ev
+  
   rightClick _ = id
-  mouseMove _ = id
+  
+  mouseMove mpos ev = case overlayState o of
+    Nothing -> ev
+    Just (tk, opos) -> ev {overlay = updateOverlay mpos o}
+    where o = overlay ev
