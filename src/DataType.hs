@@ -5,9 +5,8 @@ module DataType
 , toToken, toTkPart
 , extendTkPart, reduceTkPart
 , numNames
--- , conNames, subcons
--- , isLeaf--, isLeafAt
 ) where
+
 import Data.Maybe (isJust)
 
 data Con = Con0 String | Con1 String Type | Con2 String Type Type deriving Show
@@ -110,33 +109,3 @@ numNames tkp = case tkp of
   Z _ -> 1
   O _ subTkp -> 1 + numNames subTkp 
   T _ subTkp1 subTkp2 -> 1 + numNames subTkp1 + numNames subTkp2
-
--- -- TODO: show these datatypes better
--- instance Show Con where
---   show c = unwords $ ["Con", name c] ++ fmap show (ts c)
-
--- conNames :: Con -> [String]
--- conNames c = fmap name $ concatMap cs $ ts c
-
--- con :: Con -> String -> Maybe (Int, Con)
--- con c = con' (concatMap cs (ts c)) 0
--- con' :: Type -> Int -> String -> Maybe (Int, Con)
--- con' [] _ n' = Nothing
--- con' (c@(Con n _) : cs) i n' = if n == n'
---   then Just (i, c)
---   else con' cs (i+1) n'
-
--- getCon :: Con -> Token -> Maybe Con
--- getCon c [] = Just c
--- getCon c (n:ns) = case con c n of
---   Nothing -> Nothing
---   Just (_, scon) -> getCon scon ns
-
--- subcons :: Con -> Type
--- subcons (Con _ tys) = concatMap cs tys
-
--- isLeafAt :: Con -> Token -> Bool
--- isLeafAt c tk = maybe False isLeaf $ getCon c tk
-
--- isLeaf :: Con -> Bool
--- isLeaf (Con _ ts) = null $ concatMap cs ts
