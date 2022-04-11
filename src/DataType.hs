@@ -13,7 +13,14 @@ import Data.Maybe (isJust)
 data Con = Con0 String | Con1 String Type | Con2 String Type Type deriving Show
 type Type = [Con]
 data Token = Tk0 String | Tk1 String Token | Tk2 String Token Token deriving Show
-data TkPart = H | V String | Z String | O String TkPart | T String TkPart TkPart deriving Show
+data TkPart = H | V String | Z String | O String TkPart | T String TkPart TkPart
+
+instance Show TkPart where
+  show H = "_"
+  show (V s) = "_" ++ s
+  show (Z s) = s
+  show (O s t) = "(" ++ unwords [s, show t] ++ ")"
+  show (T s t1 t2) = "(" ++ unwords [s, show t1, show t2] ++ ")"
 
 conName :: Con -> String
 conName (Con0 n) = n
