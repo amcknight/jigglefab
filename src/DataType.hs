@@ -5,6 +5,7 @@ module DataType
 , toToken, toTkPart
 , extendTkPart, reduceTkPart
 , numNames
+, firstHole
 ) where
 
 import Data.Maybe (isJust)
@@ -61,7 +62,7 @@ extendTkPart c tkp = case tkp of
   Z _ -> Nothing
   O s subTkp -> case c of
     Con1 _ ty -> (Just . O s) =<< extendTkPart (con ty s) subTkp
-    _' -> error "Type error: TkPart and Con don't match (1)"
+    _ -> error "Type error: TkPart and Con don't match (1)"
   T s subTkp1 subTkp2 -> case c of
     Con2 _ ty1 ty2 -> case extendTkPart (con ty1 s) subTkp1 of
       Nothing -> case extendTkPart (con ty2 s) subTkp2 of

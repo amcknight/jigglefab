@@ -23,8 +23,8 @@ Subject to drastic changes. Consider these rough thoughts about future functiona
 ## Version 0.4
 - Sub-circuits Editor
 - - Parts can be loaded, rotated, expanded, combined, snapped together
+- Chemistry Editor
 
 ## Beyond
-- Chemistry Editor
 - Rendering for large models
 - Demo of a universal constructor

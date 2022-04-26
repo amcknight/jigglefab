@@ -20,6 +20,7 @@ import DataType
 import Pane.EditView
 import Pane.RunView
 import Pane.Pane
+import Debug.Trace
 import qualified Control.Arrow as Pane.Pane
 
 data View c = View

@@ -16,7 +16,8 @@ data EditView c = EditView
   }
 
 setOverlayOn :: Position -> EditView c -> EditView c
-setOverlayOn p ev = ev {overlay = Overlay (overlayCon (overlay ev)) (Just (H, p))}
+setOverlayOn p ev = ev {overlay = Overlay c (Just (H, p))}
+  where c = overlayCon $ overlay ev
 
 instance Pane (EditView c) where
   leftClick mpos ev = case s of
@@ -26,7 +27,7 @@ instance Pane (EditView c) where
       Just tk -> ev {tip = tk}
     where (Overlay c s) = overlay ev
   
-  rightClick _ = id
+  rightClick = setOverlayOn
   
   mouseMove mpos ev = case overlayState o of
     Nothing -> ev

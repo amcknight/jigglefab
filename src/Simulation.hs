@@ -62,8 +62,9 @@ speeed = 10
 
 metaChem :: Con
 metaChem = encodeMetaChem
+
 neutral :: Token
-neutral = Tk1 "Wire" $ Tk0 "Off"
+neutral = encodeNeutral
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
@@ -251,9 +252,21 @@ drawOverlay' c tkp = case tkp of
   H -> blank
   V _ -> blank
   Z s -> error "Invalid empty root token"
-  O s tp -> Pictures $ drawSuboverlay c tkp
+  O s tp -> Pictures $ drawOverlayFan c tkp ++ drawSuboverlay c tkp
   T s tp tp' -> error "Invalid two-typed root token"
- 
+
+drawOverlayFan :: Con -> TkPart -> [Picture]
+drawOverlayFan c tkp = case firstHole c tkp of
+  Nothing -> []
+   -- TODO: Seems fundamentally confused. What am I drawing? A tkpart/con can have two holes
+  Just (Con0 _) -> error "This can't be a hole?"
+  Just (Con1 _ tys) -> drawFan tys tkp $ findRange c tkp
+  Just (Con2 _ tys1 tys2) -> drawFan tys1 tkp $ findRange c tkp
+
+drawFan :: [Con] -> TkPart -> P Turn -> [Picture]
+drawFan subC baseTkp baseR = trace "FAN" []
+  where pts = partitionRange baseR $ length subC
+
 drawSuboverlay :: Con -> TkPart -> [Picture]
 drawSuboverlay c tkp = case tkp of
   H -> []
@@ -273,9 +286,15 @@ drawSuboverlay c tkp = case tkp of
 drawTkPart :: Con -> TkPart -> Picture 
 drawTkPart c tkp = drawSlice tkp $ findRange c tkp
 
-ranges :: P Turn -> Int -> [P Turn]
-ranges (d0,d1) n = zip turns $ tail turns
-  where turns = fmap (\i -> d0 + (d1-d0) * fromIntegral i / fromIntegral n) [0..n]
+drawSlice :: TkPart -> P Turn -> Picture
+drawSlice tkp (f, t) = Pictures
+  [ color (C.toGlossColor (metaChemColor tkp)) (toArcSolid d0 d1 rad)
+  , color black $ toSectorWire d0 d1 rad
+  ]
+  where
+    rad = fromIntegral $ numNames tkp
+    d0 = degrees f
+    d1 = degrees t
 
 findRange :: Con -> TkPart -> P Turn 
 findRange c tkp = findRange' c tkp (0,1)
@@ -292,20 +311,14 @@ nextRange (Con2 _ ty _) s r = nextRange' ty s r
 nextRange' :: [Con] -> String -> P Turn -> P Turn
 nextRange' cs s r = rs!!i
   where
-    rs = ranges r $ length cs
+    rs = partitionRange r $ length cs
     i = case elemIndex s $ fmap conName cs of
       Nothing -> error "Coundn't find elem in nextRange'"
       Just n -> n
 
-drawSlice :: TkPart -> P Turn -> Picture
-drawSlice tkp (f, t) = Pictures
-  [ color (C.toGlossColor (metaChemColor tkp)) (toArcSolid d0 d1 rad)
-  , color black $ toSectorWire d0 d1 rad
-  ]
-  where
-    rad = fromIntegral $ numNames tkp
-    d0 = degrees f
-    d1 = degrees t
+partitionRange :: P Turn -> Int -> [P Turn]
+partitionRange (d0,d1) n = zip turns $ tail turns
+  where turns = fmap (\i -> d0 + (d1-d0) * fromIntegral i / fromIntegral n) [0..n]
 
 -- TODO: Remove all these magic numbers
 drawSidebar :: Con -> Token -> Picture

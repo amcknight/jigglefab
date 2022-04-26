@@ -2,6 +2,7 @@ module Chem.Encode
 ( Encode (..)
 , encoder
 , encodeMetaChem
+, encodeNeutral
 , metaChemColor
 ) where
 
@@ -20,6 +21,9 @@ data Active = Off | On Sig deriving (Show, Eq, Ord)
 data Sync = Open | Hold Sig | Emit Sig deriving (Show, Eq, Ord)
 data Dup = Ready | Once Sig | Twice Sig deriving (Show, Eq, Ord)
 data Encode = Wire Active | Port Side Active | Eat | Sync Sync | Dup Dup deriving (Show, Eq, Ord)
+
+encodeNeutral :: Token
+encodeNeutral = Tk1 "Wire" $ Tk0 "Off"
 
 encodeMetaChem :: Con
 encodeMetaChem = topCon encode
