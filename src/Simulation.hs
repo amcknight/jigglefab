@@ -258,13 +258,12 @@ drawOverlay' c tkp = case tkp of
 drawOverlayFan :: Con -> TkPart -> [Picture]
 drawOverlayFan c tkp = case firstHole c tkp of
   Nothing -> []
-   -- TODO: Seems fundamentally confused. What am I drawing? A tkpart/con can have two holes
-  Just (Con0 _) -> error "This can't be a hole?"
+  Just (Con0 _) -> []-- TODO: Is this already displayed, sub-fan? is this impossible?
   Just (Con1 _ tys) -> drawFan tys tkp $ findRange c tkp
-  Just (Con2 _ tys1 tys2) -> drawFan tys1 tkp $ findRange c tkp
+  Just (Con2 _ tys1 _) -> drawFan tys1 tkp $ findRange c tkp
 
 drawFan :: [Con] -> TkPart -> P Turn -> [Picture]
-drawFan subC baseTkp baseR = trace "FAN" []
+drawFan subC baseTkp baseR = fmap (\(c,pt) -> drawSlice (tkPart + name c) pt) (zip subC pts)
   where pts = partitionRange baseR $ length subC
 
 drawSuboverlay :: Con -> TkPart -> [Picture]

@@ -108,5 +108,5 @@ numNames tkp = case tkp of
   H -> 0
   V _ -> 0
   Z _ -> 1
-  O _ subTkp -> 1 + numNames subTkp 
+  O _ subTkp -> 1 + numNames subTkp
   T _ subTkp1 subTkp2 -> 1 + numNames subTkp1 + numNames subTkp2
