@@ -8,8 +8,6 @@ module DataType
 , firstHole
 ) where
 
-import Data.Maybe (isJust)
-
 data Con = Con0 String | Con1 String Type | Con2 String Type Type deriving Show
 type Type = [Con]
 data Token = Tk0 String | Tk1 String Token | Tk2 String Token Token deriving Show

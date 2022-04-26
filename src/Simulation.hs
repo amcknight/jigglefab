@@ -263,7 +263,7 @@ drawOverlayFan c tkp = case firstHole c tkp of
   Just (Con2 _ tys1 _) -> drawFan tys1 tkp $ findRange c tkp
 
 drawFan :: [Con] -> TkPart -> P Turn -> [Picture]
-drawFan subC baseTkp baseR = fmap (\(c,pt) -> drawSlice (tkPart + name c) pt) (zip subC pts)
+drawFan subC baseTkp baseR = [] --TODO: DON THIS BUT MAKE IT WORK USING SIMPLE OPS fmap (\(c,pt) -> drawSlice (tkPart + name c) pt) (zip subC pts)
   where pts = partitionRange baseR $ length subC
 
 drawSuboverlay :: Con -> TkPart -> [Picture]
