@@ -6,15 +6,15 @@
 packages:
 - completed:
     size: 15389
-    url: https://github.com/amcknight/geo2d/archive/add091d2290b9fb1f7b4b59d8cfa283f4bf14f93.tar.gz
+    url: https://github.com/amcknight/geo2d/archive/d7ddb02679281f9a3839f9b8aebf3caa6cfa3f24.tar.gz
     name: geo2d
-    version: 0.0.1
-    sha256: c86c014fe02401dbae7d6e5257ee240f956c2a405b0f92969793dbfd112a1f2f
+    version: 0.1.1
+    sha256: c631dc5826e5123ce70fe8099681430191ab3581d5ef895135d358fd1fa790c9
     pantry-tree:
       size: 1931
-      sha256: 7d91622fa7b9f00f6a8f9c8622fd3ee338316f7a94b2f3edeac4a6fbb6869fbc
+      sha256: 0a76fbfa2dfbce539ff227de067c26ef15681cd8eb884597eeb6be706407ce0f
   original:
-    url: https://github.com/amcknight/geo2d/archive/add091d2290b9fb1f7b4b59d8cfa283f4bf14f93.tar.gz
+    url: https://github.com/amcknight/geo2d/archive/d7ddb02679281f9a3839f9b8aebf3caa6cfa3f24.tar.gz
 snapshots:
 - completed:
     size: 590102
