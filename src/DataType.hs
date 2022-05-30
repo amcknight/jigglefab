@@ -1,5 +1,5 @@
 module DataType
-( Con(..), Token(..), TkPart(..)
+( Con(..), Type, Token(..), TkPart(..)
 , conName
 , topCon
 , toToken, toTkPart
@@ -11,11 +11,10 @@ module DataType
 data Con = Con0 String | Con1 String Type | Con2 String Type Type deriving Show
 type Type = [Con]
 data Token = Tk0 String | Tk1 String Token | Tk2 String Token Token deriving Show
-data TkPart = H | V String | Z String | O String TkPart | T String TkPart TkPart
+data TkPart = H | Z String | O String TkPart | T String TkPart TkPart
 
 instance Show TkPart where
   show H = "_"
-  show (V s) = "_" ++ s
   show (Z s) = s
   show (O s t) = "(" ++ unwords [s, show t] ++ ")"
   show (T s t1 t2) = "(" ++ unwords [s, show t1, show t2] ++ ")"
@@ -37,7 +36,6 @@ topCon = Con1 ""
 toToken :: TkPart -> Maybe Token
 toToken tkp = case tkp of
   H -> Nothing
-  V s -> Nothing
   Z s -> Just $ Tk0 s
   O s tp -> case toToken tp of
     Nothing -> Nothing
@@ -56,7 +54,6 @@ toTkPart (Tk2 s t1 t2) = T s (toTkPart t1) (toTkPart t2)
 extendTkPart :: Con -> TkPart -> Maybe TkPart
 extendTkPart c tkp = case tkp of
   H -> Just $ toHole c
-  V _ -> Just $ toHole c
   Z _ -> Nothing
   O s subTkp -> case c of
     Con1 _ ty -> (Just . O s) =<< extendTkPart (con ty s) subTkp
@@ -71,7 +68,6 @@ extendTkPart c tkp = case tkp of
 
 reduceTkPart :: TkPart -> Maybe TkPart
 reduceTkPart H = Nothing
-reduceTkPart (V s) = Nothing
 reduceTkPart (Z _) = Just H
 reduceTkPart (O s t) = case reduceTkPart t of
   Nothing -> Just H
@@ -90,7 +86,6 @@ toHole (Con2 s _ _) = T s H H
 firstHole :: Con -> TkPart -> Maybe Con
 firstHole c tkp = case tkp of
   H -> Just c
-  V _ -> Just c
   Z _ -> Nothing
   O s subTkp -> case c of
     Con1 _ ty -> firstHole (con ty s) subTkp
@@ -104,7 +99,6 @@ firstHole c tkp = case tkp of
 numNames :: TkPart -> Int
 numNames tkp = case tkp of
   H -> 0
-  V _ -> 0
   Z _ -> 1
   O _ subTkp -> 1 + numNames subTkp
   T _ subTkp1 subTkp2 -> 1 + numNames subTkp1 + numNames subTkp2

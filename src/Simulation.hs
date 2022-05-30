@@ -250,7 +250,6 @@ drawOverlay (Overlay c st) = case st of
 drawOverlay' :: Con -> TkPart -> Picture
 drawOverlay' c tkp = case tkp of
   H -> blank
-  V _ -> blank
   Z s -> error "Invalid empty root token"
   O s tp -> Pictures $ drawOverlayFan c tkp ++ drawSuboverlay c tkp
   T s tp tp' -> error "Invalid two-typed root token"
@@ -269,7 +268,6 @@ drawFan subC baseTkp baseR = [] --TODO: DO THIS BUT MAKE IT WORK USING SIMPLE OP
 drawSuboverlay :: Con -> TkPart -> [Picture]
 drawSuboverlay c tkp = case tkp of
   H -> []
-  V s -> []
   Z s -> [drawTkPart c tkp]
   O s tp -> case c of
     Con1 _ ty -> drawTkPart c tkp : case reduceTkPart tkp of

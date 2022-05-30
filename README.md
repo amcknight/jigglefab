@@ -2,15 +2,13 @@
 
 Version 0.1.5
 
-Work in progress. Don't use until v1
+[ChangeLog](ChangeLog.md) | [Roadmap](Roadmap.md)
 
-[ChangeLog](ChangeLog.md) - [Roadmap](Roadmap.md)
-
-Run with `stack run`.
+Work in progress. Run with `stack run`
 
 # Physics
 
-The alternative physics used here is a specialized classical physics where there are two dimensions, all masses are constant, all shapes are circles of the same radius, and the only force is an instant elastic collisions force. I chose this physics so that reactions would be isotropic and would feel more organic compared to cellular automata but also be quite simple.
+The alternative physics used here is a specialized classical physics where there are two dimensions, all masses are constant, all shapes are circles of the same radius, and the only force is an instant elastic collision force. I chose this physics so that reactions would be isotropic and would feel more organic compared to cellular automata but still quite simple.
 
 Additionally, collisions can occur normally, from the outside, but can also occur from the inside. This is because balls can either bounce or pass through depending on the chemical rules. This allows two balls to be inside each other in the sense that each of their center points are inside the other ball. Having every ball be the same size makes sidedness a symmetric relationship, (ie. if A is in B then B is in A). Collisions from the inside are mathematically identical to collisions from the outside.
 
