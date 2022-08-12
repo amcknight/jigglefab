@@ -2,6 +2,9 @@
 
 ## Unreleased changes
 
+## v0.1.5
+- Reverted Overlay but showing an equivalent in the top left
+
 ## v0.1.4
 - Can select elements from overlay
 - Shows the current element in top right
