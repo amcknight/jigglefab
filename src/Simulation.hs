@@ -109,7 +109,6 @@ draw v = case mode v of
 drawEditView :: Chem c => Position -> Double -> EditView c -> Picture
 drawEditView p z ev = Pictures
   [ toTranslate p $ toScale z z $ drawStruct $ struct ev
-  , drawOverlay $ overlay ev
   , drawSidebar metaChem $ tip ev
   ]
 
@@ -241,45 +240,6 @@ drawEdge = Color white . drawSeg . seg
 drawSeg :: Seg -> Picture
 drawSeg (Seg p q) = toLine [p, q]
 
-drawOverlay :: Overlay -> Picture
-drawOverlay (Overlay c st) = case st of
-  Nothing -> blank
-  Just (tkp, pos) -> toTranslate pos $ scale s s $ drawOverlay' c tkp
-  where s = realToFrac overlayThickness
-
-drawOverlay' :: Con -> TkPart -> Picture
-drawOverlay' c tkp = case tkp of
-  H -> blank
-  Z s -> error "Invalid empty root token"
-  O s tp -> Pictures $ drawOverlayFan c tkp ++ drawSuboverlay c tkp
-  T s tp tp' -> error "Invalid two-typed root token"
-
-drawOverlayFan :: Con -> TkPart -> [Picture]
-drawOverlayFan c tkp = case firstHole c tkp of
-  Nothing -> []
-  Just (Con0 _) -> []-- TODO: Is this already displayed, sub-fan? is this impossible?
-  Just (Con1 _ tys) -> drawFan tys tkp $ findRange c tkp
-  Just (Con2 _ tys1 _) -> drawFan tys1 tkp $ findRange c tkp
-
-drawFan :: [Con] -> TkPart -> P Turn -> [Picture]
-drawFan subC baseTkp baseR = [] --TODO: DO THIS BUT MAKE IT WORK USING SIMPLE OPS fmap (\(c,pt) -> drawSlice (tkPart + name c) pt) (zip subC pts)
-  where pts = partitionRange baseR $ length subC
-
-drawSuboverlay :: Con -> TkPart -> [Picture]
-drawSuboverlay c tkp = case tkp of
-  H -> []
-  Z s -> [drawTkPart c tkp]
-  O s tp -> case c of
-    Con1 _ ty -> drawTkPart c tkp : case reduceTkPart tkp of
-      Nothing -> []
-      Just subTkp -> drawSuboverlay c subTkp
-    _ -> error "Incorrect type in drawSuboverlay (1)"
-  T s tp tp' -> case c of
-    Con2 _ ty1 ty2 -> drawTkPart c tkp : case reduceTkPart tkp of
-      Nothing -> []
-      Just subTkp -> drawSuboverlay c subTkp
-    _ -> error "Incorrect type in drawSuboverlay (2)"
-
 drawTkPart :: Con -> TkPart -> Picture 
 drawTkPart c tkp = drawSlice tkp $ findRange c tkp
 
@@ -319,5 +279,15 @@ partitionRange (d0,d1) n = zip turns $ tail turns
 
 -- TODO: Remove all these magic numbers
 drawSidebar :: Con -> Token -> Picture
-drawSidebar c tk = translate (-1850) 1000 $ color (C.toGlossColor (metaChemColor tkp)) $ Pictures [toCircleSolid 50, text $ show tkp]
-  where tkp = toTkPart tk
+drawSidebar c tk = translate (-1850) 1000 $ Pictures pics
+  where
+    (Con1 "" topTy) = c
+    pics = spreadSelections $ map (drawTokenSelector c) (allTokensByType topTy)
+    spreadSelections :: [Picture] -> [Picture]
+    spreadSelections ps = zipWith (\i p -> translate 0 (-40*fromIntegral i) p) [0..length ps] ps
+
+drawTokenSelector :: Con -> Token -> Picture
+drawTokenSelector c tk = tokenColor c tk $ Pictures [toCircleSolid 20, translate 40 (-10) $ scale 0.2 0.2 $ text $ show tk]
+
+tokenColor :: Con -> Token -> Picture -> Picture
+tokenColor c = color . C.toGlossColor . metaChemColor . toTkPart

@@ -6,12 +6,18 @@ module DataType
 , extendTkPart, reduceTkPart
 , numNames
 , firstHole
+, allTokensByType, allTokensByCon
 ) where
 
 data Con = Con0 String | Con1 String Type | Con2 String Type Type deriving Show
 type Type = [Con]
-data Token = Tk0 String | Tk1 String Token | Tk2 String Token Token deriving Show
+data Token = Tk0 String | Tk1 String Token | Tk2 String Token Token
 data TkPart = H | Z String | O String TkPart | T String TkPart TkPart
+
+instance Show Token where
+  show (Tk0 s) = s
+  show (Tk1 s t) = "(" ++ unwords [s, show t] ++ ")"
+  show (Tk2 s t1 t2) = "(" ++ unwords [s, show t1, show t2] ++ ")"
 
 instance Show TkPart where
   show H = "_"
@@ -102,3 +108,11 @@ numNames tkp = case tkp of
   Z _ -> 1
   O _ subTkp -> 1 + numNames subTkp
   T _ subTkp1 subTkp2 -> 1 + numNames subTkp1 + numNames subTkp2
+
+allTokensByType :: Type -> [Token]
+allTokensByType = concatMap allTokensByCon
+
+allTokensByCon :: Con -> [Token]
+allTokensByCon (Con0 n) = [Tk0 n]
+allTokensByCon (Con1 n ty) = map (Tk1 n) (allTokensByType ty)
+allTokensByCon (Con2 n ty1 ty2) = [Tk2 n tk1 tk2 | tk1 <- allTokensByType ty1, tk2 <- allTokensByType ty2]
