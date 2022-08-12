@@ -1,5 +1,5 @@
-resolver: lts-18.27
+resolver: lts-18.28
 extra-deps:
 #  - ../geo2d # for local
  - github: amcknight/geo2d
-   commit: add091d2290b9fb1f7b4b59d8cfa283f4bf14f93 # v0.1 tag
+   commit: d7ddb02679281f9a3839f9b8aebf3caa6cfa3f24 # v0.1.1 tag

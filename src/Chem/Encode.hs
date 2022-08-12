@@ -2,6 +2,7 @@ module Chem.Encode
 ( Encode (..)
 , encoder
 , encodeMetaChem
+, encodeNeutral
 , metaChemColor
 ) where
 
@@ -21,34 +22,37 @@ data Sync = Open | Hold Sig | Emit Sig deriving (Show, Eq, Ord)
 data Dup = Ready | Once Sig | Twice Sig deriving (Show, Eq, Ord)
 data Encode = Wire Active | Port Side Active | Eat | Sync Sync | Dup Dup deriving (Show, Eq, Ord)
 
+encodeNeutral :: Token
+encodeNeutral = Tk1 "Wire" $ Tk0 "Off"
+
 encodeMetaChem :: Con
 encodeMetaChem = topCon encode
   where
-    sig = Type [Con "Red" [], Con "Blue" []]
-    active = Type [Con "Off" [], Con "On" [sig]]
-    side = Type [Con "Out" [], Con "In" []]
-    sync = Type [Con "Open" [], Con "Hold" [sig], Con "Emit" [sig]]
-    dup = Type [Con "Ready" [], Con "Once" [sig], Con "Twice" [sig]]
-    encode = Type [Con "Wire" [active], Con "Port" [side, active], Con "Eat" [], Con "Sync" [sync], Con "Dup" [dup]]
+    sig = [Con0 "Red", Con0 "Blue"]
+    side = [Con0 "Out", Con0 "In"]
+    active = [Con0 "Off", Con1 "On" sig]
+    sync = [Con0 "Open", Con1 "Hold" sig, Con1 "Emit" sig]
+    dup = [Con0 "Ready", Con1 "Once" sig, Con1 "Twice" sig]
+    encode = [Con1 "Wire" active, Con2 "Port" side active, Con0 "Eat", Con1 "Sync" sync, Con1 "Dup" dup]
 
-metaChemColor :: Token -> Color
-metaChemColor ["Wire", "Off"] = grey
-metaChemColor ["Wire", "On", "Red"] = mix red grey
-metaChemColor ["Wire", "On", "Blue"] = mix cyan grey
-metaChemColor ["Port", "Off"] = green 
-metaChemColor ["Port", "On", "Red"] = mix red green
-metaChemColor ["Port", "On", "Blue"] = mix cyan green
-metaChemColor ["Eat"] = black 
-metaChemColor ["Sync", "Open"] = blue 
-metaChemColor ["Sync", "Hold", "Red"] = mix red blue
-metaChemColor ["Sync", "Hold", "Blue"] = mix cyan blue
-metaChemColor ["Sync", "Emit", "Red"] = mix white $ mix red blue
-metaChemColor ["Sync", "Emit", "Blue"] = mix white $ mix cyan blue
-metaChemColor ["Dup", "Ready"] = yellow 
-metaChemColor ["Dup", "Twice", "Red"] = mix red $ mix red yellow
-metaChemColor ["Dup", "Once", "Red"] = mix red yellow
-metaChemColor ["Dup", "Twice", "Blue"] = mix cyan $ mix cyan yellow
-metaChemColor ["Dup", "Once", "Blue"] = mix cyan yellow
+metaChemColor :: TkPart -> Color
+metaChemColor (O "Wire" (Z "Off")) = grey
+metaChemColor (O "Wire" (O "On" (Z "Red"))) = mix red grey
+metaChemColor (O "Wire" (O "On" (Z "Blue"))) = mix cyan grey
+metaChemColor (T "Port" H (Z "Off")) = green 
+metaChemColor (T "Port" H (O "On" (Z "Red"))) = mix red green
+metaChemColor (T "Port" H (O "On" (Z "Blue"))) = mix cyan green
+metaChemColor (Z "Eat") = black 
+metaChemColor (O "Sync" (Z "Open")) = blue 
+metaChemColor (O "Sync" (O "Hold" (Z "Red"))) = mix red blue
+metaChemColor (O "Sync" (O "Hold" (Z "Blue"))) = mix cyan blue
+metaChemColor (O "Sync" (O "Emit" (Z "Red"))) = mix white $ mix red blue
+metaChemColor (O "Sync" (O "Emit" (Z "Blue"))) = mix white $ mix cyan blue
+metaChemColor (O "Dup" (Z "Ready")) = yellow 
+metaChemColor (O "Dup" (O "Twice" (Z "Red"))) = mix red $ mix red yellow
+metaChemColor (O "Dup" (O "Once" (Z "Red"))) = mix red yellow
+metaChemColor (O "Dup" (O "Twice" (Z "Blue"))) = mix cyan $ mix cyan yellow
+metaChemColor (O "Dup" (O "Once" (Z "Blue"))) = mix cyan yellow
 metaChemColor _ = white
 
 instance Chem Encode where

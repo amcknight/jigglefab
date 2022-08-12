@@ -5,7 +5,7 @@ module Simulation
 import Graphics.Gloss.Data.ViewPort (ViewPort)
 import Data.Vector (toList)
 import System.Random (getStdGen, StdGen)
-import Data.List (sortBy)
+import Data.List (sortBy, elemIndex)
 import Data.Fixed (mod')
 import qualified Data.Vector as V
 import qualified Color as C
@@ -46,7 +46,6 @@ import Draw
 import Chem.Stripe
 import Chem.Peano
 import Chem.Encode
-import Overlay
 import DataType
 import Pane.View
 import Pane.EditView
@@ -62,14 +61,15 @@ speeed = 10
 
 metaChem :: Con
 metaChem = encodeMetaChem
+
 neutral :: Token
-neutral = ["Wire", "Off"]
+neutral = encodeNeutral
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
   let struct = turnbuckle
   let (model, nextSeed) = runState (buildModel speeed struct) seed
-  let view = View Run (EditView NoOverlay neutral struct) (RunView nextSeed model) zeroV zooom
+  let view = View Run (EditView neutral Nothing struct) (RunView nextSeed model) zeroV zooom
   let frameRate = 30
   play
     FullScreen
@@ -82,8 +82,8 @@ runSeeded seed = do
 
 event :: Chem c => Graphics.Gloss.Interface.IO.Interact.Event -> View c -> View c
 event e v = case e of
-  EventKey (MouseButton LeftButton) Down _ mpos -> click (pmap realToFrac mpos) metaChem v
-  EventKey (MouseButton RightButton) Down _ mpos -> rightClick (pmap realToFrac mpos) v
+  EventKey (MouseButton LeftButton) Down _ mpos -> lClick (pmap realToFrac mpos) metaChem v
+  EventKey (MouseButton RightButton) Down _ mpos -> rClick (pmap realToFrac mpos) v
   EventKey (Char '=') Down _ _ -> zoomHop Out v
   EventKey (Char '-') Down _ _ -> zoomHop In v
   EventKey (SpecialKey KeySpace) Down _ _ -> togglePlay speeed v
@@ -92,7 +92,7 @@ event e v = case e of
   EventKey (SpecialKey KeyUp) Down _ _ ->    panHop upV v
   EventKey (SpecialKey KeyDown) Down _ _ ->  panHop downV v
   EventKey {} -> v
-  EventMotion mpos -> mouseMove (pmap realToFrac mpos) metaChem v
+  EventMotion mpos -> mMove (pmap realToFrac mpos) metaChem v
   EventResize _ -> v
 
 update :: Chem c => Float -> View c -> View c
@@ -108,8 +108,7 @@ draw v = case mode v of
 drawEditView :: Chem c => Position -> Double -> EditView c -> Picture
 drawEditView p z ev = Pictures
   [ toTranslate p $ toScale z z $ drawStruct $ struct ev
-  , drawOverlay metaChem $ overlay ev
-  , drawSidebar metaChem $ tip ev
+  , drawSidebar metaChem (tip ev) (hover ev)
   ]
 
 drawRunView :: Chem c => Position -> Double -> RunView c -> Picture
@@ -159,7 +158,7 @@ drawParabola focal sweep xBound = case parabolaFromFocus sweep focal of
 
 drawParabCrosses :: Double -> V.Vector Bouy -> [Picture]
 drawParabCrosses sw bs =
-  fmap drawCrossPoints (zipWith (crossPointsFromFoci sw) ps (tail ps)) <> 
+  fmap drawCrossPoints (zipWith (crossPointsFromFoci sw) ps (tail ps)) <>
   fmap drawLiveCrossPoint (zipWith (parabolaCross sw) ps (tail ps))
   where ps = V.toList $ fmap pos bs
 
@@ -240,39 +239,67 @@ drawEdge = Color white . drawSeg . seg
 drawSeg :: Seg -> Picture
 drawSeg (Seg p q) = toLine [p, q]
 
-drawOverlay :: Con -> Overlay -> Picture
-drawOverlay c o = case o of
-  NoOverlay -> blank
-  Overlay pos tk -> toTranslate pos $ scale s s $ Pictures $ drawSuboverlay [] tk c (0,1)
-  where s = realToFrac overlayThinkness
+drawTkPart :: Con -> TkPart -> Picture
+drawTkPart c tkp = drawSlice tkp $ findRange c tkp
 
--- Try this as a Zipper?
-drawSuboverlay :: Token -> Token -> Con -> P Turn -> [Picture]
-drawSuboverlay preTk tk c r = ( case tk of
-  [] -> []
-  (name:postTk) -> case con c name of
-    Nothing -> error "Can't draw Overlay where Token not matching the Con"
-    Just (nextI, nextC) -> drawSuboverlay (preTk ++ [name]) postTk nextC (rs!!nextI)
-  ) ++ zipWith drawSlice subTks rs
-  where
-    subTks = fmap (\n -> preTk ++ [n]) names
-    rs = ranges r $ length names
-    names = conNames c
-
-ranges :: P Turn -> Int -> [P Turn]
-ranges (d0,d1) n = zip turns $ tail turns
-  where turns = fmap (\i -> d0 + (d1-d0) * fromIntegral i / fromIntegral n) [0..n]
-
-drawSlice :: Token -> P Turn -> Picture
-drawSlice tk (f, t) = Pictures
-  [ color (C.toGlossColor (metaChemColor tk)) (toArcSolid d0 d1 rad)
+drawSlice :: TkPart -> P Turn -> Picture
+drawSlice tkp (f, t) = Pictures
+  [ color (C.toGlossColor (metaChemColor tkp)) (toArcSolid d0 d1 rad)
   , color black $ toSectorWire d0 d1 rad
   ]
   where
-    rad = fromIntegral $ length tk
+    rad = fromIntegral $ numNames tkp
     d0 = degrees f
     d1 = degrees t
 
+findRange :: Con -> TkPart -> P Turn
+findRange c tkp = findRange' c tkp (0,1)
+findRange' :: Con -> TkPart -> P Turn -> P Turn
+findRange' c tkp r = case tkp of
+  O s subTkp -> findRange' c subTkp $ nextRange c s r
+  T s subTkp1 subTkp2 -> findRange' c subTkp2 $ findRange' c subTkp1 $ nextRange c s r
+  _ -> r
+
+nextRange :: Con -> String -> P Turn -> P Turn
+nextRange (Con0 _) s r = r
+nextRange (Con1 _ ty) s r = nextRange' ty s r
+nextRange (Con2 _ ty _) s r = nextRange' ty s r
+nextRange' :: [Con] -> String -> P Turn -> P Turn
+nextRange' cs s r = rs!!i
+  where
+    rs = partitionRange r $ length cs
+    i = case elemIndex s $ fmap conName cs of
+      Nothing -> error "Coundn't find elem in nextRange'"
+      Just n -> n
+
+partitionRange :: P Turn -> Int -> [P Turn]
+partitionRange (d0,d1) n = zip turns $ tail turns
+  where turns = fmap (\i -> d0 + (d1-d0) * fromIntegral i / fromIntegral n) [0..n]
+
 -- TODO: Remove all these magic numbers
-drawSidebar :: Con -> Token -> Picture
-drawSidebar c tk = translate 1850 1000 $ color (C.toGlossColor (metaChemColor tk)) $ toCircleSolid 50
+drawSidebar :: Con -> Token -> Maybe Int -> Picture
+drawSidebar c tk hovI = translate (-1850) 1000 $ Pictures pics
+  where
+    (Con1 "" topTy) = c
+    pics = spreadSelections $ zipWith (drawTokenSelector c) tks flairs
+    flairs = zipWith (buildFlair hovI tk) is tks
+    tks = allTokensByType topTy
+    is = [0..length tks]
+    spreadSelections :: [Picture] -> [Picture]
+    spreadSelections ps = zipWith (\i p -> translate 0 (-40*fromIntegral i) p) is ps
+
+buildFlair :: Maybe Int -> Token -> Int -> Token -> Picture
+buildFlair hovI selTk i tk
+  | selTk == tk = color white $ toRectSolid 20 20
+  | hovI == Just i = color black $ toRectSolid 20 20
+  | otherwise = blank
+
+drawTokenSelector :: Con -> Token -> Picture -> Picture
+drawTokenSelector c tk flair = Pictures
+  [ translate 0 0 flair
+  , translate 40 0 $ tokenColor c tk $ toCircleSolid 20
+  , translate 100 (-10) $ scale 0.2 0.2 $ color white $ text $ show tk
+  ]
+
+tokenColor :: Con -> Token -> Picture -> Picture
+tokenColor c = color . C.toGlossColor . metaChemColor . toTkPart

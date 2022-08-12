@@ -1,30 +1,24 @@
 module Pane.EditView
 ( EditView(..)
-, setOverlayOn
 ) where
 
 import Struct
-import Overlay
 import Geometry.Vector
 import DataType
 import Pane.Pane
-import Draw
-import Graphics.Gloss
-import Chem
-import qualified Data.Map as V
-import Voronoi.Fortune
-import Tiling (tileVoronoi)
+import Debug.Trace
 
 data EditView c = EditView
-  { overlay :: Overlay
-  , tip :: Token
+  { tip :: Token
+  , hover :: Maybe Int
   , struct :: Struct c
   }
 
-setOverlayOn :: Position -> EditView c -> EditView c
-setOverlayOn p ev = ev {overlay = Overlay p []}
-
 instance Pane (EditView c) where
-  leftClick _ = id
-  rightClick _ = id
-  mouseMove _ = id
+  leftClick mpos ev = ev
+  rightClick mpos ev = ev
+-- TODO: Remove magic numbers
+  mouseMove (mx, my) ev = if mx > -1880 && mx < -1420 && my < 1020
+    then ev {hover = Just i}
+    else ev {hover = Nothing}
+    where i = floor $ (1020 - my) / 40

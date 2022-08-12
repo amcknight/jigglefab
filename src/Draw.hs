@@ -4,6 +4,7 @@ module Draw
 , toLine, toPolygon
 , toSectorWire, toArcSolid
 , toCircle, toCircleSolid
+, toRectSolid
 ) where
 import Geometry.Vector
 import Graphics.Gloss
@@ -32,3 +33,6 @@ toCircle = circle . realToFrac
 
 toCircleSolid :: Double -> Picture
 toCircleSolid = circleSolid . realToFrac
+
+toRectSolid :: Double -> Double -> Picture
+toRectSolid w h = rectangleSolid (realToFrac w) (realToFrac h)

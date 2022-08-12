@@ -1,48 +1,125 @@
 module DataType
-( Type(..), Con(..), Token(..)
-, topCon, conNames, con, getCon, subcons
-, isLeaf, isLeafAt
+( Con(..), Type, Token(..), TkPart(..)
+, conName
+, topCon
+, toToken, toTkPart
+, extendTkPart, reduceTkPart
+, numNames
+, firstHole
+, allTokensByType, allTokensByCon
+, tokenFromI
 ) where
 
-data Con = Con { name :: String, ts :: [Type] }
-newtype Type = Type { cs :: [Con] }
-type Token = [String]
+data Con = Con0 String | Con1 String Type | Con2 String Type Type deriving Show
+type Type = [Con]
+data Token = Tk0 String | Tk1 String Token | Tk2 String Token Token deriving Eq
+data TkPart = H | Z String | O String TkPart | T String TkPart TkPart
 
--- TODO: show these datatypes better
-instance Show Con where
-  show c = unwords $ ["Con", name c] ++ fmap show (ts c)
-instance Show Type where
-  show t = unwords $ "Type" : fmap show (cs t)
+instance Show Token where
+  show (Tk0 s) = s
+  show (Tk1 s t) = "(" ++ unwords [s, show t] ++ ")"
+  show (Tk2 s t1 t2) = "(" ++ unwords [s, show t1, show t2] ++ ")"
+
+instance Show TkPart where
+  show H = "_"
+  show (Z s) = s
+  show (O s t) = "(" ++ unwords [s, show t] ++ ")"
+  show (T s t1 t2) = "(" ++ unwords [s, show t1, show t2] ++ ")"
+
+conName :: Con -> String
+conName (Con0 n) = n
+conName (Con1 n _) = n
+conName (Con2 n _ _) = n
+
+con :: Type -> String -> Con
+con cs n = case filter ((== n) . conName) cs of
+  [] -> error "Should only find one Con. Found none."
+  [c] -> c
+  _ -> error "Should only find one Con. Found more."
 
 topCon :: Type -> Con
-topCon ty = Con "" [ty]
+topCon = Con1 ""
 
-isTopCon :: Con -> Bool
-isTopCon (Con "" [_]) = True
-isTopCon _ = False
+toToken :: TkPart -> Maybe Token
+toToken tkp = case tkp of
+  H -> Nothing
+  Z s -> Just $ Tk0 s
+  O s tp -> case toToken tp of
+    Nothing -> Nothing
+    Just t -> Just $ Tk1 s t
+  T s tp1 tp2 -> case toToken tp1 of
+    Nothing -> Nothing
+    Just t1 -> case toToken tp2 of
+      Nothing -> Nothing
+      Just t2 -> Just $ Tk2 s t1 t2
 
-conNames :: Con -> [String]
-conNames c = fmap name $ concatMap cs $ ts c
+toTkPart :: Token -> TkPart
+toTkPart (Tk0 s) = Z s
+toTkPart (Tk1 s t) = O s $ toTkPart t
+toTkPart (Tk2 s t1 t2) = T s (toTkPart t1) (toTkPart t2)
 
-con :: Con -> String -> Maybe (Int, Con)
-con c = con' (concatMap cs (ts c)) 0
-con' :: [Con] -> Int -> String -> Maybe (Int, Con)
-con' [] _ n' = Nothing
-con' (c@(Con n _) : cs) i n' = if n == n'
-  then Just (i, c)
-  else con' cs (i+1) n'
+extendTkPart :: Con -> TkPart -> Maybe TkPart
+extendTkPart c tkp = case tkp of
+  H -> Just $ toHole c
+  Z _ -> Nothing
+  O s subTkp -> case c of
+    Con1 _ ty -> (Just . O s) =<< extendTkPart (con ty s) subTkp
+    _ -> error "Type error: TkPart and Con don't match (1)"
+  T s subTkp1 subTkp2 -> case c of
+    Con2 _ ty1 ty2 -> case extendTkPart (con ty1 s) subTkp1 of
+      Nothing -> case extendTkPart (con ty2 s) subTkp2 of
+        Nothing -> Nothing
+        Just newTkp -> Just $ T s subTkp1 newTkp
+      Just newTkp -> Just $ T s newTkp subTkp2
+    _ -> error "Type error: TkPart and Con don't match (2)"
 
-getCon :: Con -> Token -> Maybe Con
-getCon c [] = Just c
-getCon c (n:ns) = case con c n of
-  Nothing -> Nothing
-  Just (_, scon) -> getCon scon ns
+reduceTkPart :: TkPart -> Maybe TkPart
+reduceTkPart H = Nothing
+reduceTkPart (Z _) = Just H
+reduceTkPart (O s t) = case reduceTkPart t of
+  Nothing -> Just H
+  Just tp -> Just tp
+reduceTkPart (T s t1 t2) = case reduceTkPart t2 of
+  Nothing -> case reduceTkPart t1 of
+    Nothing -> Just H
+    Just tp -> Just tp
+  Just tp -> Just tp
 
-subcons :: Con -> [Con]
-subcons (Con _ tys) = concatMap cs tys
+toHole :: Con -> TkPart
+toHole (Con0 s) = Z s
+toHole (Con1 s _) = O s H
+toHole (Con2 s _ _) = T s H H
 
-isLeafAt :: Con -> Token -> Bool
-isLeafAt c tk = maybe False isLeaf $ getCon c tk
+firstHole :: Con -> TkPart -> Maybe Con
+firstHole c tkp = case tkp of
+  H -> Just c
+  Z _ -> Nothing
+  O s subTkp -> case c of
+    Con1 _ ty -> firstHole (con ty s) subTkp
+    _' -> error "Type error: TkPart and Con don't match (1)"
+  T s subTkp1 subTkp2 -> case c of
+    Con2 _ ty1 ty2 -> case firstHole (con ty1 s) subTkp1 of
+      Nothing -> firstHole (con ty2 s) subTkp2
+      Just con -> Just con
+    _ -> error "Type error: TkPart and Con don't match (2)"
 
-isLeaf :: Con -> Bool
-isLeaf (Con _ ts) = null $ concatMap cs ts
+numNames :: TkPart -> Int
+numNames tkp = case tkp of
+  H -> 0
+  Z _ -> 1
+  O _ subTkp -> 1 + numNames subTkp
+  T _ subTkp1 subTkp2 -> 1 + numNames subTkp1 + numNames subTkp2
+
+allTokensByType :: Type -> [Token]
+allTokensByType = concatMap allTokensByCon
+
+allTokensByCon :: Con -> [Token]
+allTokensByCon (Con0 n) = [Tk0 n]
+allTokensByCon (Con1 n ty) = map (Tk1 n) (allTokensByType ty)
+allTokensByCon (Con2 n ty1 ty2) = [Tk2 n tk1 tk2 | tk1 <- allTokensByType ty1, tk2 <- allTokensByType ty2]
+
+tokenFromI :: Type -> Int -> Maybe Token
+tokenFromI ty i = if length tks >= i
+  then Nothing
+  else Just $ tks !! i
+  where tks = allTokensByType ty

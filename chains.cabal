@@ -44,7 +44,6 @@ library
       HitTime
       Model
       Orb
-      Overlay
       Pane.EditView
       Pane.Pane
       Pane.RunView
