@@ -46,7 +46,6 @@ import Draw
 import Chem.Stripe
 import Chem.Peano
 import Chem.Encode
-import Overlay
 import DataType
 import Pane.View
 import Pane.EditView
@@ -70,7 +69,7 @@ runSeeded :: StdGen -> IO ()
 runSeeded seed = do
   let struct = turnbuckle
   let (model, nextSeed) = runState (buildModel speeed struct) seed
-  let view = View Run (EditView (Overlay metaChem Nothing) neutral struct) (RunView nextSeed model) zeroV zooom
+  let view = View Run (EditView neutral struct) (RunView nextSeed model) zeroV zooom
   let frameRate = 30
   play
     FullScreen

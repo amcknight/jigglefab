@@ -3,7 +3,6 @@ module Pane.View
   , Mode(..)
   , panHop, zoomHop
   , togglePlay
-  , setOverlayOn
   , lClick, rClick
   , mMove
   ) where
@@ -15,7 +14,6 @@ import Form
 import Time
 import Control.Monad.State
 import Chem
-import Overlay
 import DataType
 import Pane.EditView
 import Pane.RunView
@@ -49,7 +47,7 @@ zoomHop s view = case s of
 togglePlay :: Chem c => Speed -> View c -> View c
 togglePlay sp v = case mode v of
   Edit -> v {mode = Run, runView = rv {model = evalState (buildModel sp (struct ev)) (seed rv)}}
-  Run ->  v {mode = Edit, editView = ev {overlay = (overlay ev) {overlayState = Nothing}, struct = extractStruct $ form $ model rv}}
+  Run ->  v {mode = Edit, editView = ev {struct = extractStruct $ form $ model rv}}
   where
     ev = editView v
     rv = runView v
