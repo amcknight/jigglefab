@@ -69,7 +69,7 @@ runSeeded :: StdGen -> IO ()
 runSeeded seed = do
   let struct = turnbuckle
   let (model, nextSeed) = runState (buildModel speeed struct) seed
-  let view = View Run (EditView neutral struct) (RunView nextSeed model) zeroV zooom
+  let view = View Run (EditView neutral Nothing struct) (RunView nextSeed model) zeroV zooom
   let frameRate = 30
   play
     FullScreen
@@ -108,7 +108,7 @@ draw v = case mode v of
 drawEditView :: Chem c => Position -> Double -> EditView c -> Picture
 drawEditView p z ev = Pictures
   [ toTranslate p $ toScale z z $ drawStruct $ struct ev
-  , drawSidebar metaChem $ tip ev
+  , drawSidebar metaChem (tip ev) (hover ev)
   ]
 
 drawRunView :: Chem c => Position -> Double -> RunView c -> Picture
@@ -158,7 +158,7 @@ drawParabola focal sweep xBound = case parabolaFromFocus sweep focal of
 
 drawParabCrosses :: Double -> V.Vector Bouy -> [Picture]
 drawParabCrosses sw bs =
-  fmap drawCrossPoints (zipWith (crossPointsFromFoci sw) ps (tail ps)) <> 
+  fmap drawCrossPoints (zipWith (crossPointsFromFoci sw) ps (tail ps)) <>
   fmap drawLiveCrossPoint (zipWith (parabolaCross sw) ps (tail ps))
   where ps = V.toList $ fmap pos bs
 
@@ -239,7 +239,7 @@ drawEdge = Color white . drawSeg . seg
 drawSeg :: Seg -> Picture
 drawSeg (Seg p q) = toLine [p, q]
 
-drawTkPart :: Con -> TkPart -> Picture 
+drawTkPart :: Con -> TkPart -> Picture
 drawTkPart c tkp = drawSlice tkp $ findRange c tkp
 
 drawSlice :: TkPart -> P Turn -> Picture
@@ -252,7 +252,7 @@ drawSlice tkp (f, t) = Pictures
     d0 = degrees f
     d1 = degrees t
 
-findRange :: Con -> TkPart -> P Turn 
+findRange :: Con -> TkPart -> P Turn
 findRange c tkp = findRange' c tkp (0,1)
 findRange' :: Con -> TkPart -> P Turn -> P Turn
 findRange' c tkp r = case tkp of
@@ -277,16 +277,29 @@ partitionRange (d0,d1) n = zip turns $ tail turns
   where turns = fmap (\i -> d0 + (d1-d0) * fromIntegral i / fromIntegral n) [0..n]
 
 -- TODO: Remove all these magic numbers
-drawSidebar :: Con -> Token -> Picture
-drawSidebar c tk = translate (-1850) 1000 $ Pictures pics
+drawSidebar :: Con -> Token -> Maybe Int -> Picture
+drawSidebar c tk hovI = translate (-1850) 1000 $ Pictures pics
   where
     (Con1 "" topTy) = c
-    pics = spreadSelections $ map (drawTokenSelector c) (allTokensByType topTy)
+    pics = spreadSelections $ zipWith (drawTokenSelector c) tks flairs
+    flairs = zipWith (buildFlair hovI tk) is tks
+    tks = allTokensByType topTy
+    is = [0..length tks]
     spreadSelections :: [Picture] -> [Picture]
-    spreadSelections ps = zipWith (\i p -> translate 0 (-40*fromIntegral i) p) [0..length ps] ps
+    spreadSelections ps = zipWith (\i p -> translate 0 (-40*fromIntegral i) p) is ps
 
-drawTokenSelector :: Con -> Token -> Picture
-drawTokenSelector c tk = tokenColor c tk $ Pictures [toCircleSolid 20, translate 40 (-10) $ scale 0.2 0.2 $ text $ show tk]
+buildFlair :: Maybe Int -> Token -> Int -> Token -> Picture
+buildFlair hovI selTk i tk
+  | selTk == tk = color white $ toRectSolid 20 20
+  | hovI == Just i = color black $ toRectSolid 20 20
+  | otherwise = blank
+
+drawTokenSelector :: Con -> Token -> Picture -> Picture
+drawTokenSelector c tk flair = Pictures
+  [ translate 0 0 flair
+  , translate 40 0 $ tokenColor c tk $ toCircleSolid 20
+  , translate 100 (-10) $ scale 0.2 0.2 $ color white $ text $ show tk
+  ]
 
 tokenColor :: Con -> Token -> Picture -> Picture
 tokenColor c = color . C.toGlossColor . metaChemColor . toTkPart

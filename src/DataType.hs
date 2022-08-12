@@ -7,11 +7,12 @@ module DataType
 , numNames
 , firstHole
 , allTokensByType, allTokensByCon
+, tokenFromI
 ) where
 
 data Con = Con0 String | Con1 String Type | Con2 String Type Type deriving Show
 type Type = [Con]
-data Token = Tk0 String | Tk1 String Token | Tk2 String Token Token
+data Token = Tk0 String | Tk1 String Token | Tk2 String Token Token deriving Eq
 data TkPart = H | Z String | O String TkPart | T String TkPart TkPart
 
 instance Show Token where
@@ -116,3 +117,9 @@ allTokensByCon :: Con -> [Token]
 allTokensByCon (Con0 n) = [Tk0 n]
 allTokensByCon (Con1 n ty) = map (Tk1 n) (allTokensByType ty)
 allTokensByCon (Con2 n ty1 ty2) = [Tk2 n tk1 tk2 | tk1 <- allTokensByType ty1, tk2 <- allTokensByType ty2]
+
+tokenFromI :: Type -> Int -> Maybe Token
+tokenFromI ty i = if length tks >= i
+  then Nothing
+  else Just $ tks !! i
+  where tks = allTokensByType ty
