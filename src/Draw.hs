@@ -1,6 +1,7 @@
 module Draw
 ( toTranslate
 , toScale
+, toFrame
 , toLine, toPolygon
 , toSectorWire, toArcSolid
 , toCircle, toCircleSolid
@@ -9,12 +10,16 @@ module Draw
 import Geometry.Vector
 import Graphics.Gloss
 import Pair
+import Pane.Frame
 
 toTranslate :: Position -> Picture -> Picture
 toTranslate = uncurry translate . pmap realToFrac
 
-toScale :: Double -> Double -> Picture -> Picture
-toScale x y = scale (realToFrac x) (realToFrac y)
+toScale :: Double -> Picture -> Picture
+toScale z = scale (realToFrac z) (realToFrac z)
+
+toFrame :: Frame -> Picture -> Picture
+toFrame (Frame p z) = toTranslate p . toScale z
 
 toLine :: [Position] -> Picture
 toLine = line . fmap (pmap realToFrac)

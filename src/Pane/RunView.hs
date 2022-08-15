@@ -11,6 +11,6 @@ data RunView c = RunView
   }
 
 instance Pane (RunView c) where
-  leftClick _ = id
-  rightClick _ = id
-  mouseMove _ = id
+  leftClick f mpos rv = rv
+  rightClick f mpos rv = rv
+  mouseMove f mpos rv = rv

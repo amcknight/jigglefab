@@ -45,6 +45,7 @@ library
       Model
       Orb
       Pane.EditView
+      Pane.Frame
       Pane.Pane
       Pane.RunView
       Pane.View

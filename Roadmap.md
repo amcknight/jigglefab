@@ -14,8 +14,8 @@ Subject to drastic changes. Consider these rough thoughts about future functiona
 - Encoding of chemistries
 - Encoding of models
 - General Editor
-- - Select from different chemistries
 - - Save and Load models
+- - Select from different chemistries
 - - Draw out wire chains
 - A set of initial demo capacities
 

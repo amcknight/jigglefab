@@ -50,12 +50,14 @@ import DataType
 import Pane.View
 import Pane.EditView
 import Pane.RunView
+import Pane.Frame
 
 run :: IO ()
 run = runSeeded =<< getStdGen
 
-zooom :: Double
-zooom = 50
+initialFrame :: Frame
+initialFrame = Frame zeroV 50
+
 speeed :: Double
 speeed = 10
 
@@ -69,7 +71,7 @@ runSeeded :: StdGen -> IO ()
 runSeeded seed = do
   let struct = turnbuckle
   let (model, nextSeed) = runState (buildModel speeed struct) seed
-  let view = View Run (EditView 0 Nothing struct) (RunView nextSeed model) zeroV zooom
+  let view = View Run (EditView 0 Nothing Nothing struct) (RunView nextSeed model) initialFrame
   let frameRate = 30
   play
     FullScreen
@@ -84,15 +86,15 @@ event :: Chem c => Graphics.Gloss.Interface.IO.Interact.Event -> View c -> View 
 event e v = case e of
   EventKey (MouseButton LeftButton) Down _ mpos -> lClick (pmap realToFrac mpos) metaChem v
   EventKey (MouseButton RightButton) Down _ mpos -> rClick (pmap realToFrac mpos) v
-  EventKey (Char '=') Down _ _ -> zoomHop Out v
-  EventKey (Char '-') Down _ _ -> zoomHop In v
+  EventKey (Char '=') Down _ _ -> v {frame = zoomHop Out $ frame v}
+  EventKey (Char '-') Down _ _ -> v {frame = zoomHop In $ frame v}
   EventKey (SpecialKey KeySpace) Down _ _ -> togglePlay speeed v
-  EventKey (SpecialKey KeyLeft) Down _ _ ->  panHop leftV v
-  EventKey (SpecialKey KeyRight) Down _ _ -> panHop rightV v
-  EventKey (SpecialKey KeyUp) Down _ _ ->    panHop upV v
-  EventKey (SpecialKey KeyDown) Down _ _ ->  panHop downV v
+  EventKey (SpecialKey KeyLeft) Down _ _ ->  v {frame = panHop leftV $ frame v}
+  EventKey (SpecialKey KeyRight) Down _ _ -> v {frame = panHop rightV $ frame v}
+  EventKey (SpecialKey KeyUp) Down _ _ ->    v {frame = panHop upV $ frame v}
+  EventKey (SpecialKey KeyDown) Down _ _ ->  v {frame = panHop downV $ frame v}
   EventKey {} -> v
-  EventMotion mpos -> mMove (pmap realToFrac mpos) metaChem v
+  EventMotion mpos -> mMove (pmap realToFrac mpos) v
   EventResize _ -> v
 
 update :: Chem c => Float -> View c -> View c
@@ -102,29 +104,31 @@ update dt v = case mode v of
 
 draw :: Chem c => View c -> Picture
 draw v = case mode v of
-  Edit -> drawEditView (pos v) (zoom v) (editView v)
-  Run -> drawRunView (pos v) (zoom v) (runView v)
+  Edit -> drawEditView (frame v) (editView v)
+  Run -> drawRunView (frame v) (runView v)
 
-drawEditView :: Chem c => Position -> Double -> EditView c -> Picture
-drawEditView p z ev = Pictures
-  [ toTranslate p $ toScale z z $ drawStruct $ struct ev
-  , drawSidebar metaChem (tip ev) (hover ev)
+drawEditView :: Chem c => Frame -> EditView c -> Picture
+drawEditView f ev = Pictures
+  [ drawStruct f $ struct ev
+  , drawOrbHover (orbHover ev) (struct ev)
+  , drawSidebar metaChem (tip ev) (menuHover ev)
   ]
 
-drawRunView :: Chem c => Position -> Double -> RunView c -> Picture
-drawRunView p z rv = toTranslate p $ toScale z z $ drawModel $ model rv
+drawRunView :: Chem c => Frame -> RunView c -> Picture
+drawRunView f rv = toFrame f $ drawModel $ model rv
 
-drawStruct :: Chem c => Struct c -> Picture
-drawStruct (Struct walls os) = Pictures $
+drawStruct :: Chem c => Frame -> Struct c -> Picture
+drawStruct f (Struct walls os) = toFrame f $ Pictures $
   fmap (drawWall yellow) walls
   <> fmap drawOrb os
   <> fmap drawEdge es
   <> fmap (drawOrbWedge (V.fromList os)) ws
-  -- <> [drawBeach (V.fromList os) (processBeach (initialBeach ps) 4)]
+  <> beach
   where
     es = voronoi ps
     ps = fmap pos os
     ws = tileVoronoi (V.fromList ps) es
+    beach = [drawBeach (V.fromList os) (processBeach (initialBeach ps) 4)]
 
 drawBeach :: Chem c => V.Vector (Orb c) -> Beach -> Picture
 drawBeach os (Beach sw _ es bs rs) = Pictures $
@@ -145,13 +149,13 @@ drawEvent (CrossEvent (Cross (Geometry.Circle.Circle pos rad) i)) =
   Color g (toTranslate pos (toCircle rad)) <> drawPosAt pos g
   where g = greyN 0.5
 
-drawBouy :: Chem c => V.Vector (Orb c) -> Double -> (Double, Double) -> Bouy -> Picture
-drawBouy cs sweep xBound (Bouy pos@(x,y) i) = drawPosAt pos c <> Color c p
+drawBouy :: Chem c => V.Vector (Orb c) -> Double -> P Double -> Bouy -> Picture
+drawBouy os sweep xBound (Bouy pos@(x,y) i) = drawPosAt pos c <> Color c p
   where
     p = drawParabola pos sweep xBound
-    c = C.toGlossColor $ chemColor $ orbChem $ cs V.! i
+    c = C.toGlossColor $ chemColor $ orbChem $ os V.! i
 
-drawParabola :: Position -> Double -> (Double, Double) -> Picture
+drawParabola :: Position -> Double -> P Double -> Picture
 drawParabola focal sweep xBound = case parabolaFromFocus sweep focal of
   Nothing -> trace "Warning: blank parabola" blank
   Just p -> toLine $ parabPoss p xBound 0.01 -- TODO: Should be sensitive to zooom
@@ -175,7 +179,7 @@ drawSweep :: Double -> [Picture]
 drawSweep h = [Color black $ toLine [(-100000, h), (100000, h)]]
 
 drawPosAt :: Position -> Color -> Picture
-drawPosAt pos c = Color c $ toTranslate pos $ toCircleSolid $ 5/zooom
+drawPosAt pos c = Color c $ toTranslate pos $ toCircleSolid 1
 
 drawOrbWedge :: Chem c => V.Vector (Orb c) -> Wedge -> Picture
 drawOrbWedge os (PieWedge i p) = Color (colorFromOrbI os i) $ drawPie p
@@ -212,7 +216,7 @@ drawBall :: Chem c => Ball c -> Picture
 drawBall (Ball (Point p _) c) = drawOrb $ Orb p c
 
 drawOrb :: Chem c => Orb c -> Picture
-drawOrb (Orb p chem) = toTranslate p . Color c $ toCircleSolid (5/zooom) <> circle 1
+drawOrb (Orb p chem) = toTranslate p . Color c $ toCircleSolid 1 <> circle 1
   where c = C.toGlossColor $ chemColor chem
 
 drawWall :: Color -> Wall -> Picture
@@ -275,6 +279,10 @@ nextRange' cs s r = rs!!i
 partitionRange :: P Turn -> Int -> [P Turn]
 partitionRange (d0,d1) n = zip turns $ tail turns
   where turns = fmap (\i -> d0 + (d1-d0) * fromIntegral i / fromIntegral n) [0..n]
+
+drawOrbHover :: Maybe (Orb c) -> Struct c -> Picture
+drawOrbHover Nothing _ = blank
+drawOrbHover (Just o) _ = toCircleSolid 20
 
 -- TODO: Remove all these magic numbers
 drawSidebar :: Con -> Int -> Maybe Int -> Picture
