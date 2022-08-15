@@ -69,7 +69,7 @@ runSeeded :: StdGen -> IO ()
 runSeeded seed = do
   let struct = turnbuckle
   let (model, nextSeed) = runState (buildModel speeed struct) seed
-  let view = View Run (EditView neutral Nothing struct) (RunView nextSeed model) zeroV zooom
+  let view = View Run (EditView 0 Nothing struct) (RunView nextSeed model) zeroV zooom
   let frameRate = 30
   play
     FullScreen
@@ -277,20 +277,20 @@ partitionRange (d0,d1) n = zip turns $ tail turns
   where turns = fmap (\i -> d0 + (d1-d0) * fromIntegral i / fromIntegral n) [0..n]
 
 -- TODO: Remove all these magic numbers
-drawSidebar :: Con -> Token -> Maybe Int -> Picture
-drawSidebar c tk hovI = translate (-1850) 1000 $ Pictures pics
+drawSidebar :: Con -> Int -> Maybe Int -> Picture
+drawSidebar c selI hovI = translate (-1850) 1000 $ Pictures pics
   where
     (Con1 "" topTy) = c
     pics = spreadSelections $ zipWith (drawTokenSelector c) tks flairs
-    flairs = zipWith (buildFlair hovI tk) is tks
+    flairs = zipWith (buildFlair hovI selI) is tks
     tks = allTokensByType topTy
     is = [0..length tks]
     spreadSelections :: [Picture] -> [Picture]
     spreadSelections ps = zipWith (\i p -> translate 0 (-40*fromIntegral i) p) is ps
 
-buildFlair :: Maybe Int -> Token -> Int -> Token -> Picture
-buildFlair hovI selTk i tk
-  | selTk == tk = color white $ toRectSolid 20 20
+buildFlair :: Maybe Int -> Int -> Int -> Token -> Picture
+buildFlair hovI selI i tk
+  | selI == i = color white $ toRectSolid 20 20
   | hovI == Just i = color black $ toRectSolid 20 20
   | otherwise = blank
 

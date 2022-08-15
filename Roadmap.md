@@ -5,7 +5,7 @@ Subject to drastic changes. Consider these rough thoughts about future functiona
 - Common chemistry representation type
 - Basic Editor
 - - Place orbs individually
-- - Show hover-over outline of orbs and overlay options
+- - Show hover-over outline of orbs before selecting
 - - Modify an orb to have selected chemistry
 - - Move orbs
 - - Delete orbs
