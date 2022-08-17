@@ -55,9 +55,6 @@ import Pane.Frame
 run :: IO ()
 run = runSeeded =<< getStdGen
 
-initialFrame :: Frame
-initialFrame = Frame zeroV 50
-
 speeed :: Double
 speeed = 10
 
@@ -71,6 +68,7 @@ runSeeded :: StdGen -> IO ()
 runSeeded seed = do
   let struct = turnbuckle
   let (model, nextSeed) = runState (buildModel speeed struct) seed
+  let initialFrame = Frame zeroV 50
   let view = View Run (EditView 0 Nothing Nothing struct) (RunView nextSeed model) initialFrame
   let frameRate = 30
   play
@@ -128,12 +126,12 @@ drawStruct f (Struct walls os) = toFrame f $ Pictures $
     es = voronoi ps
     ps = fmap pos os
     ws = tileVoronoi (V.fromList ps) es
-    beach = [drawBeach (V.fromList os) (processBeach (initialBeach ps) 4)]
+    beach = [drawBeach (zoom f) (V.fromList os) (processBeach (initialBeach ps) 4)]
 
-drawBeach :: Chem c => V.Vector (Orb c) -> Beach -> Picture
-drawBeach os (Beach sw _ es bs rs) = Pictures $
-  fmap drawEvent es <>
-  zipWith (drawBouy os sw) xBounds (V.toList bs) <>
+drawBeach :: Chem c => Double -> V.Vector (Orb c) -> Beach -> Picture
+drawBeach z os (Beach sw _ es bs rs) = Pictures $
+  fmap (drawEvent z) es <>
+  zipWith (drawBouy z os sw) xBounds (V.toList bs) <>
   fmap drawEdge (edgesFromRays b rs) <>
   drawSweep sw
   where
@@ -143,14 +141,14 @@ drawBeach os (Beach sw _ es bs rs) = Pictures $
     pcs = filter (\x -> x > minX b && x < maxX b) $ parabolaCrossXs sw bps
     xBounds = zip (minX b : pcs) (pcs ++ [maxX b])
 
-drawEvent :: Voronoi.Event.Event -> Picture
-drawEvent (BouyEvent b) = drawPosAt (pos b) cyan
-drawEvent (CrossEvent (Cross (Geometry.Circle.Circle pos rad) i)) =
-  Color g (toTranslate pos (toCircle rad)) <> drawPosAt pos g
+drawEvent :: Double -> Voronoi.Event.Event -> Picture
+drawEvent z (BouyEvent b) = drawPosAt z (pos b) cyan
+drawEvent z (CrossEvent (Cross (Geometry.Circle.Circle pos rad) i)) =
+  Color g (toTranslate pos (toCircle rad)) <> drawPosAt z pos g
   where g = greyN 0.5
 
-drawBouy :: Chem c => V.Vector (Orb c) -> Double -> P Double -> Bouy -> Picture
-drawBouy os sweep xBound (Bouy pos@(x,y) i) = drawPosAt pos c <> Color c p
+drawBouy :: Chem c => Double -> V.Vector (Orb c) -> Double -> P Double -> Bouy -> Picture
+drawBouy z os sweep xBound (Bouy pos@(x,y) i) = drawPosAt z pos c <> Color c p
   where
     p = drawParabola pos sweep xBound
     c = C.toGlossColor $ chemColor $ orbChem $ os V.! i
@@ -160,26 +158,26 @@ drawParabola focal sweep xBound = case parabolaFromFocus sweep focal of
   Nothing -> trace "Warning: blank parabola" blank
   Just p -> toLine $ parabPoss p xBound 0.01 -- TODO: Should be sensitive to zooom
 
-drawParabCrosses :: Double -> V.Vector Bouy -> [Picture]
-drawParabCrosses sw bs =
-  fmap drawCrossPoints (zipWith (crossPointsFromFoci sw) ps (tail ps)) <>
-  fmap drawLiveCrossPoint (zipWith (parabolaCross sw) ps (tail ps))
+drawParabCrosses :: Double -> Double -> V.Vector Bouy -> [Picture]
+drawParabCrosses z sw bs =
+  fmap (drawCrossPoints z) (zipWith (crossPointsFromFoci sw) ps (tail ps)) <>
+  fmap (drawLiveCrossPoint z) (zipWith (parabolaCross sw) ps (tail ps))
   where ps = V.toList $ fmap pos bs
 
-drawCrossPoints :: CrossPoints -> Picture
-drawCrossPoints (OneCross p) = drawPosAt p blue
-drawCrossPoints (TwoCross p q) = drawPosAt p blue <> drawPosAt p blue
-drawCrossPoints NoCross = error "Drawing non-points"
-drawCrossPoints InfinteCross = error "Drawing infinite-points"
+drawCrossPoints :: Double -> CrossPoints -> Picture
+drawCrossPoints z (OneCross p) = drawPosAt z p blue
+drawCrossPoints z (TwoCross p q) = drawPosAt z p blue <> drawPosAt z p blue
+drawCrossPoints _ NoCross = error "Drawing non-points"
+drawCrossPoints _ InfinteCross = error "Drawing infinite-points"
 
-drawLiveCrossPoint :: Position -> Picture
-drawLiveCrossPoint p = drawPosAt p magenta
+drawLiveCrossPoint :: Double -> Position -> Picture
+drawLiveCrossPoint z p = drawPosAt z p magenta
 
 drawSweep :: Double -> [Picture]
 drawSweep h = [Color black $ toLine [(-100000, h), (100000, h)]]
 
-drawPosAt :: Position -> Color -> Picture
-drawPosAt pos c = Color c $ toTranslate pos $ toCircleSolid 1
+drawPosAt :: Double -> Position -> Color -> Picture
+drawPosAt z pos c = Color c $ toTranslate pos $ toCircleSolid $ 5/z
 
 drawOrbWedge :: Chem c => V.Vector (Orb c) -> Wedge -> Picture
 drawOrbWedge os (PieWedge i p) = Color (colorFromOrbI os i) $ drawPie p
