@@ -14,7 +14,6 @@ import Form
 import Time
 import Control.Monad.State
 import Chem
-import DataType
 import Pane.EditView
 import Pane.RunView
 import Pane.Pane

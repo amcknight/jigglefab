@@ -37,7 +37,6 @@ library
       Chem.Stripe
       Chem.Valence
       Color
-      DataType
       Draw
       Enumer
       Form

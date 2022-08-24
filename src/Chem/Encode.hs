@@ -1,9 +1,12 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE StandaloneDeriving #-}
 module Chem.Encode
 ( Encode (..)
 , encoder
-, encodeMetaChem
-, encodeNeutral
-, metaChemColor
+-- , encodeMetaChem
+-- , encodeNeutral
+-- , metaChemColor
 ) where
 
 import Chem
@@ -14,46 +17,14 @@ import Color
 import Geometry.Vector
 import Struct
 import Orb
-import DataType
+import GHC.Generics
+import Enumer
 
-data Sig = Red | Blue deriving (Show, Eq, Ord)
-data Active = Off | On Sig deriving (Show, Eq, Ord)
-data Sync = Open | Hold Sig | Emit Sig deriving (Show, Eq, Ord)
-data Dup = Ready | Once Sig | Twice Sig deriving (Show, Eq, Ord)
-data Encode = Wire Active | Port Side Active | Eat | Sync Sync | Dup Dup deriving (Show, Eq, Ord)
-
-encodeNeutral :: Token
-encodeNeutral = Tk1 "Wire" $ Tk0 "Off"
-
-encodeMetaChem :: Con
-encodeMetaChem = topCon encode
-  where
-    sig = [Con0 "Red", Con0 "Blue"]
-    side = [Con0 "Out", Con0 "In"]
-    active = [Con0 "Off", Con1 "On" sig]
-    sync = [Con0 "Open", Con1 "Hold" sig, Con1 "Emit" sig]
-    dup = [Con0 "Ready", Con1 "Once" sig, Con1 "Twice" sig]
-    encode = [Con1 "Wire" active, Con2 "Port" side active, Con0 "Eat", Con1 "Sync" sync, Con1 "Dup" dup]
-
-metaChemColor :: TkPart -> Color
-metaChemColor (O "Wire" (Z "Off")) = grey
-metaChemColor (O "Wire" (O "On" (Z "Red"))) = mix red grey
-metaChemColor (O "Wire" (O "On" (Z "Blue"))) = mix cyan grey
-metaChemColor (T "Port" H (Z "Off")) = green 
-metaChemColor (T "Port" H (O "On" (Z "Red"))) = mix red green
-metaChemColor (T "Port" H (O "On" (Z "Blue"))) = mix cyan green
-metaChemColor (Z "Eat") = black 
-metaChemColor (O "Sync" (Z "Open")) = blue 
-metaChemColor (O "Sync" (O "Hold" (Z "Red"))) = mix red blue
-metaChemColor (O "Sync" (O "Hold" (Z "Blue"))) = mix cyan blue
-metaChemColor (O "Sync" (O "Emit" (Z "Red"))) = mix white $ mix red blue
-metaChemColor (O "Sync" (O "Emit" (Z "Blue"))) = mix white $ mix cyan blue
-metaChemColor (O "Dup" (Z "Ready")) = yellow 
-metaChemColor (O "Dup" (O "Twice" (Z "Red"))) = mix red $ mix red yellow
-metaChemColor (O "Dup" (O "Once" (Z "Red"))) = mix red yellow
-metaChemColor (O "Dup" (O "Twice" (Z "Blue"))) = mix cyan $ mix cyan yellow
-metaChemColor (O "Dup" (O "Once" (Z "Blue"))) = mix cyan yellow
-metaChemColor _ = white
+data Sig = Red | Blue deriving (Show, Eq, Ord, Generic, Enumer)
+data Active = Off | On Sig deriving (Show, Eq, Ord, Generic, Enumer)
+data Sync = Open | Hold Sig | Emit Sig deriving (Show, Eq, Ord, Generic, Enumer)
+data Dup = Ready | Once Sig | Twice Sig deriving (Show, Eq, Ord, Generic, Enumer)
+data Encode = Wire Active | Port Side Active | Eat | Sync Sync | Dup Dup deriving (Show, Eq, Ord, Generic, Enumer)
 
 instance Chem Encode where
   chemColor (Wire Off) = grey

@@ -4,7 +4,6 @@ module Pane.EditView
 
 import Struct
 import Geometry.Vector
-import DataType
 import Pane.Frame
 import Pane.Pane
 import Debug.Trace

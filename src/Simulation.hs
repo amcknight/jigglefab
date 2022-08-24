@@ -48,7 +48,6 @@ import Draw
 import Chem.Stripe
 import Chem.Peano
 import Chem.Encode
-import DataType
 import Pane.View
 import Pane.EditView
 import Pane.RunView
@@ -60,12 +59,6 @@ run = runSeeded =<< getStdGen
 
 speeed :: Double
 speeed = 10
-
--- metaChem :: Con
--- metaChem = encodeMetaChem
-
--- neutral :: Token
--- neutral = encodeNeutral
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
@@ -244,49 +237,12 @@ drawEdge = Color white . drawSeg . seg
 drawSeg :: Seg -> Picture
 drawSeg (Seg p q) = toLine [p, q]
 
--- drawTkPart :: Con -> TkPart -> Picture
--- drawTkPart c tkp = drawSlice tkp $ findRange c tkp
-
--- drawSlice :: TkPart -> P Turn -> Picture
--- drawSlice tkp (f, t) = Pictures
---   [ color (C.toGlossColor (metaChemColor tkp)) (toArcSolid d0 d1 rad)
---   , color black $ toSectorWire d0 d1 rad
---   ]
---   where
---     rad = fromIntegral $ numNames tkp
---     d0 = degrees f
---     d1 = degrees t
-
--- findRange :: Con -> TkPart -> P Turn
--- findRange c tkp = findRange' c tkp (0,1)
--- findRange' :: Con -> TkPart -> P Turn -> P Turn
--- findRange' c tkp r = case tkp of
---   O s subTkp -> findRange' c subTkp $ nextRange c s r
---   T s subTkp1 subTkp2 -> findRange' c subTkp2 $ findRange' c subTkp1 $ nextRange c s r
---   _ -> r
-
--- nextRange :: Con -> String -> P Turn -> P Turn
--- nextRange (Con0 _) s r = r
--- nextRange (Con1 _ ty) s r = nextRange' ty s r
--- nextRange (Con2 _ ty _) s r = nextRange' ty s r
--- nextRange' :: [Con] -> String -> P Turn -> P Turn
--- nextRange' cs s r = rs!!i
---   where
---     rs = partitionRange r $ length cs
---     i = case elemIndex s $ fmap conName cs of
---       Nothing -> error "Coundn't find elem in nextRange'"
---       Just n -> n
-
-partitionRange :: P Turn -> Int -> [P Turn]
-partitionRange (d0,d1) n = zip turns $ tail turns
-  where turns = fmap (\i -> d0 + (d1-d0) * fromIntegral i / fromIntegral n) [0..n]
-
 drawOrbHover :: Frame -> Maybe (Orb c) -> Struct c -> Picture
 drawOrbHover _ Nothing _ = blank
 drawOrbHover f (Just (Orb p _)) _ = toFrame f $ toTranslate p $ toCircleSolid $ 20 / zoom f
 
 -- TODO: Remove all these magic numbers
-drawSidebar :: (Show c, Chem c) => [c] -> Int -> Maybe Int -> Picture
+drawSidebar :: Chem c => [c] -> Int -> Maybe Int -> Picture
 drawSidebar chs selI hovI = translate (-1850) 1000 $ Pictures pics
   where
     pics = spreadSelections $ zipWith drawTokenSelector chs flairs
