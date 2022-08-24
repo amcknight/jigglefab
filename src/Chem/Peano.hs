@@ -9,8 +9,10 @@ import Geometry.Vector
 import Wall
 import StructLibrary
 import Struct
+import GHC.Generics
+import Enumer
 
-data Peano = No | Yes | Tail | Wrap Peano deriving (Show, Eq, Ord)
+data Peano = No | Yes | Tail | Wrap Peano deriving (Show, Eq, Ord, Generic, Enumer)
 
 wrap :: Int -> Peano -> Peano
 wrap 0 = id

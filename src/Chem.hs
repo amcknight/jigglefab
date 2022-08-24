@@ -11,6 +11,7 @@ import Geometry.Space
 import Pair
 import Data.Tuple
 import Color
+import Enumer
 
 data Reactant c = LeftOnly c | RightOnly c | Exchange (Sided c) | Birth (Sided c) c
 
@@ -27,7 +28,7 @@ toReactant (InRightOnly c) = RightOnly c
 toReactant (InExchange cs) = Exchange (cs, In)
 toReactant (InBirth cs c) = Birth (cs, In) c
 
-class Chem c where
+class Show c => Chem c where
   react :: Sided c -> Reactant c
   default react :: (Ord c, InnerChem c) => Sided c -> Reactant c
   react sc = if allowedThru

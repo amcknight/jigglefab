@@ -9,9 +9,11 @@ import Geometry.Vector
 import Geometry.Space
 import Struct
 import Orb
+import Enumer
+import GHC.Generics
 
-data Trip = A | B | C deriving (Show, Eq, Ord)
-data Stripe = No Trip | Yes Trip deriving (Show, Eq, Ord)
+data Trip = A | B | C deriving (Show, Eq, Ord, Generic, Enumer)
+data Stripe = No Trip | Yes Trip deriving (Show, Eq, Ord, Generic, Enumer)
 
 instance Chem Stripe where
   chemColor (No A) = light grey

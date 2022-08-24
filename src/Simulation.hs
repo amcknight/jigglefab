@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module Simulation
 ( run
 ) where
@@ -51,6 +53,7 @@ import Pane.View
 import Pane.EditView
 import Pane.RunView
 import Pane.Frame
+import Enumer
 
 run :: IO ()
 run = runSeeded =<< getStdGen
@@ -58,11 +61,11 @@ run = runSeeded =<< getStdGen
 speeed :: Double
 speeed = 10
 
-metaChem :: Con
-metaChem = encodeMetaChem
+-- metaChem :: Con
+-- metaChem = encodeMetaChem
 
-neutral :: Token
-neutral = encodeNeutral
+-- neutral :: Token
+-- neutral = encodeNeutral
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
@@ -82,7 +85,7 @@ runSeeded seed = do
 
 event :: Chem c => Graphics.Gloss.Interface.IO.Interact.Event -> View c -> View c
 event e v = case e of
-  EventKey (MouseButton LeftButton) Down _ mpos -> lClick (pmap realToFrac mpos) metaChem v
+  EventKey (MouseButton LeftButton) Down _ mpos -> lClick (pmap realToFrac mpos) v
   EventKey (MouseButton RightButton) Down _ mpos -> rClick (pmap realToFrac mpos) v
   EventKey (Char '=') Down _ _ -> v {frame = zoomHop Out $ frame v}
   EventKey (Char '-') Down _ _ -> v {frame = zoomHop In $ frame v}
@@ -100,16 +103,16 @@ update dt v = case mode v of
   Edit -> v
   Run -> v {runView = (runView v) {model = step (realToFrac dt) (model (runView v))}}
 
-draw :: Chem c => View c -> Picture
+draw :: (Chem c, Enumer c) => View c -> Picture
 draw v = case mode v of
   Edit -> drawEditView (frame v) (editView v)
   Run -> drawRunView (frame v) (runView v)
 
-drawEditView :: Chem c => Frame -> EditView c -> Picture
+drawEditView :: forall c . (Chem c, Enumer c) => Frame -> EditView c -> Picture
 drawEditView f ev = Pictures
   [ drawStruct f $ struct ev
-  , drawOrbHover (orbHover ev) (struct ev)
-  , drawSidebar metaChem (tip ev) (menuHover ev)
+  , drawOrbHover f (orbHover ev) (struct ev)
+  , drawSidebar (vals @c) (tip ev) (menuHover ev)
   ]
 
 drawRunView :: Chem c => Frame -> RunView c -> Picture
@@ -241,71 +244,70 @@ drawEdge = Color white . drawSeg . seg
 drawSeg :: Seg -> Picture
 drawSeg (Seg p q) = toLine [p, q]
 
-drawTkPart :: Con -> TkPart -> Picture
-drawTkPart c tkp = drawSlice tkp $ findRange c tkp
+-- drawTkPart :: Con -> TkPart -> Picture
+-- drawTkPart c tkp = drawSlice tkp $ findRange c tkp
 
-drawSlice :: TkPart -> P Turn -> Picture
-drawSlice tkp (f, t) = Pictures
-  [ color (C.toGlossColor (metaChemColor tkp)) (toArcSolid d0 d1 rad)
-  , color black $ toSectorWire d0 d1 rad
-  ]
-  where
-    rad = fromIntegral $ numNames tkp
-    d0 = degrees f
-    d1 = degrees t
+-- drawSlice :: TkPart -> P Turn -> Picture
+-- drawSlice tkp (f, t) = Pictures
+--   [ color (C.toGlossColor (metaChemColor tkp)) (toArcSolid d0 d1 rad)
+--   , color black $ toSectorWire d0 d1 rad
+--   ]
+--   where
+--     rad = fromIntegral $ numNames tkp
+--     d0 = degrees f
+--     d1 = degrees t
 
-findRange :: Con -> TkPart -> P Turn
-findRange c tkp = findRange' c tkp (0,1)
-findRange' :: Con -> TkPart -> P Turn -> P Turn
-findRange' c tkp r = case tkp of
-  O s subTkp -> findRange' c subTkp $ nextRange c s r
-  T s subTkp1 subTkp2 -> findRange' c subTkp2 $ findRange' c subTkp1 $ nextRange c s r
-  _ -> r
+-- findRange :: Con -> TkPart -> P Turn
+-- findRange c tkp = findRange' c tkp (0,1)
+-- findRange' :: Con -> TkPart -> P Turn -> P Turn
+-- findRange' c tkp r = case tkp of
+--   O s subTkp -> findRange' c subTkp $ nextRange c s r
+--   T s subTkp1 subTkp2 -> findRange' c subTkp2 $ findRange' c subTkp1 $ nextRange c s r
+--   _ -> r
 
-nextRange :: Con -> String -> P Turn -> P Turn
-nextRange (Con0 _) s r = r
-nextRange (Con1 _ ty) s r = nextRange' ty s r
-nextRange (Con2 _ ty _) s r = nextRange' ty s r
-nextRange' :: [Con] -> String -> P Turn -> P Turn
-nextRange' cs s r = rs!!i
-  where
-    rs = partitionRange r $ length cs
-    i = case elemIndex s $ fmap conName cs of
-      Nothing -> error "Coundn't find elem in nextRange'"
-      Just n -> n
+-- nextRange :: Con -> String -> P Turn -> P Turn
+-- nextRange (Con0 _) s r = r
+-- nextRange (Con1 _ ty) s r = nextRange' ty s r
+-- nextRange (Con2 _ ty _) s r = nextRange' ty s r
+-- nextRange' :: [Con] -> String -> P Turn -> P Turn
+-- nextRange' cs s r = rs!!i
+--   where
+--     rs = partitionRange r $ length cs
+--     i = case elemIndex s $ fmap conName cs of
+--       Nothing -> error "Coundn't find elem in nextRange'"
+--       Just n -> n
 
 partitionRange :: P Turn -> Int -> [P Turn]
 partitionRange (d0,d1) n = zip turns $ tail turns
   where turns = fmap (\i -> d0 + (d1-d0) * fromIntegral i / fromIntegral n) [0..n]
 
-drawOrbHover :: Maybe (Orb c) -> Struct c -> Picture
-drawOrbHover Nothing _ = blank
-drawOrbHover (Just o) _ = toCircleSolid 20
+drawOrbHover :: Frame -> Maybe (Orb c) -> Struct c -> Picture
+drawOrbHover _ Nothing _ = blank
+drawOrbHover f (Just (Orb p _)) _ = toFrame f $ toTranslate p $ toCircleSolid $ 20 / zoom f
 
 -- TODO: Remove all these magic numbers
-drawSidebar :: Con -> Int -> Maybe Int -> Picture
-drawSidebar c selI hovI = translate (-1850) 1000 $ Pictures pics
+drawSidebar :: (Show c, Chem c) => [c] -> Int -> Maybe Int -> Picture
+drawSidebar chs selI hovI = translate (-1850) 1000 $ Pictures pics
   where
-    (Con1 "" topTy) = c
-    pics = spreadSelections $ zipWith (drawTokenSelector c) tks flairs
-    flairs = zipWith (buildFlair hovI selI) is tks
-    tks = allTokensByType topTy
-    is = [0..length tks]
+    pics = spreadSelections $ zipWith drawTokenSelector chs flairs
+    flairs = map (buildFlair hovI selI) is
+    is = [0..length chs]
     spreadSelections :: [Picture] -> [Picture]
     spreadSelections ps = zipWith (\i p -> translate 0 (-40*fromIntegral i) p) is ps
 
-buildFlair :: Maybe Int -> Int -> Int -> Token -> Picture
-buildFlair hovI selI i tk
-  | selI == i = color white $ toRectSolid 20 20
-  | hovI == Just i = color black $ toRectSolid 20 20
+buildFlair :: Maybe Int -> Int -> Int -> Picture
+buildFlair hovI selI i
+  | selI == i = color white pointer
+  | hovI == Just i = color black pointer
   | otherwise = blank
+  where pointer = toRectSolid 20 20
 
-drawTokenSelector :: Con -> Token -> Picture -> Picture
-drawTokenSelector c tk flair = Pictures
+drawTokenSelector :: (Show c, Chem c) => c -> Picture -> Picture
+drawTokenSelector ch flair = Pictures
   [ translate 0 0 flair
-  , translate 40 0 $ tokenColor c tk $ toCircleSolid 20
-  , translate 100 (-10) $ scale 0.2 0.2 $ color white $ text $ show tk
+  , translate 40 0 $ tokenColor ch $ toCircleSolid 20
+  , translate 100 (-10) $ scale 0.2 0.2 $ color white $ text $ show ch
   ]
 
-tokenColor :: Con -> Token -> Picture -> Picture
-tokenColor c = color . C.toGlossColor . metaChemColor . toTkPart
+tokenColor :: Chem c => c -> Picture -> Picture
+tokenColor = color . C.toGlossColor . chemColor

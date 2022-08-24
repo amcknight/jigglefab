@@ -13,11 +13,12 @@ import Wall
 import StructLibrary
 import Struct
 import Orb
+import Enumer
+import GHC.Generics
 
-data Sig = Red | Blue deriving (Show, Eq, Ord)
-data Active a = Off | On a deriving (Show, Eq, Ord)
-
-data Buckle = Wire (Active Sig) | Port Side (Active Sig) | Flag Sig | Actor (Active Sig) | Sense Side deriving (Show, Eq, Ord)
+data Sig = Red | Blue deriving (Show, Eq, Ord, Generic, Enumer)
+data Active a = Off | On a deriving (Show, Eq, Ord, Generic, Enumer)
+data Buckle = Wire (Active Sig) | Port Side (Active Sig) | Flag Sig | Actor (Active Sig) | Sense Side deriving (Show, Eq, Ord, Generic, Enumer)
 
 -- a - O - O
 -- Tighten a - O - O

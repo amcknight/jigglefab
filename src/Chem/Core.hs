@@ -16,11 +16,13 @@ import Geometry.Angle
 import Wall
 import Orb
 import StructLibrary
+import GHC.Generics
+import Enumer
 
-data Sig = Red | Blue deriving (Show, Eq, Ord)
-data Active a = Off | On a deriving (Show, Eq, Ord)
+data Sig = Red | Blue deriving (Show, Eq, Ord, Generic, Enumer)
+data Active a = Off | On a deriving (Show, Eq, Ord, Generic, Enumer)
 
-data Core = Wire (Active Sig) | Port Side (Active Sig) | Sensor | Creator | Destroyer deriving (Show, Eq, Ord)
+data Core = Wire (Active Sig) | Port Side (Active Sig) | Sensor | Creator | Destroyer deriving (Show, Eq, Ord, Generic, Enumer)
 
 instance Chem Core where
   chemColor (Wire Off) = grey

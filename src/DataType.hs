@@ -1,13 +1,14 @@
 module DataType
-( Con(..), Type, Token(..), TkPart(..)
-, conName
-, topCon
-, toToken, toTkPart
-, extendTkPart, reduceTkPart
-, numNames
-, firstHole
-, allTokensByType, allTokensByCon
-, tokenFromI
+(
+--   Con(..), Type, Token(..), TkPart(..)
+-- , conName
+-- , topCon
+-- , toToken, toTkPart
+-- , extendTkPart, reduceTkPart
+-- , numNames
+-- , firstHole
+-- , allTokensByType, allTokensByCon
+-- , tokenFromI
 ) where
 
 data Con = Con0 String | Con1 String Type | Con2 String Type Type deriving Show

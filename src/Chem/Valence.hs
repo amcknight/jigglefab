@@ -24,11 +24,13 @@ import Orb
 import Geometry.Vector
 import StructLibrary
 import Wall
+import GHC.Generics
+import Enumer
 
 data Valence = Valence
   { wants :: Int 
   , has :: Int 
-  } deriving Show
+  } deriving (Show, Generic)
 
 instance Chem Valence where
   react (cs, In)

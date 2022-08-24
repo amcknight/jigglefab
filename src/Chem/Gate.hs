@@ -11,11 +11,13 @@ import StructLibrary
 import Color
 import Struct
 import Orb
+import Enumer
+import GHC.Generics
 
-data Sig = Red | Blue deriving (Show, Eq, Ord)
-data Active = Off | On Sig deriving (Show, Eq, Ord)
-data Part = Wait Active | Go Active deriving (Show, Eq, Ord)
-data Logic = And | Fst | Snd deriving (Show, Eq, Ord)
+data Sig = Red | Blue deriving (Show, Eq, Ord, Generic, Enumer)
+data Active = Off | On Sig deriving (Show, Eq, Ord, Generic, Enumer)
+data Part = Wait Active | Go Active deriving (Show, Eq, Ord, Generic, Enumer)
+data Logic = And | Fst | Snd deriving (Show, Eq, Ord, Generic, Enumer)
 
 logic :: Logic -> Sig -> Sig -> Active
 logic log newS oldS = case log of
@@ -23,7 +25,7 @@ logic log newS oldS = case log of
   Fst -> On oldS
   Snd -> On newS
 
-data Gate = Wire Active | Port Side Active | Gate Part Logic deriving (Show, Eq, Ord)
+data Gate = Wire Active | Port Side Active | Gate Part Logic deriving (Show, Eq, Ord, Generic, Enumer)
 
 instance Chem Gate where
   chemColor (Wire (On Red)) = red

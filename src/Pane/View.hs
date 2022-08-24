@@ -42,8 +42,8 @@ togglePlay sp v = case mode v of
     ev = editView v
     rv = runView v
 
-lClick :: Position -> Con -> View c -> View c
-lClick mpos c v = case mode v of
+lClick :: Position -> View c -> View c
+lClick mpos v = case mode v of
   Edit -> v {editView = leftClick (frame v) mpos $ editView v}
   Run  -> v {runView = leftClick (frame v) mpos $ runView v}
 

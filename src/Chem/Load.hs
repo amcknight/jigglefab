@@ -10,11 +10,13 @@ import StructLibrary
 import Color
 import Geometry.Vector
 import Struct
+import GHC.Generics
+import Enumer
 
-data Sig = Blue | Red deriving (Show, Eq, Ord)
-data Active = Off | On Sig deriving (Show, Eq, Ord)
-data Loader = Stem | StemWL | StemPort deriving (Show, Eq, Ord)
-data Load = Wire Active | Port Side Active | Load Loader | Womb Load deriving (Show, Eq, Ord)
+data Sig = Blue | Red deriving (Show, Eq, Ord, Generic, Enumer)
+data Active = Off | On Sig deriving (Show, Eq, Ord, Generic, Enumer)
+data Loader = Stem | StemWL | StemPort deriving (Show, Eq, Ord, Generic, Enumer)
+data Load = Wire Active | Port Side Active | Load Loader | Womb Load deriving (Show, Eq, Ord, Generic, Enumer)
 
 instance Chem Load where
   chemColor (Wire Off) = grey

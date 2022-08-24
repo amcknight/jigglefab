@@ -12,9 +12,11 @@ import Wall
 import StructLibrary
 import Struct
 import Orb
+import GHC.Generics
+import Enumer
 
-data Sig = Red | Blue deriving (Show, Eq, Ord)
-data Active = Open | Closed | Full Sig deriving (Show, Eq, Ord)
+data Sig = Red | Blue deriving (Show, Eq, Ord, Generic, Enumer)
+data Active = Open | Closed | Full Sig deriving (Show, Eq, Ord, Generic, Enumer)
 data Act = Sig Sig  -- Signal transfers freely to empty Wires
          | Apply -- Applies Actions (Take, Drop, Die, Spawn)
          | Done  -- Used by Port to move from Closed -> Open
@@ -25,8 +27,8 @@ data Act = Sig Sig  -- Signal transfers freely to empty Wires
          | Spawn -- Applier and Spawner create an empty Wire
          | Hold  -- Does nothing until reacted with an empty Wire
          | Send [Act] -- Puts actions on empty Wire
-         deriving (Show, Eq, Ord)
-data Sem = Wire [Act] | Port Active deriving (Show, Eq, Ord)
+         deriving (Show, Eq, Ord, Generic)
+data Sem = Wire [Act] | Port Active deriving (Show, Eq, Ord, Generic)
 
 instance Chem Sem where
   chemColor (Wire []) = grey

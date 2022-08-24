@@ -11,8 +11,9 @@ import Struct
 import Orb
 import Wall
 import StructLibrary
+import GHC.Generics
 
-data Electro = Dormant | Active | Tired Int deriving (Show, Eq, Ord)
+data Electro = Dormant | Active | Tired Int deriving (Show, Eq, Ord, Generic)
 
 instance Chem Electro where
   chemColor Dormant = grey

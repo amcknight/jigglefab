@@ -19,6 +19,66 @@ extra-source-files:
 # common to point users to the README.md file.
 description:         Please see the README on GitHub at <https://github.com/githubuser/chains#readme>
 
+ghc-options:
+- -Wall -Wredundant-constraints
+
+default-extensions:
+- BangPatterns
+- BinaryLiterals
+- ConstrainedClassMethods
+- ConstraintKinds
+- DataKinds
+- DeriveAnyClass
+- DeriveDataTypeable
+- DeriveFoldable
+- DeriveFunctor
+- DeriveGeneric
+- DeriveLift
+- DeriveTraversable
+- DerivingStrategies
+- DerivingVia
+- DoAndIfThenElse
+- DuplicateRecordFields
+- EmptyCase
+- EmptyDataDecls
+- EmptyDataDeriving
+- ExistentialQuantification
+- ExplicitForAll
+- FlexibleContexts
+- FlexibleInstances
+- ForeignFunctionInterface
+- GADTSyntax
+- GADTs
+- GeneralizedNewtypeDeriving
+- HexFloatLiterals
+- ImplicitPrelude
+- ImportQualifiedPost
+- InstanceSigs
+- KindSignatures
+- LambdaCase
+- MonomorphismRestriction
+- MultiParamTypeClasses
+- NamedFieldPuns
+- NamedWildCards
+- NumericUnderscores
+- OverloadedStrings
+- PatternGuards
+- PolyKinds
+- PostfixOperators
+- RankNTypes
+- RelaxedPolyRec
+- ScopedTypeVariables
+- StandaloneDeriving
+- StandaloneKindSignatures
+- StarIsType
+- TraditionalRecordSyntax
+- TupleSections
+- TypeApplications
+- TypeFamilies
+- TypeOperators
+- TypeSynonymInstances
+- ViewPatterns
+
 dependencies:
 - base >= 4.7 && < 5
 
