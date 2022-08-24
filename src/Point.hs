@@ -35,7 +35,7 @@ side ps = if furtherThan 1 ps then Out else In
 
 furtherThan :: Double -> P Point -> Bool
 furtherThan d ps
-  | uncurry distSq (pmap pos ps) > d^2 = True
+  | uncurry distSq (pmap pos ps) > d*d = True
   | otherwise = False
 
 bonkVLine :: Point -> Point

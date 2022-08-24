@@ -52,8 +52,8 @@ dark = mix black
 
 mix :: Color -> Color -> Color
 mix (Grey v1) (Grey v2) = Grey (avg v1 v2)
-mix g@(Grey v) c = mix c g
-mix c@(Color h s v1) (Grey v2) = mix c (Color h 0 v2)
+mix g@Grey {} c = mix c g
+mix c@(Color h _ _) (Grey v2) = mix c (Color h 0 v2)
 mix (Color h1 s1 v1) (Color h2 s2 v2) = Color (mixHue h1 h2) (avg s1 s2) (avg v1 v2)
 
 mixHue :: Turn -> Turn -> Turn

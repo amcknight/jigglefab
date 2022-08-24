@@ -74,7 +74,6 @@ movingTool = walls <> chains <> buckles <> tool <> gate
   where
     slack = 3
     boxSize = 13.333
-    numSigs = 1
     mid = boxSize |* upV
     bottom = boxSize |* downV
     left = boxSize |* upLeftV

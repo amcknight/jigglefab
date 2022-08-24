@@ -61,10 +61,7 @@ longStruct = string0 <>
   where
     size = 1000
     rad = 50 :: Double
-    speed = rad*3
     left = size |* leftV
-    right = size |* rightV
-    sig = Yes A
 
     pos :: Radius -> Vector -> Int -> Vector
     pos rad left i = left |+ ((fromIntegral i * rad * 0.9) |* rightV)

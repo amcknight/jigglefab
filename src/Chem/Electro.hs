@@ -1,11 +1,9 @@
 module Chem.Electro
-( Electro (Dormant, Active)
+( Electro (..)
+, wireStruct
 ) where
 
 import Chem
-    ( Chem(chemColor),
-      InReactant(InExchange),
-      InnerChem(innerReact, allowThru) )
 import Color
 import Struct
 import Orb
@@ -18,7 +16,7 @@ data Electro = Dormant | Active | Tired Int deriving (Show, Eq, Ord, Generic)
 instance Chem Electro where
   chemColor Dormant = grey
   chemColor Active = red
-  chemColor (Tired n) = blue
+  chemColor (Tired _) = blue
 
 instance InnerChem Electro where
   innerReact (Dormant, Active) = InExchange (Active, Tired 3)
@@ -42,8 +40,4 @@ wireStruct = walls <> chain <> signal
     y2 = -12
     v1 = (x1,y1)
     v2 = (x2,y2)
-    damp x = case compare x 0 of
-      LT -> x + 1
-      EQ -> x
-      GT -> x - 1
  

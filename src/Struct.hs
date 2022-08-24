@@ -37,8 +37,8 @@ orbAt s p = case nearestOrb of
   where nearestOrb = minWith (distSq p . orbPos) (orbs s)
 
 minWith :: Ord b => (a -> b) -> [a] -> Maybe a
-minWith f [] = Nothing
-minWith f [x] = Just x
+minWith _ [] = Nothing
+minWith _ [x] = Just x
 minWith f (x:xs) = if f x < f minTailX
   then Just x
   else Just minTailX

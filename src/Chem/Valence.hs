@@ -25,7 +25,6 @@ import Geometry.Vector
 import StructLibrary
 import Wall
 import GHC.Generics
-import Enumer
 
 data Valence = Valence
   { wants :: Int 

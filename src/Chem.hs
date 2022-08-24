@@ -1,4 +1,5 @@
 {-# LANGUAGE DefaultSignatures #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Chem
 ( Reactant(..)
@@ -11,7 +12,6 @@ import Geometry.Space
 import Pair
 import Data.Tuple
 import Color
-import Enumer
 
 data Reactant c = LeftOnly c | RightOnly c | Exchange (Sided c) | Birth (Sided c) c
 

@@ -50,7 +50,7 @@ instance InnerChem Load where
   thruReact cs = cs
 
   allowThru ((Load _, Womb _), In) = True
-  allowThru sc = False
+  allowThru _ = False
 
 load :: Struct Load
 load = walls <> wire -- <> ribo
@@ -59,9 +59,6 @@ load = walls <> wire -- <> ribo
     boxSize = 10
     start = boxSize |* leftV
     end = boxSize |* rightV
-    mid = 0.5 |* (start |+ end)
-    adjacentStep = 0.95
-    diagStep = sqrt ((adjacentStep^2)/2)
 
     walls = wallStruct (rock start 1) -- <> wallStruct (rock end 1)
     sigs = [Red, Blue, Blue, Red]

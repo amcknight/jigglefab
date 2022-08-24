@@ -1,12 +1,8 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE StandaloneDeriving #-}
 module Chem.Encode
 ( Encode (..)
 , encoder
--- , encodeMetaChem
--- , encodeNeutral
--- , metaChemColor
 ) where
 
 import Chem
@@ -52,25 +48,25 @@ instance InnerChem Encode where
   innerReact (Wire Off,       Dup (Once s)) =    InExchange (Wire (On s),     Dup Ready)
   innerReact (Wire Off,       Dup (Twice s)) =   InExchange (Wire (On s),     Dup (Once s))
   innerReact (Wire (On s),    Port In Off) =     InExchange (Wire Off,        Port In (On s))
-  innerReact (Wire (On s),    Eat) =             InExchange (Wire Off,        Eat)
+  innerReact (Wire (On _),    Eat) =             InExchange (Wire Off,        Eat)
   innerReact (Wire (On s),    Sync Open) =       InExchange (Wire Off,        Sync (Hold s))
   innerReact (Wire (On s),    Dup Ready) =       InExchange (Wire Off,        Dup (Twice s))
   innerReact (Port Out Off,   Sync (Emit s)) =   InExchange (Port Out (On s), Sync Open)
   innerReact (Port Out Off,   Dup (Once s)) =    InExchange (Port Out (On s), Dup Ready)
   innerReact (Port Out Off,   Dup (Twice s)) =   InExchange (Port Out (On s), Dup (Once s))
-  innerReact (Port In (On s), Eat) =             InExchange (Port In Off,     Eat)
+  innerReact (Port In (On _), Eat) =             InExchange (Port In Off,     Eat)
   innerReact (Port In (On s), Sync Open) =       InExchange (Port In Off,     Sync (Hold s))
   innerReact (Port In (On s), Dup Ready) =       InExchange (Port In Off,     Dup (Twice s))
   innerReact (Sync (Hold s1), Sync (Hold s2)) =  InExchange (Sync (Emit s1),  Sync (Emit s2))
   innerReact cs = InExchange cs
-  allowThru sc = False
+  allowThru _ = False
 
 -- TODO this is all terribly hardcoded
 loopStruct :: Int -> Position -> [Active] -> Struct Encode
-loopStruct size pos sigs = mconcat loops
+loopStruct _ pos sigs = mconcat loops
   where
     adjacentStep = 0.9
-    diagStep = sqrt ((adjacentStep^2)/2)
+    diagStep = sqrt ((adjacentStep * adjacentStep)/2)
     up = adjacentStep |* upV
     down = adjacentStep |* downV
     left = adjacentStep |* leftV
@@ -91,8 +87,8 @@ loopStruct size pos sigs = mconcat loops
     actives = sigs ++ replicate (13 - length sigs) Off
     loops = fmap (\(pos, a) -> orbStruct (Orb pos (Wire a))) (zip lps actives)
 
-andStruct :: Position -> Sig -> Struct Encode
-andStruct pos sig = mconcat $ ports ++ syncs ++ [garbage, eat]
+andStruct :: Position -> Struct Encode
+andStruct pos = mconcat $ ports ++ syncs ++ [garbage, eat]
   where
     adjacentStep = 0.95
     up = adjacentStep |* upV
@@ -112,7 +108,7 @@ splitStruct :: Position -> Struct Encode
 splitStruct pos = mconcat [inP, dup, outP, bridge, rightInP, topS, botS, topOutP, botOutP]
   where
     adjacentStep = 0.95
-    diagStep = sqrt ((adjacentStep^2)/2)
+    diagStep = sqrt ((adjacentStep*adjacentStep)/2)
     right = adjacentStep |* rightV
     up = adjacentStep |* upV
     down = adjacentStep |* downV
@@ -143,7 +139,6 @@ dupSeqStruct pos num = mconcat [inP, dup, outP, bridge, tail]
 encoder :: Struct Encode
 encoder = walls <> prewire <> dup4 <> postdupWire <> blueAnd <> bridge <> split <> loop <> postwire
   where
-    speed = 5
     slack = 3
     boxSize = 20
     start = boxSize |* leftV
@@ -152,8 +147,7 @@ encoder = walls <> prewire <> dup4 <> postdupWire <> blueAnd <> bridge <> split 
     midLeft = 0.5 |* (start |+ mid)
 
     adjacentStep = 0.95
-    diagStep = sqrt ((adjacentStep^2)/2)
-    up = adjacentStep |* upV
+    diagStep = sqrt ((adjacentStep*adjacentStep)/2)
     right = adjacentStep |* rightV
     diagUp = diagStep |* upRightV
     diagDown = diagStep |* downRightV
@@ -161,8 +155,7 @@ encoder = walls <> prewire <> dup4 <> postdupWire <> blueAnd <> bridge <> split 
     prewire = cappedLinChainExcl slack start midLeft (replicate 3 (Wire (On Blue))) (Wire Off) []
     dup4 = dupSeqStruct midLeft 2
     postdupWire = linChainExcl 1 (mid |- (4 |* right)) mid $ Wire Off
-    blueAnd = andStruct mid Blue
-    encoderTip = orbStruct $ Orb mid $ Wire Off
+    blueAnd = andStruct mid
     walls = wallStruct (rock start 1) <> wallStruct (rock end 1)
     sigs = [Red, Blue, Blue, Red]
     blueAndOutPos = mid |+ ((2*adjacentStep) |* upV) |+ ((1.5*adjacentStep) |* rightV)

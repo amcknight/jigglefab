@@ -34,7 +34,7 @@ hitTimes rad ps = maybe NoHit times root
       EQ -> Just 0
       GT -> Just $ sqrt x
 
-    root = safeRoot $ speedSq * (rad^2 - magnitudeSq (pos diff)) + s^2
+    root = safeRoot $ speedSq * (rad*rad - magnitudeSq (pos diff)) + s*s
     s = pos diff |. vel diff
     speedSq = magnitudeSq $ vel diff
     diff = minus ps

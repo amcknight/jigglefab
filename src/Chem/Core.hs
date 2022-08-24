@@ -2,6 +2,7 @@ module Chem.Core
 ( Core (..)
 , Sig (..)
 , Active (..)
+, andGate, meshStruct
 ) where
 
 import qualified Data.Vector as V
@@ -43,12 +44,12 @@ instance InnerChem Core where
   innerReact (Wire Off, Port Out a) = InExchange (Wire a, Port Out Off)
   innerReact (Wire a, Port In Off) = InExchange (Wire Off, Port In a)
   innerReact (Wire a, Sensor) = InExchange (Wire Off, Wire a)
-  innerReact (Wire a, Creator) = InBirth (Wire Off, Wire Off) (Wire Off)
-  innerReact (Wire a, Destroyer) = InRightOnly Destroyer
+  innerReact (Wire _, Creator) = InBirth (Wire Off, Wire Off) (Wire Off)
+  innerReact (Wire _, Destroyer) = InRightOnly Destroyer
   innerReact cs = InExchange cs
   
-  allowThru ((Wire a, Sensor), Out) = True
-  allowThru sc = False
+  allowThru ((Wire _, Sensor), Out) = True
+  allowThru _ = False
 
 
 gateStruct :: Int -> Core -> Struct Core
@@ -101,74 +102,5 @@ arcChainsStruct slack preBalls ((a,(i,j)):is) = c <> cs
 
 -------------------
 
-gen :: Struct Core
-gen = signal <> sense <> chain <> gen
-  where
-    speed = 3
-    gap = pair $ 1/2
-    v1 = pair 300
-    v2 = pair (-300)
-    signal = orbStruct $ Orb (v1 |+ (4 |* gap)) (Wire (On Red))
-    sense = orbStruct $ Orb (v1 |+ gap) Sensor
-    chain = linChainIncl 1 v1 v2 $ Wire Off
-    gen = orbStruct $ Orb (v2 |- gap) Creator
-
-innerBump :: Core -> Core -> Struct Core
-innerBump c1 c2 = orbStruct (Orb zeroV c1) <> orbStruct (Orb upLeftV c2)
-
 andGate :: Struct Core
 andGate = gateStruct 3 Destroyer
-
-----------
-
-mesh :: Struct Core
-mesh = meshStruct 1
-  [ ((   0,  0), Wire (On Red))
-  , ((-8,4), Wire (On Red))
-  , ((-12,4), Wire (On Red))
-  , ((-8,6), Wire (On Red))
-  , ((-4,12), Wire (On Red))
-  , ((-4,14), Wire (On Red))
-  , (( 6,8), Wire (On Red))
-  ]
-  [ (0,1)
-  , (1,2)
-  , (1,3)
-  , (4,5)
-  ]
-  [ (toRadian 0.25, (0,6))
-  , (toRadian 0.10, (3,6))
-  , (toRadian 0.15, (4,3))
-  , (toRadian 0.20, (6,4))
-  ]
-
-headStruct :: Struct Core
-headStruct = pegs <> tether <> tool <> packet <> hose
-  where
-    boxRad = 12
-    gap = 0.95
-    up = gap |* upV
-    right = gap |* rightV
-    tethSlack = 1
-    toolMid = boxRad |* upV
-    toolLeft = toolMid
-    toolRight = toolMid
-    toolBottom = toolMid |- up
-    toolTop = toolMid |+ up
-    leftPeg  = boxRad |* upLeftV
-    rightPeg = boxRad |* upRightV
-    backPeg = boxRad |* downV
-    sigs = [Wire (On Red), Wire (On Red), Wire (On Blue), Wire (On Red)]
-    sigTopPos = backPeg |+ (fromIntegral (length sigs - 1) |* up)
-    pegs = mconcat $ fmap (\peg -> wallStruct (rock peg 1)) [leftPeg, rightPeg, backPeg]
-    inPort = orbStruct $ Orb toolBottom $ Port In Off
-    outPort = orbStruct $ Orb toolTop $ Port Out Off
-    ports = inPort <> outPort
-    receiver = orbStruct $ Orb toolMid $ Wire Off
-    tip = linChainExcl 1 toolTop (toolTop |+ (3 |* up)) (Wire Off)
-    tool = ports <> receiver <> tip
-    leftTether = linChainExcl tethSlack leftPeg toolLeft $ Wire Off
-    rightTether = linChainExcl tethSlack rightPeg toolRight $ Wire Off
-    tether = leftTether <> rightTether
-    packet = sig backPeg sigTopPos sigs
-    hose = linChainExcl 5 sigTopPos toolBottom $ Wire Off

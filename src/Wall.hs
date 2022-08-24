@@ -17,7 +17,7 @@ rock p = Rock . Circle p
 wSide :: Wall -> Position -> Side
 wSide (VLine x) p = wSide' x $ fst p
 wSide (HLine y) p = wSide' y $ snd p
-wSide (Rock (Circle c r)) p = if distSq p c > r^2 then Out else In
+wSide (Rock (Circle c r)) p = if distSq p c > r*r then Out else In
 wSide' :: Double -> Double -> Side
 wSide' pl p = case compare pl p of
   LT -> In

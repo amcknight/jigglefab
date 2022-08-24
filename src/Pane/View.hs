@@ -9,7 +9,6 @@ module Pane.View
 
 import Model
 import Geometry.Vector
-import Geometry.Space
 import Form
 import Time
 import Control.Monad.State
@@ -17,8 +16,6 @@ import Chem
 import Pane.EditView
 import Pane.RunView
 import Pane.Pane
-import Debug.Trace
-import qualified Control.Arrow as Pane.Pane
 import Pane.Frame
 
 data View c = View

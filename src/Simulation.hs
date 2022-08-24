@@ -4,11 +4,8 @@ module Simulation
 ( run
 ) where
 
-import Graphics.Gloss.Data.ViewPort (ViewPort)
 import Data.Vector (toList)
 import System.Random (getStdGen, StdGen)
-import Data.List (sortBy, elemIndex)
-import Data.Fixed (mod')
 import qualified Data.Vector as V
 import qualified Color as C
 import Geometry.Circle
@@ -21,19 +18,16 @@ import Wall
 import Form
 import Control.Monad.State
 import Chem
-import Chem.Valence
 import Debug.Trace
 import Graphics.Gloss
 import Graphics.Gloss.Interface.IO.Interact
 import Geometry.Vector
 import Struct
 import Orb
-import Chem.Sem
 import Tiling
 import Voronoi.Fortune
 import Geometry.Line
 import Geometry.Parabola
-import Geometry.CrossPoint
 import Voronoi.Beach
 import Geometry.Bound
 import Geometry.Angle
@@ -43,11 +37,7 @@ import Voronoi.Sweep
 import Chem.Buckle
 import Voronoi.Edge
 import Voronoi.Event
-import Chem.Load
 import Draw
-import Chem.Stripe
-import Chem.Peano
-import Chem.Encode
 import Pane.View
 import Pane.EditView
 import Pane.RunView
@@ -139,12 +129,12 @@ drawBeach z os (Beach sw _ es bs rs) = Pictures $
 
 drawEvent :: Double -> Voronoi.Event.Event -> Picture
 drawEvent z (BouyEvent b) = drawPosAt z (pos b) cyan
-drawEvent z (CrossEvent (Cross (Geometry.Circle.Circle pos rad) i)) =
+drawEvent z (CrossEvent (Cross (Geometry.Circle.Circle pos rad) _)) =
   Color g (toTranslate pos (toCircle rad)) <> drawPosAt z pos g
   where g = greyN 0.5
 
 drawBouy :: Chem c => Double -> V.Vector (Orb c) -> Double -> P Double -> Bouy -> Picture
-drawBouy z os sweep xBound (Bouy pos@(x,y) i) = drawPosAt z pos c <> Color c p
+drawBouy z os sweep xBound (Bouy pos i) = drawPosAt z pos c <> Color c p
   where
     p = drawParabola pos sweep xBound
     c = C.toGlossColor $ chemColor $ orbChem $ os V.! i
@@ -153,21 +143,6 @@ drawParabola :: Position -> Double -> P Double -> Picture
 drawParabola focal sweep xBound = case parabolaFromFocus sweep focal of
   Nothing -> trace "Warning: blank parabola" blank
   Just p -> toLine $ parabPoss p xBound 0.01 -- TODO: Should be sensitive to zooom
-
-drawParabCrosses :: Double -> Double -> V.Vector Bouy -> [Picture]
-drawParabCrosses z sw bs =
-  fmap (drawCrossPoints z) (zipWith (crossPointsFromFoci sw) ps (tail ps)) <>
-  fmap (drawLiveCrossPoint z) (zipWith (parabolaCross sw) ps (tail ps))
-  where ps = V.toList $ fmap pos bs
-
-drawCrossPoints :: Double -> CrossPoints -> Picture
-drawCrossPoints z (OneCross p) = drawPosAt z p blue
-drawCrossPoints z (TwoCross p q) = drawPosAt z p blue <> drawPosAt z p blue
-drawCrossPoints _ NoCross = error "Drawing non-points"
-drawCrossPoints _ InfinteCross = error "Drawing infinite-points"
-
-drawLiveCrossPoint :: Double -> Position -> Picture
-drawLiveCrossPoint z p = drawPosAt z p magenta
 
 drawSweep :: Double -> [Picture]
 drawSweep h = [Color black $ toLine [(-100000, h), (100000, h)]]
@@ -205,9 +180,6 @@ drawForm (Form ws bs) = Pictures $ wPics ++ bPics -- <> fmap drawEdge es
     wPics = toList $ fmap (drawWall yellow) ws
     es = voronoi $ toList $ fmap pos bs
     bPics = drawBallWedge bs <$> tileVoronoi (fmap pos bs) es
-
-drawBall :: Chem c => Ball c -> Picture
-drawBall (Ball (Point p _) c) = drawOrb $ Orb p c
 
 drawOrb :: Chem c => Orb c -> Picture
 drawOrb (Orb p chem) = toTranslate p . Color c $ toCircleSolid 1 <> circle 1
@@ -258,7 +230,7 @@ buildFlair hovI selI i
   | otherwise = blank
   where pointer = toRectSolid 20 20
 
-drawTokenSelector :: (Show c, Chem c) => c -> Picture -> Picture
+drawTokenSelector :: Chem c => c -> Picture -> Picture
 drawTokenSelector ch flair = Pictures
   [ translate 0 0 flair
   , translate 40 0 $ tokenColor ch $ toCircleSolid 20

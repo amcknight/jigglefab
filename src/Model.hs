@@ -24,7 +24,6 @@ import Data.Bifunctor
 import HitTime
 import Struct
 import Utils
-import Geometry.Circle
 
 type SideMap = M.Map (P Int) Side
 data Model c = Model
@@ -68,11 +67,11 @@ wbSideI :: Model c -> P Int -> Side
 wbSideI m = (wbSides m M.!)
 
 replace :: Int -> Ball c -> Model c -> Model c
-replace i b (Model r oldF wss hss oldHs) = Model r newF wss hss $ updateBumps1 r newF i oldHs
+replace i b (Model r oldF wss hss oldHs) = Model r newF wss hss $ updateBumps1 newF i oldHs
   where newF = replaceBall i b oldF
 
 replacePair :: P Int -> Side -> P (Ball c) -> Model c -> Model c
-replacePair bbi s bs (Model r oldF wbs bbs oldHs) = Model r newF wbs newBbs (updateBumps2 r newF bbi oldHs)
+replacePair bbi s bs (Model r oldF wbs bbs oldHs) = Model r newF wbs newBbs (updateBumps2 newF bbi oldHs)
   where
     newBbs = M.insert bbi s bbs
     newF = replaceBalls bbi bs oldF
@@ -82,7 +81,7 @@ remove bi (Model r f wbs bbs hs) = Model r (removeBall f bi) newWbs newBbs newHs
   where
     newWbs = M.mapKeys (second decIfOver) $ M.filterWithKey (\ (_,i) _ -> bi /= i) wbs
     newBbs = M.mapKeys (pmap decIfOver) $ M.filterWithKey (\ (i,j) _ -> bi /= i && bi /= j) bbs
-    newHs = (\(Hit dt s (i,j)) -> Hit dt s (decIfOver i, decIfOver j)) <$> filter (\(Hit dt s (i,j)) -> bi /= i && bi /= j) hs
+    newHs = (\(Hit dt s (i,j)) -> Hit dt s (decIfOver i, decIfOver j)) <$> filter (\(Hit _ _ (i,j)) -> bi /= i && bi /= j) hs
     
     decIfOver :: Int -> Int
     decIfOver i = if i > bi then i-1 else i
@@ -120,16 +119,16 @@ step dt m = case (nextBonk m, nextBump m) of
   (Nothing, Just (Hit bt s ip)) -> case compare dt bt of
     LT -> move dt m
     _ -> step (dt - bt) $ bounceModel s ip $ move bt m
-  (Just (Hit bt s ip), Nothing) -> case compare dt bt of
+  (Just (Hit bt _ ip), Nothing) -> case compare dt bt of
     LT -> move dt m
-    _ -> step (dt - bt) $ bonkModel s ip $ move bt m
+    _ -> step (dt - bt) $ bonkModel ip $ move bt m
   (Just bk, Just bc) ->
     let Hit t s ip = minimum [bk, bc]
         newDt = dt - t
     in case compare dt t of
       LT -> move dt m
       _ -> case compare bk bc of
-        LT -> step newDt $ bonkModel s ip $ move t m
+        LT -> step newDt $ bonkModel ip $ move t m
         _ -> step newDt $ bounceModel s ip $ move t m
 
 nextBonk :: Model c -> Maybe Hit
@@ -150,8 +149,8 @@ nextBump m = nextValidBump m $ bounces m
     nextValidBump _ [] = Nothing 
     nextValidBump m (b@(Hit _ s ip):bs) = if bbSideI m ip == s then Just b else nextValidBump m bs
 
-updateBumps1 :: Radius -> Form c -> Int -> [Hit] -> [Hit]
-updateBumps1 r f i hs = L.sort $ keep ++ newHits
+updateBumps1 :: Form c -> Int -> [Hit] -> [Hit]
+updateBumps1 f i hs = L.sort $ keep ++ newHits
   where
     keep = filter (uneffected i) hs
     newHits = hitsFromIps f $ pairsOfTo1 (length (balls f)) i
@@ -159,8 +158,8 @@ updateBumps1 r f i hs = L.sort $ keep ++ newHits
     uneffected :: Int -> Hit -> Bool
     uneffected i h = not $ (overlaps1 i . ixPair) h
 
-updateBumps2 :: Radius -> Form c -> P Int -> [Hit] -> [Hit]
-updateBumps2 r f ip hs = L.sort $ keep ++ newHits
+updateBumps2 :: Form c -> P Int -> [Hit] -> [Hit]
+updateBumps2 f ip hs = L.sort $ keep ++ newHits
   where
     keep = filter (uneffected ip) hs
     newHits = hitsFromIps f $ pairsOfTo2 (length (balls f)) ip
@@ -197,8 +196,8 @@ bounceModel s ip@(i1,i2) m = case react (cs, s) of
     ps@(p1, p2) = pmap point bs
     cs = pmap chem bs
 
-bonkModel :: Side -> P Int -> Model c -> Model c
-bonkModel s (wi, li) m = replace li newBall m
+bonkModel :: P Int -> Model c -> Model c
+bonkModel (wi, li) m = replace li newBall m
   where
     f = form m
     w = wallI f wi

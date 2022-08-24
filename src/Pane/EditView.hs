@@ -6,10 +6,7 @@ import Struct
 import Geometry.Vector
 import Pane.Frame
 import Pane.Pane
-import Debug.Trace
 import Orb
-import Enumer
-import Chem
 
 data EditView c = EditView
   { tip :: Int
@@ -19,11 +16,11 @@ data EditView c = EditView
   }
 
 instance Pane (EditView c) where
-  leftClick frame mpos ev = if inMenu mpos
+  leftClick _ mpos ev = if inMenu mpos
     then ev {tip = i}
     else ev --{struct = addOrb (Orb mpos (tokenFromI ch (tip ev))) (struct ev)}
     where i = menuIndex mpos
-  rightClick frame mpos ev = ev
+  rightClick _ _ ev = ev
   mouseMove frame mpos ev
     | inMenu mpos = ev {menuHover = Just $ menuIndex mpos}
     | otherwise = ev {orbHover = orbAt (struct ev) (toAbsPos frame mpos)}

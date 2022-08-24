@@ -100,8 +100,8 @@ toBonk f s ip@(wi, li) = fmap (\t -> Hit t s ip) (bonkTime s w p)
     Ball p _ = ballI f li
 
 bonkTime :: Side -> Wall -> Point -> Maybe Time
-bonkTime s (VLine w) (Point (p,_) (v,_)) = bonkTime1d w p v
-bonkTime s (HLine w) (Point (_,p) (_,v)) = bonkTime1d w p v
+bonkTime _ (VLine w) (Point (p,_) (v,_)) = bonkTime1d w p v
+bonkTime _ (HLine w) (Point (_,p) (_,v)) = bonkTime1d w p v
 bonkTime s (Rock (Circle c r)) p = case hitTimes r (Point c zeroV, p) of
   NoHit -> Nothing
   InHit t -> if s == In then Just t else Nothing

@@ -20,7 +20,7 @@ extra-source-files:
 description:         Please see the README on GitHub at <https://github.com/githubuser/chains#readme>
 
 ghc-options:
-- -Wall -Wredundant-constraints
+- -Wall -Wredundant-constraints -fno-warn-name-shadowing
 
 default-extensions:
 - BangPatterns

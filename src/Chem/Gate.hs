@@ -20,7 +20,7 @@ data Part = Wait Active | Go Active deriving (Show, Eq, Ord, Generic, Enumer)
 data Logic = And | Fst | Snd deriving (Show, Eq, Ord, Generic, Enumer)
 
 logic :: Logic -> Sig -> Sig -> Active
-logic log newS oldS = case log of
+logic l newS oldS = case l of
   And -> if newS == oldS then On newS else Off
   Fst -> On oldS
   Snd -> On newS
@@ -46,7 +46,7 @@ instance InnerChem Gate where
   innerReact (Port In (On s1), Gate (Wait (On s2)) log) = InExchange (Port In Off, Gate (Go (logic log s1 s2)) log)
 
   innerReact cs = InExchange cs
-  allowThru sc = False
+  allowThru _ = False
 
 gateStruct :: Int -> Gate -> Struct Gate
 gateStruct slack c = rocks <> signals <> chains <> ports <> gate
