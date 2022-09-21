@@ -7,6 +7,8 @@ module Pane.Frame
 
 import Geometry.Vector
 import Geometry.Space
+import Types
+import qualified Geometry.Vector as V
 
 data Frame = Frame
   { center :: Position
@@ -14,7 +16,7 @@ data Frame = Frame
   }
 
 panHop :: Vector -> Frame -> Frame
-panHop dirV f = f {center = center f |+ (hop |* dirV)}
+panHop dirV f = f {center = center f |+ (hop V.|* dirV)}
   where hop = 150
 
 zoomHop :: Side -> Frame -> Frame
@@ -23,5 +25,5 @@ zoomHop s view = case s of
   In -> view {zoom = zoom view * (1/zhop)}
   where zhop = 1.25
 
-toAbsPos :: Frame -> Position -> Position
-toAbsPos f p = (1 / zoom f) |* (p |- center f)
+toAbsPos :: Frame -> Pos 'Screen -> Pos 'World
+toAbsPos f (UnsafePos p) = UnsafePos $ (1 / zoom f) V.|* (p |- center f)

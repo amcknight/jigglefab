@@ -29,7 +29,7 @@ import GHC.Generics
 data Valence = Valence
   { wants :: Int 
   , has :: Int 
-  } deriving (Show, Generic)
+  } deriving (Eq, Show, Generic)
 
 instance Chem Valence where
   react (cs, In)

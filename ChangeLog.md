@@ -1,6 +1,8 @@
 # Changelog for chains
 
 ## Unreleased changes
+- Show hover-over outline of orbs before selecting
+- Added Orb editing and Orb building
 
 ## v0.1.5
 - Reverted Overlay but showing an equivalent in the top left

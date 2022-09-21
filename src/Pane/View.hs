@@ -17,6 +17,8 @@ import Pane.EditView
 import Pane.RunView
 import Pane.Pane
 import Pane.Frame
+import Enumer
+import Types
 
 data View c = View
   { mode :: Mode
@@ -38,17 +40,17 @@ togglePlay sp v = case mode v of
     ev = editView v
     rv = runView v
 
-lClick :: Position -> View c -> View c
+lClick :: (Chem c, Enumer c) => Pos 'Screen -> View c -> View c
 lClick mpos v = case mode v of
   Edit -> v {editView = leftClick (frame v) mpos $ editView v}
   Run  -> v {runView = leftClick (frame v) mpos $ runView v}
 
-rClick :: Position -> View c -> View c
+rClick :: (Chem c, Enumer c) => Pos 'Screen -> View c -> View c
 rClick mpos v = case mode v of
   Edit -> v {editView = rightClick (frame v) mpos $ editView v}
   Run  -> v {runView = rightClick (frame v) mpos $ runView v}
 
-mMove :: Position -> View c -> View c
+mMove :: (Chem c, Enumer c) => Pos 'Screen -> View c -> View c
 mMove mpos v = case mode v of
   Edit -> v {editView = mouseMove (frame v) mpos $ editView v}
   Run -> v {runView = mouseMove (frame v) mpos $ runView v}

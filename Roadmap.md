@@ -4,9 +4,6 @@ Subject to drastic changes. Consider these rough thoughts about future functiona
 ## Version 0.2
 - Common chemistry representation type
 - Basic Editor
-- - Place orbs individually
-- - Show hover-over outline of orbs before selecting
-- - Modify an orb to have selected chemistry
 - - Move orbs
 - - Delete orbs
 
@@ -14,6 +11,7 @@ Subject to drastic changes. Consider these rough thoughts about future functiona
 - Encoding of chemistries
 - Encoding of models
 - General Editor
+- - Start from fresh empty scene
 - - Save and Load models
 - - Select from different chemistries
 - - Draw out wire chains

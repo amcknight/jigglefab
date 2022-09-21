@@ -28,7 +28,7 @@ toReactant (InRightOnly c) = RightOnly c
 toReactant (InExchange cs) = Exchange (cs, In)
 toReactant (InBirth cs c) = Birth (cs, In) c
 
-class Show c => Chem c where
+class (Eq c, Show c) => Chem c where
   react :: Sided c -> Reactant c
   default react :: (Ord c, InnerChem c) => Sided c -> Reactant c
   react sc = if allowedThru

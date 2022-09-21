@@ -34,7 +34,6 @@ import Geometry.Angle
 import Voronoi.Pie
 import Voronoi.Tri
 import Voronoi.Sweep
-import Chem.Buckle
 import Voronoi.Edge
 import Voronoi.Event
 import Draw
@@ -43,6 +42,8 @@ import Pane.EditView
 import Pane.RunView
 import Pane.Frame
 import Enumer
+import Chem.Encode
+import Types
 
 run :: IO ()
 run = runSeeded =<< getStdGen
@@ -52,7 +53,7 @@ speeed = 10
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
-  let struct = turnbuckle
+  let struct = encoder
   let (model, nextSeed) = runState (buildModel speeed struct) seed
   let initialFrame = Frame zeroV 50
   let view = View Run (EditView 0 Nothing Nothing struct) (RunView nextSeed model) initialFrame
@@ -66,19 +67,22 @@ runSeeded seed = do
     event
     update
 
-event :: Chem c => Graphics.Gloss.Interface.IO.Interact.Event -> View c -> View c
+event :: (Chem c, Enumer c) => Graphics.Gloss.Interface.IO.Interact.Event -> View c -> View c
 event e v = case e of
-  EventKey (MouseButton LeftButton) Down _ mpos -> lClick (pmap realToFrac mpos) v
-  EventKey (MouseButton RightButton) Down _ mpos -> rClick (pmap realToFrac mpos) v
+  EventKey (MouseButton LeftButton) Down _ mpos -> lClick (UnsafePos (pmap realToFrac mpos)) v
+  EventKey (MouseButton RightButton) Down _ mpos -> rClick (UnsafePos (pmap realToFrac mpos)) v
   EventKey (Char '=') Down _ _ -> v {frame = zoomHop Out $ frame v}
   EventKey (Char '-') Down _ _ -> v {frame = zoomHop In $ frame v}
+  EventKey (Char 'd') Down _ _ -> v -- TODO: Set to Delete Mode
+  EventKey (Char 'e') Down _ _ -> v -- TODO: Set to Edit Mode
+  EventKey (Char 'm') Down _ _ -> v -- TODO: Set to Move Mode
   EventKey (SpecialKey KeySpace) Down _ _ -> togglePlay speeed v
   EventKey (SpecialKey KeyLeft) Down _ _ ->  v {frame = panHop leftV $ frame v}
   EventKey (SpecialKey KeyRight) Down _ _ -> v {frame = panHop rightV $ frame v}
   EventKey (SpecialKey KeyUp) Down _ _ ->    v {frame = panHop upV $ frame v}
   EventKey (SpecialKey KeyDown) Down _ _ ->  v {frame = panHop downV $ frame v}
   EventKey {} -> v
-  EventMotion mpos -> mMove (pmap realToFrac mpos) v
+  EventMotion mpos -> mMove (UnsafePos (pmap realToFrac mpos)) v
   EventResize _ -> v
 
 update :: Chem c => Float -> View c -> View c
