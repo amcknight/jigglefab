@@ -9,7 +9,6 @@ module Struct
 import Wall
 import Orb
 import Geometry.Vector
-import Types
 
 data Struct c = Struct
   { structWalls :: [Wall]
@@ -32,8 +31,8 @@ orbStruct o = Struct [] [o]
 addOrb :: Orb c -> Struct c -> Struct c
 addOrb o s = s {orbs = o : orbs s}
 
-orbAt :: Struct c -> Pos 'World -> Maybe (Orb c)
-orbAt s (UnsafePos p) = case nearestOrb of
+orbAt :: Struct c -> Position -> Maybe (Orb c)
+orbAt s p = case nearestOrb of
   Nothing -> Nothing
   Just nearOrb -> if distSq p (orbPos nearOrb) < 1
     then nearestOrb

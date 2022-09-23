@@ -3,9 +3,9 @@ module Pane.Pane
 ) where
 
 import Pane.Frame
-import Types
+import Pane.MousePos
 
 class Pane p where
-  leftClick :: Frame -> Pos 'Screen -> p -> p
-  rightClick :: Frame -> Pos 'Screen -> p -> p
-  mouseMove :: Frame -> Pos 'Screen -> p -> p
+  leftClick :: Frame -> MousePos -> p -> p
+  rightClick :: Frame -> MousePos -> p -> p
+  mouseMove :: Frame -> MousePos -> p -> p

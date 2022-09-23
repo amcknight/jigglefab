@@ -9,16 +9,12 @@ import Data.Maybe (catMaybes)
 import qualified Data.Vector as V
 import Geometry.Vector
 import Geometry.Line
-import Orb
-import Chem
 import Pair
-import Debug.Trace
 import Geometry.CrossPoint
 import Voronoi.Pie
 import Voronoi.Tri
 import Voronoi.Sweep
 import Voronoi.Edge
-import Color
 
 data Wedge = TriWedge Int Tri | PieWedge Int Pie deriving Show
 
@@ -45,7 +41,7 @@ toPies' ((i,p):ips) (ts:tss) = case compare i (wedgeI (head ts)) of
 
 extractPie :: Int -> Position -> [Wedge] -> [Wedge]
 extractPie i p [] = [PieWedge i (Pie p FullSweep)]
-extractPie i p ts = fmap (PieWedge i) $ antiPies $ fmap (triToPie . (\(TriWedge i t) -> t)) ts
+extractPie i _ ts = fmap (PieWedge i) $ antiPies $ fmap (triToPie . (\(TriWedge _ t) -> t)) ts
 
 antiPies :: [Pie] -> [Pie]
 antiPies ps = fmap (Pie (pos (head ps))) . antiSweeps . sortOn (\(Sweep t _) -> t) . fmap (\(Pie _ s) -> s) $ ps
@@ -58,7 +54,7 @@ triToPie (Tri o (Seg p q)) = case (direction (p |- o), direction (q |- o)) of
   (Just dpo, Just dqo) -> Pie o $ Sweep dpo dqo
 
 toTris :: V.Vector Position -> Edge -> [Wedge]
-toTris ps (Edge s@(Seg p1 p2) is@(i,j)) = catMaybes
+toTris ps (Edge (Seg p1 p2) is@(i,j)) = catMaybes
   [ fmap (TriWedge i) (buildTri p1 p2 cps o1)
   , fmap (TriWedge j) (buildTri p1 p2 cps o2)
   ]

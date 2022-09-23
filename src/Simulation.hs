@@ -43,7 +43,7 @@ import Pane.RunView
 import Pane.Frame
 import Enumer
 import Chem.Encode
-import Types
+import Pane.MousePos
 
 run :: IO ()
 run = runSeeded =<< getStdGen
@@ -69,8 +69,8 @@ runSeeded seed = do
 
 event :: (Chem c, Enumer c) => Graphics.Gloss.Interface.IO.Interact.Event -> View c -> View c
 event e v = case e of
-  EventKey (MouseButton LeftButton) Down _ mpos -> lClick (UnsafePos (pmap realToFrac mpos)) v
-  EventKey (MouseButton RightButton) Down _ mpos -> rClick (UnsafePos (pmap realToFrac mpos)) v
+  EventKey (MouseButton LeftButton) Down _ mpos -> lClick (MousePos (pmap realToFrac mpos)) v
+  EventKey (MouseButton RightButton) Down _ mpos -> rClick (MousePos (pmap realToFrac mpos)) v
   EventKey (Char '=') Down _ _ -> v {frame = zoomHop Out $ frame v}
   EventKey (Char '-') Down _ _ -> v {frame = zoomHop In $ frame v}
   EventKey (Char 'd') Down _ _ -> v -- TODO: Set to Delete Mode
@@ -82,7 +82,7 @@ event e v = case e of
   EventKey (SpecialKey KeyUp) Down _ _ ->    v {frame = panHop upV $ frame v}
   EventKey (SpecialKey KeyDown) Down _ _ ->  v {frame = panHop downV $ frame v}
   EventKey {} -> v
-  EventMotion mpos -> mMove (UnsafePos (pmap realToFrac mpos)) v
+  EventMotion mpos -> mMove (MousePos (pmap realToFrac mpos)) v
   EventResize _ -> v
 
 update :: Chem c => Float -> View c -> View c

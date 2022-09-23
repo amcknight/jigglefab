@@ -46,6 +46,7 @@ library
       Orb
       Pane.EditView
       Pane.Frame
+      Pane.MousePos
       Pane.Pane
       Pane.RunView
       Pane.View
@@ -55,7 +56,6 @@ library
       StructLibrary
       Tiling
       Time
-      Types
       Wall
   other-modules:
       Paths_chains
