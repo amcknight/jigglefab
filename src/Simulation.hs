@@ -18,7 +18,6 @@ import Wall
 import Form
 import Control.Monad.State
 import Chem
-import Debug.Trace
 import Graphics.Gloss
 import Graphics.Gloss.Interface.IO.Interact
 import Geometry.Vector
@@ -27,15 +26,10 @@ import Orb
 import Tiling
 import Voronoi.Fortune
 import Geometry.Line
-import Geometry.Parabola
-import Voronoi.Beach
-import Geometry.Bound
 import Geometry.Angle
 import Voronoi.Pie
 import Voronoi.Tri
 import Voronoi.Sweep
-import Voronoi.Edge
-import Voronoi.Event
 import Draw
 import Pane.View
 import Pane.EditView
@@ -44,6 +38,7 @@ import Pane.Frame
 import Enumer
 import Chem.Encode
 import Pane.MousePos
+import DrawDebug
 
 run :: IO ()
 run = runSeeded =<< getStdGen
@@ -69,8 +64,8 @@ runSeeded seed = do
 
 event :: (Chem c, Enumer c) => Graphics.Gloss.Interface.IO.Interact.Event -> View c -> View c
 event e v = case e of
-  EventKey (MouseButton LeftButton) Down _ mpos -> lClick (MousePos (pmap realToFrac mpos)) v
-  EventKey (MouseButton RightButton) Down _ mpos -> rClick (MousePos (pmap realToFrac mpos)) v
+  EventKey (MouseButton LeftButton) Down _ mpos -> lClick (buildMousePos mpos) v
+  EventKey (MouseButton RightButton) Down _ mpos -> rClick (buildMousePos mpos) v
   EventKey (Char '=') Down _ _ -> v {frame = zoomHop Out $ frame v}
   EventKey (Char '-') Down _ _ -> v {frame = zoomHop In $ frame v}
   EventKey (Char 'd') Down _ _ -> v -- TODO: Set to Delete Mode
@@ -82,7 +77,7 @@ event e v = case e of
   EventKey (SpecialKey KeyUp) Down _ _ ->    v {frame = panHop upV $ frame v}
   EventKey (SpecialKey KeyDown) Down _ _ ->  v {frame = panHop downV $ frame v}
   EventKey {} -> v
-  EventMotion mpos -> mMove (MousePos (pmap realToFrac mpos)) v
+  EventMotion mpos -> mMove (buildMousePos mpos) v
   EventResize _ -> v
 
 update :: Chem c => Float -> View c -> View c
@@ -109,50 +104,13 @@ drawStruct :: Chem c => Frame -> Struct c -> Picture
 drawStruct f (Struct walls os) = toFrame f $ Pictures $
   fmap (drawWall yellow) walls
   <> fmap drawOrb os
-  <> fmap drawEdge es
+  <> drawVoronoiEdges es
   <> fmap (drawOrbWedge (V.fromList os)) ws
-  <> beach
+  <> [drawBeach f os 4]
   where
-    es = voronoi ps
     ps = fmap pos os
+    es = voronoi ps
     ws = tileVoronoi (V.fromList ps) es
-    beach = [drawBeach (zoom f) (V.fromList os) (processBeach (initialBeach ps) 4)]
-
-drawBeach :: Chem c => Double -> V.Vector (Orb c) -> Beach -> Picture
-drawBeach z os (Beach sw _ es bs rs) = Pictures $
-  fmap (drawEvent z) es <>
-  zipWith (drawBouy z os sw) xBounds (V.toList bs) <>
-  fmap drawEdge (edgesFromRays b rs) <>
-  drawSweep sw
-  where
-    ops = V.toList $ fmap pos os
-    bps = V.toList $ fmap pos bs
-    b = bufferedBound ops 1
-    pcs = filter (\x -> x > minX b && x < maxX b) $ parabolaCrossXs sw bps
-    xBounds = zip (minX b : pcs) (pcs ++ [maxX b])
-
-drawEvent :: Double -> Voronoi.Event.Event -> Picture
-drawEvent z (BouyEvent b) = drawPosAt z (pos b) cyan
-drawEvent z (CrossEvent (Cross (Geometry.Circle.Circle pos rad) _)) =
-  Color g (toTranslate pos (toCircle rad)) <> drawPosAt z pos g
-  where g = greyN 0.5
-
-drawBouy :: Chem c => Double -> V.Vector (Orb c) -> Double -> P Double -> Bouy -> Picture
-drawBouy z os sweep xBound (Bouy pos i) = drawPosAt z pos c <> Color c p
-  where
-    p = drawParabola pos sweep xBound
-    c = C.toGlossColor $ chemColor $ orbChem $ os V.! i
-
-drawParabola :: Position -> Double -> P Double -> Picture
-drawParabola focal sweep xBound = case parabolaFromFocus sweep focal of
-  Nothing -> trace "Warning: blank parabola" blank
-  Just p -> toLine $ parabPoss p xBound 0.01 -- TODO: Should be sensitive to zooom
-
-drawSweep :: Double -> [Picture]
-drawSweep h = [Color black $ toLine [(-100000, h), (100000, h)]]
-
-drawPosAt :: Double -> Position -> Color -> Picture
-drawPosAt z pos c = Color c $ toTranslate pos $ toCircleSolid $ 5/z
 
 drawOrbWedge :: Chem c => V.Vector (Orb c) -> Wedge -> Picture
 drawOrbWedge os (PieWedge i p) = Color (colorFromOrbI os i) $ drawPie p
@@ -179,7 +137,7 @@ drawModel :: Chem c => Model c -> Picture
 drawModel m = drawForm (form m) <> Pictures (fmap (drawBond (form m)) (innerIps m))
 
 drawForm :: Chem c => Form c -> Picture
-drawForm (Form ws bs) = Pictures $ wPics ++ bPics -- <> fmap drawEdge es
+drawForm (Form ws bs) = Pictures $ wPics ++ bPics
   where
     wPics = toList $ fmap (drawWall yellow) ws
     es = voronoi $ toList $ fmap pos bs
@@ -206,12 +164,6 @@ drawArcAt p from to = toTranslate p $ case compare f t of
    where
      f = degrees from
      t = degrees to
-
-drawEdge :: Edge -> Picture
-drawEdge = Color white . drawSeg . seg
-
-drawSeg :: Seg -> Picture
-drawSeg (Seg p q) = toLine [p, q]
 
 drawOrbHover :: Frame -> Maybe (Orb c) -> Struct c -> Picture
 drawOrbHover _ Nothing _ = blank

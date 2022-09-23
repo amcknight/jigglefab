@@ -38,6 +38,7 @@ library
       Chem.Valence
       Color
       Draw
+      DrawDebug
       Enumer
       Form
       Hit

@@ -4,8 +4,10 @@ Subject to drastic changes. Consider these rough thoughts about future functiona
 ## Version 0.2
 - Common chemistry representation type
 - Basic Editor
-- - Move orbs
-- - Delete orbs
+- - Display editor mode (delete, move, add) and use keys to choose between them
+- - Delete orb
+- - Move orb
+- - Add orb inside another
 
 ## Version 0.3
 - Encoding of chemistries
@@ -13,6 +15,7 @@ Subject to drastic changes. Consider these rough thoughts about future functiona
 - General Editor
 - - Start from fresh empty scene
 - - Save and Load models
+- - Multi-select with multi-edit/move/delete
 - - Select from different chemistries
 - - Draw out wire chains
 - A set of initial demo capacities
