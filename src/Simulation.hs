@@ -104,9 +104,9 @@ drawStruct :: Chem c => Frame -> Struct c -> Picture
 drawStruct f (Struct walls os) = toFrame f $ Pictures $
   fmap (drawWall yellow) walls
   <> fmap drawOrb os
-  <> drawVoronoiEdges es
   <> fmap (drawOrbWedge (V.fromList os)) ws
-  <> [drawBeach f os 4]
+  <> drawVoronoiEdges es
+  -- <> [drawBeach f os 4]
   where
     ps = fmap pos os
     es = voronoi ps
