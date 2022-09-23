@@ -68,9 +68,14 @@ event e v = case e of
   EventKey (MouseButton RightButton) Down _ mpos -> rClick (buildMousePos mpos) v
   EventKey (Char '=') Down _ _ -> v {frame = zoomHop Out $ frame v}
   EventKey (Char '-') Down _ _ -> v {frame = zoomHop In $ frame v}
-  EventKey (Char 'd') Down _ _ -> v -- TODO: Set to Delete Mode
-  EventKey (Char 'e') Down _ _ -> v -- TODO: Set to Edit Mode
-  EventKey (Char 'm') Down _ _ -> v -- TODO: Set to Move Mode
+  EventKey (Char ch) Down _ _ -> case mode v of
+    Run -> v
+    _ -> case ch of
+      'a' -> v {mode = Add}
+      'd' -> v {mode = Delete}
+      'e' -> v {mode = Edit}
+      'm' -> v {mode = Move}
+      _ -> v
   EventKey (SpecialKey KeySpace) Down _ _ -> togglePlay speeed v
   EventKey (SpecialKey KeyLeft) Down _ _ ->  v {frame = panHop leftV $ frame v}
   EventKey (SpecialKey KeyRight) Down _ _ -> v {frame = panHop rightV $ frame v}
@@ -82,19 +87,41 @@ event e v = case e of
 
 update :: Chem c => Float -> View c -> View c
 update dt v = case mode v of
-  Edit -> v
   Run -> v {runView = (runView v) {model = step (realToFrac dt) (model (runView v))}}
+  _ -> v
 
 draw :: (Chem c, Enumer c) => View c -> Picture
 draw v = case mode v of
+  Add -> drawAddView (frame v) (editView v)
+  Delete -> drawDeleteView (frame v) (editView v)
   Edit -> drawEditView (frame v) (editView v)
+  Move -> drawMoveView (frame v) (editView v)
   Run -> drawRunView (frame v) (runView v)
+
+drawAddView :: forall c . (Chem c, Enumer c) => Frame -> EditView c -> Picture
+drawAddView f ev = Pictures
+  [ drawStruct f $ struct ev
+  -- , drawMouseOrb
+  , drawSidebar (vals @c) (tip ev) (menuHover ev)
+  ]
+
+drawDeleteView :: Chem c => Frame -> EditView c -> Picture
+drawDeleteView f ev = Pictures
+  [ drawStruct f $ struct ev
+  , drawOrbHover f (orbHover ev) (struct ev)
+  ]
 
 drawEditView :: forall c . (Chem c, Enumer c) => Frame -> EditView c -> Picture
 drawEditView f ev = Pictures
   [ drawStruct f $ struct ev
   , drawOrbHover f (orbHover ev) (struct ev)
   , drawSidebar (vals @c) (tip ev) (menuHover ev)
+  ]
+
+drawMoveView :: Chem c => Frame -> EditView c -> Picture
+drawMoveView f ev = Pictures
+  [ drawStruct f $ struct ev
+  , drawOrbHover f (orbHover ev) (struct ev)
   ]
 
 drawRunView :: Chem c => Frame -> RunView c -> Picture
@@ -134,7 +161,8 @@ colorFromBallI :: Chem c => V.Vector (Ball c) -> Int -> Color
 colorFromBallI bs i = C.toGlossColor $ chemColor $ chem $ bs V.! i
 
 drawModel :: Chem c => Model c -> Picture
-drawModel m = drawForm (form m) <> Pictures (fmap (drawBond (form m)) (innerIps m))
+drawModel m = drawForm f <> Pictures (fmap (drawBond f) (innerIps m))
+  where f = form m
 
 drawForm :: Chem c => Form c -> Picture
 drawForm (Form ws bs) = Pictures $ wPics ++ bPics

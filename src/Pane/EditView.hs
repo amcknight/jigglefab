@@ -11,7 +11,7 @@ import Chem
 import Pane.MousePos
 
 data EditView c = EditView
-  { tip :: Int -- TODO: Should this just BE a Chem?
+  { tip :: Int -- TODO: Should these Ints just BE Chems?
   , menuHover :: Maybe Int
   , orbHover :: Maybe (Orb c)
   , struct :: Struct c
