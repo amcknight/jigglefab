@@ -16,4 +16,4 @@ instance HasPos (Orb c) where
   pos = orbPos
 
 buildOrb :: Pos 'World -> c -> Orb c
-buildOrb = Orb . unsafePosition
+buildOrb = Orb . unsafePos
