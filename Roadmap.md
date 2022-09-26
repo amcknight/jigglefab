@@ -4,7 +4,6 @@ Subject to drastic changes. Consider these rough thoughts about future functiona
 ## Version 0.2
 - Common chemistry representation type
 - Basic Editor
-- - Display editor mode (delete, move, add) and use keys to choose between them
 - - Delete orb
 - - Move orb
 - - Add orb inside another

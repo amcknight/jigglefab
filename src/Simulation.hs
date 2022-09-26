@@ -32,8 +32,6 @@ import Voronoi.Tri
 import Voronoi.Sweep
 import Draw
 import Pane.View
-import Pane.EditView
-import Pane.RunView
 import Pane.Frame
 import Enumer
 import Chem.Encode
@@ -51,7 +49,7 @@ runSeeded seed = do
   let struct = encoder
   let (model, nextSeed) = runState (buildModel speeed struct) seed
   let initialFrame = Frame zeroV 50
-  let view = View Run (EditView 0 Nothing Nothing struct) (RunView nextSeed model) initialFrame
+  let view = initialView nextSeed initialFrame model struct
   let frameRate = 30
   play
     FullScreen
@@ -64,8 +62,8 @@ runSeeded seed = do
 
 event :: (Chem c, Enumer c) => Graphics.Gloss.Interface.IO.Interact.Event -> View c -> View c
 event e v = case e of
-  EventKey (MouseButton LeftButton) Down _ mpos -> lClick (buildMousePos mpos) v
-  EventKey (MouseButton RightButton) Down _ mpos -> rClick (buildMousePos mpos) v
+  EventKey (MouseButton LeftButton) Down _ mpos -> leftClick (frame v) (buildMousePos mpos) v
+  EventKey (MouseButton RightButton) Down _ mpos -> rightClick (frame v) (buildMousePos mpos) v
   EventKey (Char '=') Down _ _ -> v {frame = zoomHop Out $ frame v}
   EventKey (Char '-') Down _ _ -> v {frame = zoomHop In $ frame v}
   EventKey (Char ch) Down _ _ -> case mode v of
@@ -82,50 +80,50 @@ event e v = case e of
   EventKey (SpecialKey KeyUp) Down _ _ ->    v {frame = panHop upV $ frame v}
   EventKey (SpecialKey KeyDown) Down _ _ ->  v {frame = panHop downV $ frame v}
   EventKey {} -> v
-  EventMotion mpos -> mMove (buildMousePos mpos) v
+  EventMotion mpos -> mouseMove (frame v) (buildMousePos mpos) v
   EventResize _ -> v
 
 update :: Chem c => Float -> View c -> View c
 update dt v = case mode v of
-  Run -> v {runView = (runView v) {model = step (realToFrac dt) (model (runView v))}}
+  Run -> v {model = step (realToFrac dt) (model v)}
   _ -> v
 
 draw :: (Chem c, Enumer c) => View c -> Picture
 draw v = case mode v of
-  Add -> drawAddView (frame v) (editView v)
-  Delete -> drawDeleteView (frame v) (editView v)
-  Edit -> drawEditView (frame v) (editView v)
-  Move -> drawMoveView (frame v) (editView v)
-  Run -> drawRunView (frame v) (runView v)
+  Add -> drawAddView (frame v) v
+  Delete -> drawDeleteView (frame v) v
+  Edit -> drawEditView (frame v) v
+  Move -> drawMoveView (frame v) v
+  Run -> drawRunView (frame v) v
 
-drawAddView :: forall c . (Chem c, Enumer c) => Frame -> EditView c -> Picture
-drawAddView f ev = Pictures
-  [ drawStruct f $ struct ev
+drawAddView :: forall c . (Chem c, Enumer c) => Frame -> View c -> Picture
+drawAddView f v = Pictures
+  [ drawStruct f $ struct v
   -- , drawMouseOrb
-  , drawSidebar (vals @c) (tip ev) (menuHover ev)
+  , drawSidebar (vals @c) (tip v) (menuHover v)
   ]
 
-drawDeleteView :: Chem c => Frame -> EditView c -> Picture
-drawDeleteView f ev = Pictures
-  [ drawStruct f $ struct ev
-  , drawOrbHover f (orbHover ev) (struct ev)
+drawDeleteView :: Chem c => Frame -> View c -> Picture
+drawDeleteView f v = Pictures
+  [ drawStruct f $ struct v
+  , drawOrbHover f (orbHover v) (struct v)
   ]
 
-drawEditView :: forall c . (Chem c, Enumer c) => Frame -> EditView c -> Picture
-drawEditView f ev = Pictures
-  [ drawStruct f $ struct ev
-  , drawOrbHover f (orbHover ev) (struct ev)
-  , drawSidebar (vals @c) (tip ev) (menuHover ev)
+drawEditView :: forall c . (Chem c, Enumer c) => Frame -> View c -> Picture
+drawEditView f v = Pictures
+  [ drawStruct f $ struct v
+  , drawOrbHover f (orbHover v) (struct v)
+  , drawSidebar (vals @c) (tip v) (menuHover v)
   ]
 
-drawMoveView :: Chem c => Frame -> EditView c -> Picture
-drawMoveView f ev = Pictures
-  [ drawStruct f $ struct ev
-  , drawOrbHover f (orbHover ev) (struct ev)
+drawMoveView :: Chem c => Frame -> View c -> Picture
+drawMoveView f v = Pictures
+  [ drawStruct f $ struct v
+  , drawOrbHover f (orbHover v) (struct v)
   ]
 
-drawRunView :: Chem c => Frame -> RunView c -> Picture
-drawRunView f rv = toFrame f $ drawModel $ model rv
+drawRunView :: Chem c => Frame -> View c -> Picture
+drawRunView f v = toFrame f $ drawModel $ model v
 
 drawStruct :: Chem c => Frame -> Struct c -> Picture
 drawStruct f (Struct walls os) = toFrame f $ Pictures $
@@ -198,19 +196,18 @@ drawOrbHover _ Nothing _ = blank
 drawOrbHover f (Just (Orb p _)) _ = toFrame f $ toTranslate p $ toCircleSolid $ 20 / zoom f
 
 -- TODO: Remove all these magic numbers
-drawSidebar :: Chem c => [c] -> Int -> Maybe Int -> Picture
-drawSidebar chs selI hovI = translate (-1850) 1000 $ Pictures pics
+drawSidebar :: Chem c => [c] -> c -> Maybe c -> Picture
+drawSidebar chs sel hov = translate (-1850) 1000 $ Pictures pics
   where
     pics = spreadSelections $ zipWith drawTokenSelector chs flairs
-    flairs = map (buildFlair hovI selI) is
-    is = [0..length chs]
+    flairs = map (buildFlair hov sel) chs
     spreadSelections :: [Picture] -> [Picture]
-    spreadSelections ps = zipWith (\i p -> translate 0 (-40*fromIntegral i) p) is ps
+    spreadSelections ps = zipWith (\i p -> translate 0 (-40*fromIntegral i) p) [0..length chs] ps
 
-buildFlair :: Maybe Int -> Int -> Int -> Picture
-buildFlair hovI selI i
-  | selI == i = color white pointer
-  | hovI == Just i = color black pointer
+buildFlair :: Chem c => Maybe c -> c -> c -> Picture
+buildFlair hov sel c
+  | sel == c = color white pointer
+  | hov == Just c = color black pointer
   | otherwise = blank
   where pointer = toRectSolid 20 20
 

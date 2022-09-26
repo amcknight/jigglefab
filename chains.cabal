@@ -45,11 +45,8 @@ library
       HitTime
       Model
       Orb
-      Pane.EditView
       Pane.Frame
       Pane.MousePos
-      Pane.Pane
-      Pane.RunView
       Pane.View
       Point
       Simulation

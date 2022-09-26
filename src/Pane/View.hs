@@ -1,10 +1,11 @@
 module Pane.View
   ( View(..)
   , Mode(..)
+  , initialView
   , panHop, zoomHop
   , togglePlay
-  , lClick, rClick
-  , mMove
+  , leftClick, rightClick
+  , mouseMove
   ) where
 
 import Model
@@ -13,18 +14,22 @@ import Form
 import Time
 import Control.Monad.State
 import Chem
-import Pane.EditView
-import Pane.RunView
-import Pane.Pane
 import Pane.Frame
-import Enumer
 import Pane.MousePos
+import Struct
+import Orb
+import System.Random (StdGen)
+import Enumer
 
 data View c = View
   { mode :: Mode
-  , editView :: EditView c
-  , runView :: RunView c
+  , seed :: StdGen
   , frame :: Frame
+  , tip :: c
+  , menuHover :: Maybe c
+  , orbHover :: Maybe (Orb c)
+  , model :: Model c
+  , struct :: Struct c
   }
 
 data Mode = Add | Delete | Edit | Move | Run
@@ -32,27 +37,39 @@ data Mode = Add | Delete | Edit | Move | Run
 instance HasPos (View c) where
   pos = center . frame
 
+initialView :: forall c . Enumer c => StdGen -> Frame -> Model c -> Struct c -> View c
+initialView seed f = View Run seed f (head (vals @c)) Nothing Nothing
+
+leftClick :: (Chem c, Enumer c) => Frame -> MousePos -> View c -> View c
+leftClick frame mpos v = if inMenu mpos
+  then v {tip = c}
+  else case orbAt (struct v) (toAbsPos frame mpos) of
+    Nothing -> v {struct = addOrb (Orb (toAbsPos frame mpos) (tip v)) (struct v)}
+    Just o -> v {struct = replaceOrb (struct v) o o {orbChem = tip v} }
+  where
+    c = menuChem mpos
+
+rightClick :: Frame -> MousePos -> View c -> View c
+rightClick _ _ ev = ev
+
+mouseMove :: Enumer c => Frame -> MousePos -> View c -> View c
+mouseMove frame mpos ev
+  | inMenu mpos = ev {menuHover = Just $ menuChem mpos}
+  | otherwise = ev {orbHover = orbAt (struct ev) (toAbsPos frame mpos)}
+
 togglePlay :: Chem c => Speed -> View c -> View c
 togglePlay sp v = case mode v of
-  Run ->  v {mode = Edit, editView = ev {struct = extractStruct $ form $ model rv}}
-  _ -> v {mode = Run, runView = rv {model = evalState (buildModel sp (struct ev)) (seed rv)}}
+  Run ->  v {mode = Edit, struct = extractStruct $ form $ model v}
+  _ -> v {mode = Run, model = evalState (buildModel sp (struct v)) (seed v)}
+
+-- TODO: Remove magic numbers
+menuItemHeight :: Double
+menuItemHeight = 40
+
+inMenu :: MousePos -> Bool
+inMenu (MousePos (mx, my)) = mx > -1880 && mx < -1420 && my < 1020 && my > 1020 - menuItemHeight*chemSize
   where
-    ev = editView v
-    rv = runView v
+    chemSize = 20 -- TODO: This should be variable and requires EditView to use metachem. When this is possible, should also probably switch to storing tokens in EditView instead of indices
 
-lClick :: (Chem c, Enumer c) => MousePos -> View c -> View c
-lClick mpos v = case mode v of
-  Edit -> v {editView = leftClick (frame v) mpos $ editView v}
-  Run  -> v {runView = leftClick (frame v) mpos $ runView v}
-  _ -> v
-
-rClick :: (Chem c, Enumer c) => MousePos -> View c -> View c
-rClick mpos v = case mode v of
-  Edit -> v {editView = rightClick (frame v) mpos $ editView v}
-  Run  -> v {runView = rightClick (frame v) mpos $ runView v}
-  _ -> v
-
-mMove :: (Chem c, Enumer c) => MousePos -> View c -> View c
-mMove mpos v = case mode v of
-  Run -> v {runView = mouseMove (frame v) mpos $ runView v}
-  _ -> v {editView = mouseMove (frame v) mpos $ editView v}
+menuChem :: forall c . Enumer c => MousePos -> c
+menuChem (MousePos (_, my)) = (vals @c) !! floor ((1020 - my) / menuItemHeight)
