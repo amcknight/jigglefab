@@ -62,8 +62,9 @@ runSeeded seed = do
 
 event :: (Chem c, Enumer c) => Graphics.Gloss.Interface.IO.Interact.Event -> View c -> View c
 event e v = case e of
-  EventKey (MouseButton LeftButton) Down _ mpos -> leftClick (frame v) (buildMousePos mpos) v
-  EventKey (MouseButton RightButton) Down _ mpos -> rightClick (frame v) (buildMousePos mpos) v
+  EventKey (MouseButton LeftButton) Down _ mpos -> leftClick (buildMousePos mpos) v
+  EventKey (MouseButton RightButton) Down _ mpos -> rightClick (buildMousePos mpos) v
+  EventMotion mpos -> mouseMove (buildMousePos mpos) v
   EventKey (Char '=') Down _ _ -> v {frame = zoomHop Out $ frame v}
   EventKey (Char '-') Down _ _ -> v {frame = zoomHop In $ frame v}
   EventKey (Char ch) Down _ _ -> case mode v of
@@ -80,7 +81,6 @@ event e v = case e of
   EventKey (SpecialKey KeyUp) Down _ _ ->    v {frame = panHop upV $ frame v}
   EventKey (SpecialKey KeyDown) Down _ _ ->  v {frame = panHop downV $ frame v}
   EventKey {} -> v
-  EventMotion mpos -> mouseMove (frame v) (buildMousePos mpos) v
   EventResize _ -> v
 
 update :: Chem c => Float -> View c -> View c

@@ -40,22 +40,23 @@ instance HasPos (View c) where
 initialView :: forall c . Enumer c => StdGen -> Frame -> Model c -> Struct c -> View c
 initialView seed f = View Run seed f (head (vals @c)) Nothing Nothing
 
-leftClick :: (Chem c, Enumer c) => Frame -> MousePos -> View c -> View c
-leftClick frame mpos v = if inMenu mpos
+leftClick :: (Chem c, Enumer c) => MousePos -> View c -> View c
+leftClick mpos v = if inMenu (mode v) mpos
   then v {tip = c}
-  else case orbAt (struct v) (toAbsPos frame mpos) of
-    Nothing -> v {struct = addOrb (Orb (toAbsPos frame mpos) (tip v)) (struct v)}
+  else case orbAt (struct v) (toAbsPos f mpos) of
+    Nothing -> v {struct = addOrb (Orb (toAbsPos f mpos) (tip v)) (struct v)}
     Just o -> v {struct = replaceOrb (struct v) o o {orbChem = tip v} }
   where
+    f = frame v
     c = menuChem mpos
 
-rightClick :: Frame -> MousePos -> View c -> View c
-rightClick _ _ ev = ev
+rightClick :: MousePos -> View c -> View c
+rightClick _ v = v
 
-mouseMove :: Enumer c => Frame -> MousePos -> View c -> View c
-mouseMove frame mpos ev
-  | inMenu mpos = ev {menuHover = Just $ menuChem mpos}
-  | otherwise = ev {orbHover = orbAt (struct ev) (toAbsPos frame mpos)}
+mouseMove :: Enumer c => MousePos -> View c -> View c
+mouseMove mpos v
+  | inMenu (mode v) mpos = v {menuHover = Just $ menuChem mpos}
+  | otherwise = v {orbHover = orbAt (struct v) (toAbsPos (frame v) mpos)}
 
 togglePlay :: Chem c => Speed -> View c -> View c
 togglePlay sp v = case mode v of
@@ -66,9 +67,13 @@ togglePlay sp v = case mode v of
 menuItemHeight :: Double
 menuItemHeight = 40
 
-inMenu :: MousePos -> Bool
-inMenu (MousePos (mx, my)) = mx > -1880 && mx < -1420 && my < 1020 && my > 1020 - menuItemHeight*chemSize
+inMenu :: Mode -> MousePos -> Bool
+inMenu m (MousePos (mx, my)) = case m of
+  Add -> inMenuBounds
+  Edit -> inMenuBounds
+  _ -> False
   where
+    inMenuBounds = mx > -1880 && mx < -1420 && my < 1020 && my > 1020 - menuItemHeight*chemSize
     chemSize = 20 -- TODO: This should be variable and requires EditView to use metachem. When this is possible, should also probably switch to storing tokens in EditView instead of indices
 
 menuChem :: forall c . Enumer c => MousePos -> c
