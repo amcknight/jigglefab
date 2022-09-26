@@ -41,19 +41,19 @@ import DrawDebug
 run :: IO ()
 run = runSeeded =<< getStdGen
 
-speeed :: Double
-speeed = 10
-
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
-  let struct = encoder
-  let (model, nextSeed) = runState (buildModel speeed struct) seed
-  let initialFrame = Frame zeroV 50
-  let view = initialView nextSeed initialFrame model struct
+  let speed = 10
+  let zoom = 50
   let frameRate = 30
+  let bgColor = greyN 0.2
+  let struct = encoder
+  let (model, nextSeed) = runState (buildModel speed struct) seed
+  let initialFrame = Frame zeroV zoom
+  let view = initialView nextSeed initialFrame model struct
   play
     FullScreen
-    (greyN 0.2)
+    bgColor
     frameRate
     view
     draw
@@ -62,22 +62,23 @@ runSeeded seed = do
 
 event :: (Chem c, Enumer c) => Graphics.Gloss.Interface.IO.Interact.Event -> View c -> View c
 event e v = case e of
-  EventKey (MouseButton LeftButton) Down _ mpos -> leftClick (buildMousePos mpos) v
+  EventKey (MouseButton LeftButton) Down _ mpos ->  leftClick  (buildMousePos mpos) v
   EventKey (MouseButton RightButton) Down _ mpos -> rightClick (buildMousePos mpos) v
-  EventMotion mpos -> mouseMove (buildMousePos mpos) v
+  EventMotion mpos ->                               mouseMove  (buildMousePos mpos) v
   EventKey (Char ch) Down _ _ -> keyDownEvent ch v
   EventKey (SpecialKey KeySpace) Down _ _ -> togglePlay v
-  EventKey (SpecialKey KeyLeft) Down _ _ ->  v {frame = panHop leftV $ frame v}
-  EventKey (SpecialKey KeyRight) Down _ _ -> v {frame = panHop rightV $ frame v}
-  EventKey (SpecialKey KeyUp) Down _ _ ->    v {frame = panHop upV $ frame v}
-  EventKey (SpecialKey KeyDown) Down _ _ ->  v {frame = panHop downV $ frame v}
+  EventKey (SpecialKey KeyLeft) Down _ _ ->  v {frame = panHop leftV f}
+  EventKey (SpecialKey KeyRight) Down _ _ -> v {frame = panHop rightV f}
+  EventKey (SpecialKey KeyUp) Down _ _ ->    v {frame = panHop upV f}
+  EventKey (SpecialKey KeyDown) Down _ _ ->  v {frame = panHop downV f}
   EventKey {} -> v
   EventResize _ -> v
+  where f = frame v
 
 keyDownEvent :: Chem c => Char -> View c -> View c
 keyDownEvent ch v = case ch of
   '=' -> v {frame = zoomHop Out $ frame v}
-  '-' -> v {frame = zoomHop In $ frame v}
+  '-' -> v {frame = zoomHop In  $ frame v}
   'a' -> setMode Add v
   'd' -> setMode Delete v
   'e' -> setMode Edit v
@@ -91,21 +92,22 @@ update dt v = case mode v of
 
 draw :: forall c . (Chem c, Enumer c) => View c -> Picture
 draw v = Pictures $ case mode v of
-  Add -> [dStruct, dSideBar]
-  Delete -> [dStruct, dOrbHover]
-  Edit -> [dStruct, dOrbHover, dSideBar]
-  Move -> [dStruct, dOrbHover]
+  Add ->    [dStruct, dStatusBar, dSideBar]
+  Delete -> [dStruct, dStatusBar, dOrbHover]
+  Edit ->   [dStruct, dStatusBar, dOrbHover, dSideBar]
+  Move ->   [dStruct, dStatusBar, dOrbHover]
   Run -> [dModel]
   where
     f = frame v
     s = struct v
-    dStruct = drawStruct f s
+    dStruct = toFrame f $ drawStruct s
+    dModel =  toFrame f $ drawModel $ model v
+    dStatusBar = drawStatusBar $ mode v
     dSideBar = drawSidebar (vals @c) (tip v) (menuHover v)
     dOrbHover = drawOrbHover f (orbHover v) s
-    dModel = toFrame f $ drawModel $ model v
 
-drawStruct :: Chem c => Frame -> Struct c -> Picture
-drawStruct f (Struct walls os) = toFrame f $ Pictures $
+drawStruct :: Chem c => Struct c -> Picture
+drawStruct (Struct walls os) = Pictures $
   fmap (drawWall yellow) walls
   <> fmap drawOrb os
   <> fmap (drawOrbWedge (V.fromList os)) ws
@@ -175,6 +177,9 @@ drawOrbHover _ Nothing _ = blank
 drawOrbHover f (Just (Orb p _)) _ = toFrame f $ toTranslate p $ toCircleSolid $ 20 / zoom f
 
 -- TODO: Remove all these magic numbers
+drawStatusBar :: Mode -> Picture
+drawStatusBar m = translate (-1850) (-1000) $ scale 0.3 0.3 $ color green $ text $ "Mode: " ++ show m
+
 drawSidebar :: Chem c => [c] -> c -> Maybe c -> Picture
 drawSidebar chs sel hov = translate (-1850) 1000 $ Pictures pics
   where

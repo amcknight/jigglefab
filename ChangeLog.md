@@ -1,6 +1,7 @@
 # Changelog for chains
 
 ## Unreleased changes
+- Display editor mode
 
 ## v0.1.6
 - Show hover-over outline of orbs before selecting

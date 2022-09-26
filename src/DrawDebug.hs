@@ -52,7 +52,7 @@ drawBouy z os sweep xBound (Bouy pos i) = drawPosAt z pos c <> Color c p
 drawParabola :: Position -> Double -> P Double -> Picture
 drawParabola focal sweep xBound = case parabolaFromFocus sweep focal of
   Nothing -> trace "Warning: blank parabola" blank
-  Just p -> toLine $ parabPoss p xBound 0.01 -- TODO: Should be sensitive to zooom
+  Just p -> toLine $ parabPoss p xBound 0.01 -- TODO: Should be sensitive to zoom to prevent jagged parabola lines
 
 drawSweep :: Double -> [Picture]
 drawSweep h = [Color black $ toLine [(-100000, h), (100000, h)]]

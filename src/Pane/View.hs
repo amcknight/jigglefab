@@ -31,7 +31,7 @@ data View c = View
   , struct :: Struct c
   }
 
-data Mode = Add | Delete | Edit | Move | Run
+data Mode = Add | Delete | Edit | Move | Run deriving (Eq, Show)
 
 instance HasPos (View c) where
   pos = center . frame
@@ -45,11 +45,11 @@ leftClick mpos v = if inMenu (mode v) mpos
   else case mode v of
     Add -> v {struct = addOrb (Orb pos t) s}
     Delete ->  case onOrb of
-      Nothing -> v
       Just o -> v {struct = removeOrb o s}
-    Edit -> case onOrb of
       Nothing -> v
+    Edit -> case onOrb of
       Just o -> v {struct = replaceOrb o o{orbChem = t} s}
+      Nothing -> v
     Move -> v
     Run -> v
   where
