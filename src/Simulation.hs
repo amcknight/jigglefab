@@ -89,42 +89,20 @@ update dt v = case mode v of
   Run -> v {model = step (realToFrac dt) (model v)}
   _ -> v
 
-draw :: (Chem c, Enumer c) => View c -> Picture
-draw v = case mode v of
-  Add -> drawAddView (frame v) v
-  Delete -> drawDeleteView (frame v) v
-  Edit -> drawEditView (frame v) v
-  Move -> drawMoveView (frame v) v
-  Run -> drawRunView (frame v) v
-
-drawAddView :: forall c . (Chem c, Enumer c) => Frame -> View c -> Picture
-drawAddView f v = Pictures
-  [ drawStruct f $ struct v
-  -- , drawMouseOrb
-  , drawSidebar (vals @c) (tip v) (menuHover v)
-  ]
-
-drawDeleteView :: Chem c => Frame -> View c -> Picture
-drawDeleteView f v = Pictures
-  [ drawStruct f $ struct v
-  , drawOrbHover f (orbHover v) (struct v)
-  ]
-
-drawEditView :: forall c . (Chem c, Enumer c) => Frame -> View c -> Picture
-drawEditView f v = Pictures
-  [ drawStruct f $ struct v
-  , drawOrbHover f (orbHover v) (struct v)
-  , drawSidebar (vals @c) (tip v) (menuHover v)
-  ]
-
-drawMoveView :: Chem c => Frame -> View c -> Picture
-drawMoveView f v = Pictures
-  [ drawStruct f $ struct v
-  , drawOrbHover f (orbHover v) (struct v)
-  ]
-
-drawRunView :: Chem c => Frame -> View c -> Picture
-drawRunView f v = toFrame f $ drawModel $ model v
+draw :: forall c . (Chem c, Enumer c) => View c -> Picture
+draw v = Pictures $ case mode v of
+  Add -> [dStruct, dSideBar]
+  Delete -> [dStruct, dOrbHover]
+  Edit -> [dStruct, dOrbHover, dSideBar]
+  Move -> [dStruct, dOrbHover]
+  Run -> [dModel]
+  where
+    f = frame v
+    s = struct v
+    dStruct = drawStruct f s
+    dSideBar = drawSidebar (vals @c) (tip v) (menuHover v)
+    dOrbHover = drawOrbHover f (orbHover v) s
+    dModel = toFrame f $ drawModel $ model v
 
 drawStruct :: Chem c => Frame -> Struct c -> Picture
 drawStruct f (Struct walls os) = toFrame f $ Pictures $
