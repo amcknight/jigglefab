@@ -2,8 +2,10 @@
 
 ## Unreleased changes
 - Show hover-over outline of orbs before selecting
-- Added Orb editing and Orb building
-- Display editor mode (delete, move, add) and use keys to choose between them
+- Use keys to change View mode
+- Edit Orbs
+- Delete Orbs
+- Add Orbs
 
 ## v0.1.5
 - Reverted Overlay but showing an equivalent in the top left

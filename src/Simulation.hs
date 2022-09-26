@@ -65,23 +65,24 @@ event e v = case e of
   EventKey (MouseButton LeftButton) Down _ mpos -> leftClick (buildMousePos mpos) v
   EventKey (MouseButton RightButton) Down _ mpos -> rightClick (buildMousePos mpos) v
   EventMotion mpos -> mouseMove (buildMousePos mpos) v
-  EventKey (Char '=') Down _ _ -> v {frame = zoomHop Out $ frame v}
-  EventKey (Char '-') Down _ _ -> v {frame = zoomHop In $ frame v}
-  EventKey (Char ch) Down _ _ -> case mode v of
-    Run -> v
-    _ -> case ch of
-      'a' -> v {mode = Add}
-      'd' -> v {mode = Delete}
-      'e' -> v {mode = Edit}
-      'm' -> v {mode = Move}
-      _ -> v
-  EventKey (SpecialKey KeySpace) Down _ _ -> togglePlay speeed v
+  EventKey (Char ch) Down _ _ -> keyDownEvent ch v
+  EventKey (SpecialKey KeySpace) Down _ _ -> togglePlay v
   EventKey (SpecialKey KeyLeft) Down _ _ ->  v {frame = panHop leftV $ frame v}
   EventKey (SpecialKey KeyRight) Down _ _ -> v {frame = panHop rightV $ frame v}
   EventKey (SpecialKey KeyUp) Down _ _ ->    v {frame = panHop upV $ frame v}
   EventKey (SpecialKey KeyDown) Down _ _ ->  v {frame = panHop downV $ frame v}
   EventKey {} -> v
   EventResize _ -> v
+
+keyDownEvent :: Chem c => Char -> View c -> View c
+keyDownEvent ch v = case ch of
+  '=' -> v {frame = zoomHop Out $ frame v}
+  '-' -> v {frame = zoomHop In $ frame v}
+  'a' -> setMode Add v
+  'd' -> setMode Delete v
+  'e' -> setMode Edit v
+  'm' -> setMode Move v
+  _ -> v
 
 update :: Chem c => Float -> View c -> View c
 update dt v = case mode v of

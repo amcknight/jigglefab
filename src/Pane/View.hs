@@ -3,7 +3,7 @@ module Pane.View
   , Mode(..)
   , initialView
   , panHop, zoomHop
-  , togglePlay
+  , togglePlay, setMode
   , leftClick, rightClick
   , mouseMove
   ) where
@@ -11,7 +11,6 @@ module Pane.View
 import Model
 import Geometry.Vector
 import Form
-import Time
 import Control.Monad.State
 import Chem
 import Pane.Frame
@@ -42,13 +41,23 @@ initialView seed f = View Run seed f (head (vals @c)) Nothing Nothing
 
 leftClick :: (Chem c, Enumer c) => MousePos -> View c -> View c
 leftClick mpos v = if inMenu (mode v) mpos
-  then v {tip = c}
-  else case orbAt (struct v) (toAbsPos f mpos) of
-    Nothing -> v {struct = addOrb (Orb (toAbsPos f mpos) (tip v)) (struct v)}
-    Just o -> v {struct = replaceOrb (struct v) o o {orbChem = tip v} }
+  then v {tip = menuChem mpos}
+  else case mode v of
+    Add -> v {struct = addOrb (Orb pos t) s}
+    Delete ->  case onOrb of
+      Nothing -> v
+      Just o -> v {struct = removeOrb o s}
+    Edit -> case onOrb of
+      Nothing -> v
+      Just o -> v {struct = replaceOrb o o{orbChem = t} s}
+    Move -> v
+    Run -> v
   where
     f = frame v
-    c = menuChem mpos
+    s = struct v
+    t = tip v
+    pos = toAbsPos f mpos
+    onOrb = orbAt s pos
 
 rightClick :: MousePos -> View c -> View c
 rightClick _ v = v
@@ -58,10 +67,17 @@ mouseMove mpos v
   | inMenu (mode v) mpos = v {menuHover = Just $ menuChem mpos}
   | otherwise = v {orbHover = orbAt (struct v) (toAbsPos (frame v) mpos)}
 
-togglePlay :: Chem c => Speed -> View c -> View c
-togglePlay sp v = case mode v of
-  Run ->  v {mode = Edit, struct = extractStruct $ form $ model v}
-  _ -> v {mode = Run, model = evalState (buildModel sp (struct v)) (seed v)}
+togglePlay :: Chem c => View c -> View c
+togglePlay v = case mode v of
+  Run -> setMode Edit v
+  _ -> setMode Run v
+
+setMode :: Chem c => Mode -> View c -> View c
+setMode m v = case (mode v, m) of
+  (Run, Run) -> v
+  (Run, _) -> v {mode = m, struct = extractStruct $ form $ model v}
+  (_, Run) -> v {mode = Run, model = evalState (buildModel (speed (model v)) (struct v)) (seed v)}
+  _ -> v {mode = m}
 
 -- TODO: Remove magic numbers
 menuItemHeight :: Double

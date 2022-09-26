@@ -1,9 +1,8 @@
 module Struct
 ( Struct(..)
 , wallStruct, orbStruct
-, addOrb
 , orbAt
-, replaceOrb
+, addOrb, removeOrb, replaceOrb
 ) where
 
 import Wall
@@ -28,9 +27,6 @@ wallStruct w = Struct [w] []
 orbStruct :: Orb c -> Struct c
 orbStruct o = Struct [] [o]
 
-addOrb :: Orb c -> Struct c -> Struct c
-addOrb o s = s {orbs = o : orbs s}
-
 orbAt :: Struct c -> Position -> Maybe (Orb c)
 orbAt s p = case nearestOrb of
   Nothing -> Nothing
@@ -39,8 +35,14 @@ orbAt s p = case nearestOrb of
     else Nothing
   where nearestOrb = minWith (distSq p . orbPos) (orbs s)
 
-replaceOrb :: Eq c => Struct c -> Orb c -> Orb c -> Struct c
-replaceOrb s oldO newO = s {orbs = fmap (\o -> if o == oldO then newO else o) (orbs s) }
+addOrb :: Orb c -> Struct c -> Struct c
+addOrb o s = s {orbs = o : orbs s}
+
+removeOrb :: Eq c => Orb c -> Struct c -> Struct c
+removeOrb badO s = s {orbs = filter (/= badO) (orbs s)}
+
+replaceOrb :: Eq c => Orb c -> Orb c -> Struct c -> Struct c
+replaceOrb oldO newO s = s {orbs = fmap (\o -> if o == oldO then newO else o) (orbs s) }
 
 minWith :: Ord b => (a -> b) -> [a] -> Maybe a
 minWith _ [] = Nothing
