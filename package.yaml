@@ -1,5 +1,5 @@
 name:                chains
-version:             0.1.6
+version:             0.1.8
 github:              "githubuser/chains"
 license:             BSD3
 author:              "Andrew McKnight"
@@ -89,9 +89,9 @@ library:
     - containers
     - mtl
     - random
-    - vector
     - ilist
-    - geo2d
+    - vector
+    - cereal
 
 executables:
   chains-exe:

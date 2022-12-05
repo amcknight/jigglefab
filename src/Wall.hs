@@ -8,8 +8,9 @@ import Geometry.Space
 import Point
 import Geometry.Vector
 import Geometry.Circle
+import GHC.Generics (Generic)
 
-data Wall = VLine Double | HLine Double | Rock Circle deriving (Eq, Show)
+data Wall = VLine Double | HLine Double | Rock Circle deriving (Eq, Show, Generic)
 
 rock :: Position -> Radius -> Wall
 rock p = Rock . Circle p

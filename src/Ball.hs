@@ -11,11 +11,12 @@ import Time
 import Orb
 import Geometry.Vector
 import Utils
+import GHC.Generics (Generic)
 
 data Ball c = Ball
   { point :: Point
   , chem :: c
-  } deriving Show
+  } deriving (Show, Generic)
 
 instance HasPos (Ball c) where
   pos = pos . point

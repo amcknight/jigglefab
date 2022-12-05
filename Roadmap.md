@@ -3,8 +3,6 @@ Subject to drastic changes. Consider these rough thoughts about future functiona
 
 ## Version 0.2
 - Common chemistry representation type
-- Basic Editor
-- - Move orb
 
 ## Version 0.3
 - Encoding of chemistries

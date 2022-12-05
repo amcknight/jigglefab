@@ -7,6 +7,8 @@ module Model
 ) where
 
 import Data.Maybe (mapMaybe)
+import Data.Bifunctor ( Bifunctor(second) )
+import GHC.Generics (Generic)
 import qualified Data.Map as M
 import qualified Data.List as L
 import qualified Data.Vector as V
@@ -20,7 +22,6 @@ import Wall
 import Geometry.Vector
 import Form
 import Chem
-import Data.Bifunctor
 import HitTime
 import Struct
 import Utils
@@ -32,7 +33,7 @@ data Model c = Model
   , wbSides :: SideMap
   , bbSides :: SideMap
   , bounces :: [Hit]
-  } deriving Show
+  } deriving (Show, Generic)
 
 instance Mover (Model c) where
   move dt (Model sp f wss hss hs) = Model sp (move dt f) wss hss (fmap (move dt) hs)

@@ -1,7 +1,11 @@
 # Changelog for chains
 
 ## Unreleased changes
+
+## v0.1.7
 - Display editor mode
+- Implemented Move mode
+- Separated Voronoi viewing from struct viewing
 
 ## v0.1.6
 - Show hover-over outline of orbs before selecting

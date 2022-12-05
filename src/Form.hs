@@ -28,11 +28,12 @@ import Utils
 import Orb
 import Geometry.Circle
 import Data.Vector (toList)
+import GHC.Generics (Generic)
 
 data Form c = Form
   { walls :: V.Vector Wall
   , balls :: V.Vector (Ball c)
-  } deriving Show
+  } deriving (Show, Generic)
 
 instance Mover (Form c) where 
   move dt (Form ws bs) = Form ws $ fmap (move dt) bs

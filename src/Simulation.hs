@@ -1,5 +1,6 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 module Simulation
 ( run
 ) where
@@ -20,6 +21,7 @@ import Control.Monad.State
 import Chem
 import Graphics.Gloss
 import Graphics.Gloss.Interface.IO.Interact
+import Graphics.Gloss.Interface.Environment
 import Geometry.Vector
 import Struct
 import Orb
@@ -34,23 +36,28 @@ import Draw
 import Pane.View
 import Pane.Frame
 import Enumer
-import Chem.Encode
 import Pane.MousePos
 import DrawDebug
+import Chem.Buckle (turnbuckle)
+import Geometry.Bound
 
 run :: IO ()
 run = runSeeded =<< getStdGen
 
 runSeeded :: StdGen -> IO ()
 runSeeded seed = do
+  ss <- getScreenSize
   let speed = 10
   let zoom = 50
   let frameRate = 30
   let bgColor = greyN 0.2
-  let struct = encoder
+  let struct = turnbuckle
   let (model, nextSeed) = runState (buildModel speed struct) seed
   let initialFrame = Frame zeroV zoom
-  let view = initialView nextSeed initialFrame model struct
+  let sp = 0.5 |* pmap fromIntegral ss
+  let screen = Bound (zeroV |- sp) sp
+  let view = initialView nextSeed screen initialFrame model struct
+  
   play
     FullScreen
     bgColor
@@ -62,9 +69,11 @@ runSeeded seed = do
 
 event :: (Chem c, Enumer c) => Graphics.Gloss.Interface.IO.Interact.Event -> View c -> View c
 event e v = case e of
-  EventKey (MouseButton LeftButton) Down _ mpos ->  leftClick  (buildMousePos mpos) v
-  EventKey (MouseButton RightButton) Down _ mpos -> rightClick (buildMousePos mpos) v
-  EventMotion mpos ->                               mouseMove  (buildMousePos mpos) v
+  EventKey (MouseButton LeftButton) Down _ mpos -> leftDown (buildMousePos mpos) v
+  EventKey (MouseButton LeftButton) Up _ mpos -> leftUp (buildMousePos mpos) v
+  EventKey (MouseButton RightButton) Down _ mpos -> rightDown (buildMousePos mpos) v
+  EventKey (MouseButton RightButton) Up _ mpos -> rightUp (buildMousePos mpos) v
+  EventMotion mpos -> mouseMove (buildMousePos mpos) v
   EventKey (Char ch) Down _ _ -> keyDownEvent ch v
   EventKey (SpecialKey KeySpace) Down _ _ -> togglePlay v
   EventKey (SpecialKey KeyLeft) Down _ _ ->  v {frame = panHop leftV f}
@@ -79,6 +88,7 @@ keyDownEvent :: Chem c => Char -> View c -> View c
 keyDownEvent ch v = case ch of
   '=' -> v {frame = zoomHop Out $ frame v}
   '-' -> v {frame = zoomHop In  $ frame v}
+  -- 's' -> saveModel $ model v
   'a' -> setMode Add v
   'd' -> setMode Delete v
   'e' -> setMode Edit v
@@ -90,33 +100,39 @@ update dt v = case mode v of
   Run -> v {model = step (realToFrac dt) (model v)}
   _ -> v
 
+saveModel :: Model c -> IO()
+saveModel = undefined
+
 draw :: forall c . (Chem c, Enumer c) => View c -> Picture
 draw v = Pictures $ case mode v of
-  Add ->    [dStruct, dStatusBar, dSideBar]
-  Delete -> [dStruct, dStatusBar, dOrbHover]
-  Edit ->   [dStruct, dStatusBar, dOrbHover, dSideBar]
-  Move ->   [dStruct, dStatusBar, dOrbHover]
+  Add ->    [dVoronoi, dStruct, dStatusBar, dSideBar]
+  Delete -> [dVoronoi, dStruct, dStatusBar, dOrbHover]
+  Edit ->   [dVoronoi, dStruct, dStatusBar, dOrbHover, dSideBar]
+  Move ->   [dVoronoi, dStruct, dStatusBar, dOrbHover]
   Run -> [dModel]
   where
     f = frame v
     s = struct v
     dStruct = toFrame f $ drawStruct s
     dModel =  toFrame f $ drawModel $ model v
-    dStatusBar = drawStatusBar $ mode v
+    dStatusBar = drawStatusBar v
     dSideBar = drawSidebar (vals @c) (tip v) (menuHover v)
     dOrbHover = drawOrbHover f (orbHover v) s
+    dVoronoi = toFrame f $ drawVoronoi v
+
+drawVoronoi :: View c -> Picture
+drawVoronoi v = Pictures $ drawVoronoiEdges $ voronoi $ fmap pos os
+  -- <> [drawBeach f os 4]
+  where os = viewOrbs v
 
 drawStruct :: Chem c => Struct c -> Picture
 drawStruct (Struct walls os) = Pictures $
   fmap (drawWall yellow) walls
   <> fmap drawOrb os
   <> fmap (drawOrbWedge (V.fromList os)) ws
-  <> drawVoronoiEdges es
-  -- <> [drawBeach f os 4]
   where
     ps = fmap pos os
-    es = voronoi ps
-    ws = tileVoronoi (V.fromList ps) es
+    ws = tileVoronoi (V.fromList ps) (voronoi ps)
 
 drawOrbWedge :: Chem c => V.Vector (Orb c) -> Wedge -> Picture
 drawOrbWedge os (PieWedge i p) = Color (colorFromOrbI os i) $ drawPie p
@@ -176,10 +192,14 @@ drawOrbHover :: Frame -> Maybe (Orb c) -> Struct c -> Picture
 drawOrbHover _ Nothing _ = blank
 drawOrbHover f (Just (Orb p _)) _ = toFrame f $ toTranslate p $ toCircleSolid $ 20 / zoom f
 
--- TODO: Remove all these magic numbers
-drawStatusBar :: Mode -> Picture
-drawStatusBar m = translate (-1850) (-1000) $ scale 0.3 0.3 $ color green $ text $ "Mode: " ++ show m
+drawStatusBar :: View c -> Picture
+drawStatusBar v = toTranslate scrPos $ scale textScale textScale $ color green $ text $ "Mode: " ++ show (mode v)
+  where
+    textScale = 0.3
+    scrPos = pmap (realToFrac . (+ menuBlockSize)) (maxX b, maxY b)
+    b = screen v
 
+-- TODO: Remove magic numbers. Merge menu and screen values into single type for passing around?
 drawSidebar :: Chem c => [c] -> c -> Maybe c -> Picture
 drawSidebar chs sel hov = translate (-1850) 1000 $ Pictures pics
   where

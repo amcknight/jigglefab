@@ -5,7 +5,7 @@ cabal-version: 1.12
 -- see: https://github.com/sol/hpack
 
 name:           chains
-version:        0.1.6
+version:        0.1.8
 description:    Please see the README on GitHub at <https://github.com/githubuser/chains#readme>
 homepage:       https://github.com/githubuser/chains#readme
 bug-reports:    https://github.com/githubuser/chains/issues
@@ -41,10 +41,19 @@ library
       DrawDebug
       Enumer
       Form
+      Geometry.Angle
+      Geometry.Bound
+      Geometry.Circle
+      Geometry.CrossPoint
+      Geometry.Line
+      Geometry.Parabola
+      Geometry.Space
+      Geometry.Vector
       Hit
       HitTime
       Model
       Orb
+      Pair
       Pane.Frame
       Pane.MousePos
       Pane.View
@@ -54,6 +63,14 @@ library
       StructLibrary
       Tiling
       Time
+      Utils
+      Voronoi.Beach
+      Voronoi.Edge
+      Voronoi.Event
+      Voronoi.Fortune
+      Voronoi.Pie
+      Voronoi.Sweep
+      Voronoi.Tri
       Wall
   other-modules:
       Paths_chains
@@ -118,8 +135,8 @@ library
   ghc-options: -Wall -Wredundant-constraints -fno-warn-name-shadowing
   build-depends:
       base >=4.7 && <5
+    , cereal
     , containers
-    , geo2d
     , gloss
     , ilist
     , mtl

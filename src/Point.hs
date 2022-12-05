@@ -15,11 +15,12 @@ import Geometry.Space
 import Pair
 import Graphics.Gloss.Geometry.Line (closestPointOnLine)
 import Geometry.Circle
+import GHC.Generics (Generic)
 
 data Point = Point
   { pointPos :: Position
   , vel :: Velocity
-  } deriving Show
+  } deriving (Show, Generic)
 
 instance HasPos Point where
   pos = pointPos
