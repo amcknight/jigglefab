@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 module Voronoi.Beach
 ( Beach(..)
 , initialBeach

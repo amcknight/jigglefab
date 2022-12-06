@@ -1,8 +1,3 @@
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE DefaultSignatures #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Util.Enumer
 ( Enumer(..)
 ) where

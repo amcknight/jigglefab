@@ -9,11 +9,12 @@ import Voronoi.Beach
 import Voronoi.Event
 import Voronoi.Edge
 import Geometry.Angle
-import Utils
+import Util.Utils
 import Geometry.Circle
 import Data.Maybe (isJust)
 
 instance Arbitrary Bouy where
+  arbitrary :: Gen Bouy
   arbitrary = Bouy <$> arbitrary <*> arbitrary
 
 spec :: Spec

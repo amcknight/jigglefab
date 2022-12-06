@@ -9,7 +9,7 @@ import Test.QuickCheck
 import Geometry.Vector
 import Voronoi.Edge
 import Geometry.Line
-import Utils
+import Util.Utils
 import Data.Maybe (fromMaybe)
 
 spec :: Spec

@@ -1,9 +1,8 @@
-{-# LANGUAGE FlexibleInstances #-}
 module SpecUtils
 ( eqSelf
 , sym2, sym3
 ) where
-import Utils
+import Util.Utils
 
 eqSelf :: Eq a => a -> (a -> a) -> Bool
 eqSelf x f = f x == x

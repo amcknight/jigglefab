@@ -28,6 +28,7 @@ default-extensions:
 - ConstrainedClassMethods
 - ConstraintKinds
 - DataKinds
+- DefaultSignatures
 - DeriveAnyClass
 - DeriveDataTypeable
 - DeriveFoldable

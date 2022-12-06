@@ -6,7 +6,7 @@ import Test.QuickCheck
 
 import Geometry.Vector
 import SpecUtils
-import Utils
+import Util.Utils
 
 spec :: Spec
 spec = do

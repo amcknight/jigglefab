@@ -1,4 +1,3 @@
-{-# LANGUAGE DefaultSignatures #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Model.Chem

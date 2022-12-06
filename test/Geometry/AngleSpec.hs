@@ -4,7 +4,7 @@ import Test.Hspec
 import Test.Hspec.QuickCheck
 import SpecUtils
 import Geometry.Angle
-import Utils
+import Util.Utils
 
 spec :: Spec
 spec = do

@@ -1,4 +1,3 @@
-{-# LANGUAGE TypeSynonymInstances #-}
 module Geometry.Angle
 ( Turn
 , Radian
