@@ -32,6 +32,7 @@ data Beach = Beach
   }
 
 instance Show Beach where
+  show :: Beach -> String
   show (Beach sw cs es bs rs) = "Beach {s="++show sw++" stack="++show cs++" events="++show es++" bouys="++show bs++" rays="++show rs++"}"
 
 initialBeach :: [Position] -> Beach

@@ -3,6 +3,9 @@ module DrawDebug
 , drawVoronoiEdges
 ) where
 
+import qualified Data.Vector as V
+import qualified Color as C
+import Debug.Trace (trace)
 import Graphics.Gloss
 import Model.Chem
 import Model.Orb
@@ -11,10 +14,7 @@ import Voronoi.Event
 import Util.Pair
 import Geometry.Vector
 import Geometry.Circle
-import qualified Data.Vector as V
-import qualified Color as C
 import Voronoi.Edge
-import Debug.Trace (trace)
 import Draw
 import Geometry.Parabola
 import Geometry.Bound

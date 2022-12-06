@@ -12,11 +12,12 @@ data Tri = Tri
   , triSeg :: Seg
   } deriving Show
 
+instance HasPos Tri where
+  pos :: Tri -> Position
+  pos = triPos
+
 makeCCW :: Tri -> Tri
 makeCCW (Tri o (Seg p q)) = Tri o $ case turnDirection o p q of
   Nothing -> error "Tri Can't be colinear at this point"
   Just Clockwise -> Seg q p
   Just CounterClockwise -> Seg p q
-
-instance HasPos Tri where
-  pos = triPos

@@ -33,19 +33,23 @@ import Control.Monad.State
 import System.Random ( Random(randomR, random) )
 import Data.List (nub)
 import Data.Maybe (mapMaybe)
+import System.Random.Stateful (RandomGen)
 
 type Vector = P Double
 type Position = Vector
 type Velocity = Vector
 
 instance Near Vector where
+  near :: Int -> Vector -> Vector -> Bool
   near dec v1 v2 = magnitude (v2 |- v1) < 1/10^dec
 
 instance {-# OVERLAPPING #-} Random Vector where
+  randomR :: RandomGen g => P Vector -> g -> (Vector, g)
   randomR ((x1,y1),(x2,y2)) g = ((x,y), g3)
     where
       (x, g2) = randomR (x1, x2) g
       (y, g3) = randomR (y1, y2) g2
+  random :: RandomGen g => g -> (Vector, g)
   random g = (toUnit theta, g2)
     where
       (theta, g2) = randomR (-pi, pi) g
@@ -201,7 +205,7 @@ radSqFromArc :: Radian -> Vector -> Vector -> Double
 radSqFromArc a v1 v2 = distSq v1 v2 / (c*c)
   where c = chord a
 
-squashTurn :: Radius -> Vector -> Vector -> Turn
+squashTurn :: Double -> Vector -> Vector -> Turn
 squashTurn rad v1 v2 = if 2*rad <= d then 0 else toTurn $ acos $ (d/2)/rad
   where d = dist v1 v2
 

@@ -1,6 +1,5 @@
 module Geometry.Space
-( Radius
-, Ortho (..)
+( Ortho (..)
 , Sided
 , flipSided
 , swapPair
@@ -11,7 +10,6 @@ import Util.Pair
 import Data.Tuple
 import Util.Side
 
-type Radius = Double
 data Ortho = Vertical | Horizontal deriving (Eq, Show)
 type Sided a = (P a, Side)
 

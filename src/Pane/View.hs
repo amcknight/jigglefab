@@ -44,6 +44,7 @@ data Click = Up | Down
 data Mode = Add | Delete | Edit | Move | Run deriving (Eq, Show)
 
 instance HasPos (View c) where
+  pos :: View c -> Position
   pos = center . frame
 
 initialView :: forall c . Enumer c => StdGen -> Bound -> Frame -> Model c -> Struct c -> View c

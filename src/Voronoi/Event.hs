@@ -14,9 +14,11 @@ data Bouy = Bouy
   } deriving Eq
 
 instance Show Bouy where
+  show :: Bouy -> String
   show (Bouy pos i) = "Bouy "++show pos++" i"++show i
 
 instance HasPos Bouy where
+  pos :: Bouy -> Position
   pos = bouyPos
 
 data Cross = Cross

@@ -11,4 +11,5 @@ data Pie = Pie
   } deriving Show
 
 instance HasPos Pie where
+  pos :: Pie -> Position
   pos = piePos

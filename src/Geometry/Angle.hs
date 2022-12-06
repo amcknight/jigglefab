@@ -26,6 +26,7 @@ import Util.Utils
 type Turn = Double -- From 0 to 1
 
 instance Near Turn where
+  near :: Int -> Turn -> Turn -> Bool
   near dec t1 t2 = t < acc || t > 1 - acc
     where
       t = abs $ simple t1 - simple t2

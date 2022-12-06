@@ -6,11 +6,11 @@ module Chem.Stripe
 import Model.Chem
 import Color
 import Geometry.Vector
-import Geometry.Space
 import Model.Struct
 import Model.Orb
 import Util.Enumer
 import GHC.Generics
+import Geometry.Circle
 
 data Trip = A | B | C deriving (Show, Eq, Ord, Generic, Enumer)
 data Stripe = No Trip | Yes Trip deriving (Show, Eq, Ord, Generic, Enumer)

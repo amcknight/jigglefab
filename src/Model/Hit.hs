@@ -18,7 +18,9 @@ data Hit = Hit
 instance Serialize Hit
 
 instance Ord Hit where
+  compare :: Hit -> Hit -> Ordering
   compare = comparing hitTime
 
 instance Mover Hit where
+  move :: Duration -> Hit -> Hit
   move dt (Hit d s ip) = Hit (d - dt) s ip

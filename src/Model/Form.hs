@@ -41,11 +41,14 @@ data Form c = Form
 instance Serialize c => Serialize (Form c)
 
 instance Mover (Form c) where
+  move :: Duration -> Form c -> Form c
   move dt (Form ws bs) = Form ws $ fmap (move dt) bs
 
 instance Semigroup (Form c) where
+  (<>) :: Form c -> Form c -> Form c
   (<>) (Form w1 b1) (Form w2 b2) = Form (w1 <> w2) (b1 <> b2)
 instance Monoid (Form c) where
+  mempty :: Form c
   mempty = Form V.empty V.empty
 
 buildForm :: Speed -> Struct c -> R (Form c)

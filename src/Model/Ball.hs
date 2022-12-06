@@ -22,9 +22,11 @@ data Ball c = Ball
 instance Serialize c => Serialize (Ball c)
 
 instance HasPos (Ball c) where
+  pos :: Ball c -> Position
   pos = pos . point
 
 instance Mover (Ball c) where
+  move :: Duration -> Ball c -> Ball c
   move dt (Ball p c) = Ball (move dt p) c
 
 buildBall :: Speed -> Orb c -> R (Ball c)

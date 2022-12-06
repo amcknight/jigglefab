@@ -27,9 +27,11 @@ data Point = Point
 instance Serialize Point
 
 instance HasPos Point where
+  pos :: Point -> Position
   pos = pointPos
 
 instance Mover Point where
+  move :: Duration -> Point -> Point
   move dt (Point p v) = Point (p |+ (dt |* v)) v
 
 minus :: P Point -> Point

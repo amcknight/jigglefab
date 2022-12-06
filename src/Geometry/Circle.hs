@@ -1,13 +1,15 @@
 module Geometry.Circle
-( Circle(..)
+( Radius
+, Circle(..)
 , circleFrom3
 ) where
 
 import Geometry.Vector
-import Geometry.Space
 import Util.Utils
 import GHC.Generics (Generic)
 import Data.Serialize (Serialize)
+
+type Radius = Double
 
 data Circle = Circle
   { circPos :: Position
@@ -17,6 +19,7 @@ data Circle = Circle
 instance Serialize Circle
 
 instance HasPos Circle where
+  pos :: Circle -> Position
   pos = circPos
 
 circleFrom3 :: Position -> Position -> Position -> Maybe Circle

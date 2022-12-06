@@ -28,9 +28,11 @@ data Ray = Ray
    } deriving (Show, Eq)
 
 instance HasPos Ray where
+  pos :: Ray -> Position
   pos = rayPos
 
 instance Ord Ray where
+  compare :: Ray -> Ray -> Ordering
   compare (Ray _ _ (i1, j1)) (Ray _ _ (i2, j2)) = case compare i1 i2 of
     EQ -> compare j1 j2
     o -> o

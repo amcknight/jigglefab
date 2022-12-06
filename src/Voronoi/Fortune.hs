@@ -9,9 +9,9 @@ import Voronoi.Beach
 import Geometry.Angle
 import Geometry.CrossPoint
 import Voronoi.Edge
+import Util.Utils
 import Data.List (sortOn)
 import qualified Data.List.Index as I
-import Util.Utils
 
 voronoi :: [Position] -> [Edge]
 voronoi ps = case firstDupIndices ps of 

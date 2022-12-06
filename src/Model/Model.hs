@@ -40,6 +40,7 @@ data Model c = Model
 instance Serialize c => Serialize (Model c)
 
 instance Mover (Model c) where
+  move :: Duration -> Model c -> Model c
   move dt (Model sp f wss hss hs) = Model sp (move dt f) wss hss (fmap (move dt) hs)
 
 buildModel :: Chem c => Speed -> Struct c -> R (Model c)

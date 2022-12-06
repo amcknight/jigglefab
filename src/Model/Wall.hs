@@ -4,7 +4,6 @@ module Model.Wall
 , wSide
 ) where
 
-import Geometry.Space
 import Model.Point
 import Geometry.Vector
 import Geometry.Circle
