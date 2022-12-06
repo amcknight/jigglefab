@@ -2,18 +2,15 @@
 Subject to drastic changes. Consider these rough thoughts about future functionality.
 
 ## Version 0.2
-- Common chemistry representation type
+- Save and Load models
 
 ## Version 0.3
-- Encoding of chemistries
-- Encoding of models
+- A set of initial demo capacities
 - General Editor
 - - Start from fresh empty scene
-- - Save and Load models
 - - Multi-select with multi-edit/move/delete
 - - Select from different chemistries
 - - Draw out wire chains
-- A set of initial demo capacities
 
 ## Version 0.4
 - Sub-circuits Editor

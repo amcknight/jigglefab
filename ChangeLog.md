@@ -2,6 +2,11 @@
 
 ## Unreleased changes
 
+## v0.1.8
+- Added geo2d project back into chains
+- Organized modules into folders
+- Made Model serializable
+
 ## v0.1.7
 - Display editor mode
 - Implemented Move mode
