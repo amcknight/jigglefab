@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleInstances #-}
-
 module Geometry.Vector
 ( Vector
 , Position, Velocity
@@ -27,12 +25,12 @@ module Geometry.Vector
 , fromBy
 ) where
 
-import Control.Monad.State
-import System.Random
 import Geometry.Angle
 import Geometry.Space
 import Utils
 import Pair
+import Control.Monad.State ( MonadState(put, get) )
+import System.Random ( Random(randomR, random) )
 import Data.List (nub)
 import Data.Maybe (mapMaybe)
 
@@ -211,9 +209,9 @@ colinear :: Int -> [Position] -> Bool
 colinear dec ps = colinear' dec $ nub ps
 colinear' :: Int -> [Position] -> Bool
 colinear' _ [] = True
-colinear' _ [p] = True
-colinear' _ [p,q] = True
-colinear' dec aps@(a:b:ps) = all (withinAngle acc dirB) (mapMaybe dirFromA ps)
+colinear' _ [_] = True
+colinear' _ [_,_] = True
+colinear' dec (a:b:ps) = all (withinAngle acc dirB) (mapMaybe dirFromA ps)
   where
     Just dirB = dirFromA b
     dirFromA = direction . (|- a)

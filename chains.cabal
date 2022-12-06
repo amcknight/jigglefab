@@ -216,8 +216,13 @@ test-suite chains-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      Geometry.AngleSpec
+      Geometry.CircleSpec
+      Geometry.VectorSpec
       SpecUtils
       TilingSpec
+      Voronoi.BeachSpec
+      Voronoi.FortuneSpec
       Paths_chains
   hs-source-dirs:
       test
@@ -282,6 +287,5 @@ test-suite chains-test
       QuickCheck
     , base >=4.7 && <5
     , chains
-    , geo2d
     , hspec
   default-language: Haskell2010

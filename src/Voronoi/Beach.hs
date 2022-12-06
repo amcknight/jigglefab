@@ -10,7 +10,7 @@ module Voronoi.Beach
 ) where
 
 import qualified Data.Vector as V
-import Data.List (sort, partition, sortOn)
+import Data.List (sort, sortOn)
 import Data.Maybe (mapMaybe)
 import Geometry.Vector
 import Geometry.Angle
@@ -33,12 +33,6 @@ data Beach = Beach
 
 instance Show Beach where
   show (Beach sw cs es bs rs) = "Beach {s="++show sw++" stack="++show cs++" events="++show es++" bouys="++show bs++" rays="++show rs++"}"
-
-bouyEvents :: Beach -> [Event]
-bouyEvents (Beach _ _ es _ _) = filter isBouyEvent es
-
-crossEvents :: Beach -> [Event]
-crossEvents (Beach _ _ es _ _) = filter (not . isBouyEvent) es
 
 initialBeach :: [Position] -> Beach
 initialBeach ps = Beach sw [] es V.empty []
@@ -173,8 +167,3 @@ parabolaCross sw p q = case crossPointsFromFoci sw p q of
     EQ -> error "Shouldn't happen I guess"
     GT -> lc
   InfinteCross -> error "Identical Bouys should not be in a voronoi"
-
-between :: Double -> Double -> Double -> Bool
-between x a b
-  | b < a = between x b a
-  | otherwise = a <= x && x <= b

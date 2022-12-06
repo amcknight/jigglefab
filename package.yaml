@@ -114,6 +114,5 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - chains
-    - geo2d
     - hspec
     - QuickCheck
