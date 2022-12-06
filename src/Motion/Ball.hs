@@ -1,4 +1,4 @@
-module Model.Ball
+module Motion.Ball
 ( Ball (..)
 , buildBall
 , buildBalls
@@ -6,9 +6,9 @@ module Model.Ball
 ) where
 
 import Util.Pair
-import Model.Point
-import Model.Time
-import Model.Orb
+import Motion.Point
+import Motion.Time
+import State.Orb
 import Geometry.Vector
 import Util.Utils
 import GHC.Generics (Generic)

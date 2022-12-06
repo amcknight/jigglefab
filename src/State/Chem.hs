@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
-module Model.Chem
+module State.Chem
 ( Reactant(..)
 , InReactant(..)
 , Chem, react, prereact, chemColor

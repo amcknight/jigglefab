@@ -1,4 +1,4 @@
-module Model.Model
+module Motion.Model
 ( Model (speed, form)
 , buildModel
 , step
@@ -13,17 +13,17 @@ import qualified Data.Map as M
 import qualified Data.List as L
 import qualified Data.Vector as V
 import Geometry.Space
-import Model.Time
+import Motion.Time
 import Util.Pair
-import Model.Point
-import Model.Ball
-import Model.Hit
-import Model.Wall
+import Motion.Point
+import Motion.Ball
+import Motion.Hit
+import State.Wall
 import Geometry.Vector
-import Model.Form
-import Model.Chem
-import Model.HitTime
-import Model.Struct
+import Motion.Form
+import State.Chem
+import Motion.HitTime
+import State.Struct
 import Util.Utils
 import Data.Serialize (Serialize)
 import Util.Side

@@ -1,4 +1,4 @@
-module Model.Point
+module Motion.Point
 ( Point (Point)
 , Position
 , Velocity
@@ -10,7 +10,7 @@ module Model.Point
 ) where
 
 import Geometry.Vector
-import Model.Time
+import Motion.Time
 import Geometry.Space
 import Util.Pair
 import Graphics.Gloss.Geometry.Line (closestPointOnLine)

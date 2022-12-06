@@ -3,12 +3,12 @@ module Chem.Electro
 , wireStruct
 ) where
 
-import Model.Chem
+import State.Chem
 import Color
-import Model.Struct
-import Model.Orb
-import Model.Wall
-import StructLibrary
+import State.Struct
+import State.Orb
+import State.Wall
+import State.StructLibrary
 import GHC.Generics
 
 data Electro = Dormant | Active | Tired Int deriving (Show, Eq, Ord, Generic)

@@ -1,4 +1,4 @@
-module StructLibrary
+module State.StructLibrary
 ( cappedLinIncl, cappedLinExcl
 , cappedArcIncl
 , linIncl, linExcl
@@ -10,12 +10,11 @@ module StructLibrary
 , box
 ) where
 
-import Model.Point
 import Geometry.Angle
 import Geometry.Vector
-import Model.Orb
-import Model.Wall
-import Model.Struct
+import State.Orb
+import State.Wall
+import State.Struct
 
 box :: Vector -> Vector -> Struct c
 box (x1,y1) (x2,y2) =

@@ -1,4 +1,4 @@
-module TilingSpec (spec) where
+module Voronoi.TilingSpec (spec) where
 
 import Test.Hspec
 import Test.Hspec.QuickCheck
@@ -6,7 +6,7 @@ import Test.Hspec.QuickCheck
 import Test.QuickCheck
 import Geometry.Vector
 import Geometry.CrossPoint
-import Tiling
+import Voronoi.Tiling
 import Data.Maybe (isNothing)
 
 spec :: Spec

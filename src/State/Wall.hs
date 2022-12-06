@@ -1,10 +1,10 @@
-module Model.Wall
+module State.Wall
 ( Wall (..)
 , rock
 , wSide
 ) where
 
-import Model.Point
+import Motion.Point
 import Geometry.Vector
 import Geometry.Circle
 import GHC.Generics (Generic)

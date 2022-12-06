@@ -3,12 +3,12 @@ module Chem.Load
 , load
 ) where
 
-import Model.Chem
-import Model.Wall
-import StructLibrary
+import State.Chem
+import State.Wall
+import State.StructLibrary
 import Color
 import Geometry.Vector
-import Model.Struct
+import State.Struct
 import GHC.Generics
 import Util.Enumer
 import Util.Side

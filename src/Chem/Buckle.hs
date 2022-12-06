@@ -5,13 +5,13 @@ module Chem.Buckle
 , turnbuckle
 ) where
 
-import Model.Chem
+import State.Chem
 import Color
 import Geometry.Vector
-import Model.Wall
-import StructLibrary
-import Model.Struct
-import Model.Orb
+import State.Wall
+import State.StructLibrary
+import State.Struct
+import State.Orb
 import Util.Enumer
 import GHC.Generics
 import Util.Side

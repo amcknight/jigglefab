@@ -3,12 +3,12 @@ module Chem.Peano
 , placement
 ) where
 
-import Model.Chem
+import State.Chem
 import Color
 import Geometry.Vector
-import Model.Wall
-import StructLibrary
-import Model.Struct
+import State.Wall
+import State.StructLibrary
+import State.Struct
 import GHC.Generics
 import Util.Enumer
 

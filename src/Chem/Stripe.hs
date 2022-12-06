@@ -3,11 +3,11 @@ module Chem.Stripe
 , longStruct
 ) where
 
-import Model.Chem
+import State.Chem
 import Color
 import Geometry.Vector
-import Model.Struct
-import Model.Orb
+import State.Struct
+import State.Orb
 import Util.Enumer
 import GHC.Generics
 import Geometry.Circle

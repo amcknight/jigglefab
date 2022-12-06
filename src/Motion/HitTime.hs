@@ -1,12 +1,12 @@
-module Model.HitTime
+module Motion.HitTime
 ( CircleHitTime(..)
 , hitTimes
 , asList
 ) where
 
-import Model.Time
+import Motion.Time
 import Util.Pair
-import Model.Point
+import Motion.Point
 import Geometry.Vector
 import Util.Side
 import Geometry.Circle

@@ -10,15 +10,15 @@ module Pane.View
   , menuBlockSize
   ) where
 
-import Model.Model
+import Motion.Model
 import Geometry.Vector
-import Model.Form
+import Motion.Form
 import Control.Monad.State
-import Model.Chem
+import State.Chem
 import Pane.Frame
 import Pane.MousePos
-import Model.Struct
-import Model.Orb
+import State.Struct
+import State.Orb
 import Util.Enumer
 import System.Random (StdGen)
 import Geometry.Bound

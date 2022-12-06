@@ -1,4 +1,4 @@
-module Model.Form
+module Motion.Form
 ( Form (..)
 , buildForm
 , extractStruct
@@ -15,18 +15,18 @@ module Model.Form
 
 import Data.Vector.Serialize()
 import qualified Data.Vector as V
-import Model.Ball
-import Model.Wall
+import Motion.Ball
+import State.Wall
 import Util.Pair
-import Model.Time
-import Model.Hit
-import Model.HitTime
+import Motion.Time
+import Motion.Hit
+import Motion.HitTime
 import Geometry.Space
-import Model.Point
+import Motion.Point
 import Geometry.Vector
-import Model.Struct
+import State.Struct
 import Util.Utils
-import Model.Orb
+import State.Orb
 import Geometry.Circle
 import Data.Vector (toList)
 import GHC.Generics (Generic)

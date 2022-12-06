@@ -1,4 +1,4 @@
-module Model.Time 
+module Motion.Time 
 ( Time
 , Duration
 , Speed

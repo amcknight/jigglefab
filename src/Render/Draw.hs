@@ -1,4 +1,4 @@
-module Draw
+module Render.Draw
 ( toTranslate
 , toScale
 , toFrame
@@ -7,6 +7,7 @@ module Draw
 , toCircle, toCircleSolid
 , toRectSolid
 ) where
+
 import Geometry.Vector
 import Graphics.Gloss
 import Util.Pair

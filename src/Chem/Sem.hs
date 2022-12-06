@@ -4,13 +4,13 @@ module Chem.Sem
 , movingTool
 ) where
 
-import Model.Chem
+import State.Chem
 import Color
 import Geometry.Vector
-import Model.Wall
-import StructLibrary
-import Model.Struct
-import Model.Orb
+import State.Wall
+import State.StructLibrary
+import State.Struct
+import State.Orb
 import GHC.Generics
 import Util.Enumer
 import Util.Side

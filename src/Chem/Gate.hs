@@ -4,12 +4,12 @@ module Chem.Gate
 , gate
 ) where
 
-import Model.Chem
-import Model.Wall
-import StructLibrary
+import State.Chem
+import State.Wall
+import State.StructLibrary
 import Color
-import Model.Struct
-import Model.Orb
+import State.Struct
+import State.Orb
 import Util.Enumer
 import GHC.Generics
 import Util.Side

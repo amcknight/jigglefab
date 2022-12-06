@@ -35,8 +35,6 @@ library
       Chem.Stripe
       Chem.Valence
       Color
-      Draw
-      DrawDebug
       Geometry.Angle
       Geometry.Bound
       Geometry.Circle
@@ -45,23 +43,25 @@ library
       Geometry.Parabola
       Geometry.Space
       Geometry.Vector
-      Model.Ball
-      Model.Chem
-      Model.Form
-      Model.Hit
-      Model.HitTime
-      Model.Model
-      Model.Orb
-      Model.Point
-      Model.Struct
-      Model.Time
-      Model.Wall
+      Motion.Ball
+      Motion.Form
+      Motion.Hit
+      Motion.HitTime
+      Motion.Model
+      Motion.Point
+      Motion.Time
       Pane.Frame
       Pane.MousePos
       Pane.View
+      Render.Draw
+      Render.DrawDebug
+      Render.DrawSim
       Simulation
-      StructLibrary
-      Tiling
+      State.Chem
+      State.Orb
+      State.Struct
+      State.StructLibrary
+      State.Wall
       Util.Enumer
       Util.Pair
       Util.Side
@@ -72,6 +72,7 @@ library
       Voronoi.Fortune
       Voronoi.Pie
       Voronoi.Sweep
+      Voronoi.Tiling
       Voronoi.Tri
   other-modules:
       Paths_chains
@@ -224,9 +225,9 @@ test-suite chains-test
       Geometry.CircleSpec
       Geometry.VectorSpec
       SpecUtils
-      TilingSpec
       Voronoi.BeachSpec
       Voronoi.FortuneSpec
+      Voronoi.TilingSpec
       Paths_chains
   hs-source-dirs:
       test

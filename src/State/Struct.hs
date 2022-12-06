@@ -1,12 +1,12 @@
-module Model.Struct
+module State.Struct
 ( Struct(..)
 , wallStruct, orbStruct
 , orbAt
 , addOrb, removeOrb, replaceOrb
 ) where
 
-import Model.Wall
-import Model.Orb
+import State.Wall
+import State.Orb
 import Geometry.Vector
 
 data Struct c = Struct

@@ -1,4 +1,4 @@
-module Tiling
+module Voronoi.Tiling
 ( Wedge(..)
 , tileVoronoi
 , buildTri

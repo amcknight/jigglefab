@@ -15,14 +15,14 @@ module Chem.Valence
 , sevenBall
 ) where
 
-import Model.Chem
+import State.Chem
 import Util.Pair
 import Color
-import Model.Struct
-import Model.Orb
+import State.Struct
+import State.Orb
 import Geometry.Vector
-import StructLibrary
-import Model.Wall
+import State.StructLibrary
+import State.Wall
 import GHC.Generics
 import Util.Side
 

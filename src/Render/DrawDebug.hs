@@ -1,4 +1,4 @@
-module DrawDebug
+module Render.DrawDebug
 ( drawBeach
 , drawVoronoiEdges
 ) where
@@ -7,15 +7,15 @@ import qualified Data.Vector as V
 import qualified Color as C
 import Debug.Trace (trace)
 import Graphics.Gloss
-import Model.Chem
-import Model.Orb
+import State.Chem
+import State.Orb
 import Voronoi.Beach
 import Voronoi.Event
 import Util.Pair
 import Geometry.Vector
 import Geometry.Circle
 import Voronoi.Edge
-import Draw
+import Render.Draw
 import Geometry.Parabola
 import Geometry.Bound
 import Pane.Frame

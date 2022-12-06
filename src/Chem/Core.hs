@@ -7,15 +7,15 @@ module Chem.Core
 
 import qualified Data.Vector as V
 
-import Model.Chem
+import State.Chem
 import Color
-import Model.Struct
+import State.Struct
 import Geometry.Vector
 import Util.Pair
 import Geometry.Angle
-import Model.Wall
-import Model.Orb
-import StructLibrary
+import State.Wall
+import State.Orb
+import State.StructLibrary
 import GHC.Generics
 import Util.Enumer
 import Util.Side

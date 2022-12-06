@@ -1,8 +1,8 @@
-module Model.Hit
+module Motion.Hit
 ( Hit (Hit, hitTime, hitSide, ixPair)
 ) where
 
-import Model.Time
+import Motion.Time
 import Util.Pair
 import Data.Ord
 import GHC.Generics (Generic)
