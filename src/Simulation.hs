@@ -88,7 +88,7 @@ keyDownEvent :: Chem c => Char -> View c -> View c
 keyDownEvent ch v = case ch of
   '=' -> v {frame = zoomHop Out $ frame v}
   '-' -> v {frame = zoomHop In  $ frame v}
-  -- 's' -> saveModel $ model v
+  's' -> v --saveModel $ model v
   'a' -> setMode Add v
   'd' -> setMode Delete v
   'e' -> setMode Edit v
@@ -99,9 +99,6 @@ update :: Chem c => Float -> View c -> View c
 update dt v = case mode v of
   Run -> v {model = step (realToFrac dt) (model v)}
   _ -> v
-
-saveModel :: Model c -> IO()
-saveModel = undefined
 
 draw :: forall c . (Chem c, Enumer c) => View c -> Picture
 draw v = Pictures $ case mode v of
