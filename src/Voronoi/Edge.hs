@@ -8,13 +8,13 @@ module Voronoi.Edge
 import Data.Maybe (mapMaybe)
 import Data.Either (partitionEithers)
 import Data.List (sort)
-import Pair
+import Util.Pair
 import Geometry.CrossPoint
 import Geometry.Line
 import Geometry.Bound
 import Geometry.Vector
 import Geometry.Angle
-import Utils
+import Util.Utils
 
 data Edge = Edge
   { seg :: Seg

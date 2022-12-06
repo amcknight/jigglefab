@@ -3,13 +3,13 @@ module Chem.Stripe
 , longStruct
 ) where
 
-import Chem
+import Model.Chem
 import Color
 import Geometry.Vector
 import Geometry.Space
 import Model.Struct
 import Model.Orb
-import Enumer
+import Util.Enumer
 import GHC.Generics
 
 data Trip = A | B | C deriving (Show, Eq, Ord, Generic, Enumer)

@@ -4,8 +4,7 @@ module Chem.Sem
 , movingTool
 ) where
 
-import Chem
-import Geometry.Space
+import Model.Chem
 import Color
 import Geometry.Vector
 import Model.Wall
@@ -13,7 +12,8 @@ import StructLibrary
 import Model.Struct
 import Model.Orb
 import GHC.Generics
-import Enumer
+import Util.Enumer
+import Util.Side
 
 data Sig = Red | Blue deriving (Show, Eq, Ord, Generic, Enumer)
 data Active = Open | Closed | Full Sig deriving (Show, Eq, Ord, Generic, Enumer)

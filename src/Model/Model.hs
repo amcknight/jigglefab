@@ -13,19 +13,20 @@ import qualified Data.Map as M
 import qualified Data.List as L
 import qualified Data.Vector as V
 import Geometry.Space
-import Time
-import Pair
+import Model.Time
+import Util.Pair
 import Model.Point
 import Model.Ball
 import Model.Hit
 import Model.Wall
 import Geometry.Vector
 import Model.Form
-import Chem
+import Model.Chem
 import Model.HitTime
 import Model.Struct
-import Utils
+import Util.Utils
 import Data.Serialize (Serialize)
+import Util.Side
 
 type SideMap = M.Map (P Int) Side
 data Model c = Model

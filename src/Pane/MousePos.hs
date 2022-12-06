@@ -4,7 +4,7 @@ module Pane.MousePos
 ) where
 
 import Geometry.Vector
-import Pair
+import Util.Pair
 
 newtype MousePos = MousePos Position
 

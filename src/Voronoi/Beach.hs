@@ -19,8 +19,8 @@ import Geometry.Parabola
 import Debug.Trace
 import Geometry.Circle
 import Voronoi.Edge
-import Pair
-import Utils
+import Util.Pair
+import Util.Utils
 import Voronoi.Event
 
 data Beach = Beach

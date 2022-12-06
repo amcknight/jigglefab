@@ -5,16 +5,16 @@ module Chem.Buckle
 , turnbuckle
 ) where
 
-import Chem
-import Geometry.Space
+import Model.Chem
 import Color
 import Geometry.Vector
 import Model.Wall
 import StructLibrary
 import Model.Struct
 import Model.Orb
-import Enumer
+import Util.Enumer
 import GHC.Generics
+import Util.Side
 
 data Sig = Red | Blue deriving (Show, Eq, Ord, Generic, Enumer)
 data Active a = Off | On a deriving (Show, Eq, Ord, Generic, Enumer)

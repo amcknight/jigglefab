@@ -15,9 +15,8 @@ module Chem.Valence
 , sevenBall
 ) where
 
-import Chem
-import Geometry.Space
-import Pair
+import Model.Chem
+import Util.Pair
 import Color
 import Model.Struct
 import Model.Orb
@@ -25,6 +24,7 @@ import Geometry.Vector
 import StructLibrary
 import Model.Wall
 import GHC.Generics
+import Util.Side
 
 data Valence = Valence
   { wants :: Int 

@@ -1,29 +1,19 @@
 module Geometry.Space
 ( Radius
 , Ortho (..)
-, Side (..)
 , Sided
-, flipSide
 , flipSided
 , swapPair
 , inPair, inSide
 ) where
 
-import Pair
+import Util.Pair
 import Data.Tuple
-import GHC.Generics (Generic)
-import Data.Serialize (Serialize)
+import Util.Side
 
 type Radius = Double
 data Ortho = Vertical | Horizontal deriving (Eq, Show)
-data Side = Out | In deriving (Show, Eq, Ord, Generic)
 type Sided a = (P a, Side)
-
-instance Serialize Side
-
-flipSide :: Side -> Side
-flipSide In = Out
-flipSide Out = In
 
 flipSided :: Sided a -> Sided a
 flipSided (p, s) = (p, flipSide s)

@@ -6,8 +6,8 @@ module Pane.Frame
 ) where
 
 import Geometry.Vector
-import Geometry.Space
 import Pane.MousePos
+import Util.Side
 
 data Frame = Frame
   { center :: Position

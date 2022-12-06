@@ -21,7 +21,7 @@ module Geometry.Angle
 ) where
 
 import Data.Fixed (mod')
-import Utils
+import Util.Utils
 
 type Turn = Double -- From 0 to 1
 

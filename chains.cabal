@@ -24,7 +24,6 @@ source-repository head
 
 library
   exposed-modules:
-      Chem
       Chem.Buckle
       Chem.Core
       Chem.Electro
@@ -38,7 +37,6 @@ library
       Color
       Draw
       DrawDebug
-      Enumer
       Geometry.Angle
       Geometry.Bound
       Geometry.Circle
@@ -48,6 +46,7 @@ library
       Geometry.Space
       Geometry.Vector
       Model.Ball
+      Model.Chem
       Model.Form
       Model.Hit
       Model.HitTime
@@ -55,16 +54,18 @@ library
       Model.Orb
       Model.Point
       Model.Struct
+      Model.Time
       Model.Wall
-      Pair
       Pane.Frame
       Pane.MousePos
       Pane.View
       Simulation
       StructLibrary
       Tiling
-      Time
-      Utils
+      Util.Enumer
+      Util.Pair
+      Util.Side
+      Util.Utils
       Voronoi.Beach
       Voronoi.Edge
       Voronoi.Event

@@ -10,6 +10,7 @@ import Geometry.Vector
 import Geometry.Circle
 import GHC.Generics (Generic)
 import Data.Serialize (Serialize)
+import Util.Side
 
 data Wall = VLine Double | HLine Double | Rock Circle deriving (Eq, Show, Generic)
 

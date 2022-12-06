@@ -14,15 +14,15 @@ import Model.Model
 import Geometry.Vector
 import Model.Form
 import Control.Monad.State
-import Chem
+import Model.Chem
 import Pane.Frame
 import Pane.MousePos
 import Model.Struct
 import Model.Orb
-import Enumer
+import Util.Enumer
 import System.Random (StdGen)
 import Geometry.Bound
-import Pair
+import Util.Pair
 
 data View c = View
   { mode :: Mode

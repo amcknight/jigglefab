@@ -27,8 +27,8 @@ module Geometry.Vector
 
 import Geometry.Angle
 import Geometry.Space
-import Utils
-import Pair
+import Util.Utils
+import Util.Pair
 import Control.Monad.State
 import System.Random ( Random(randomR, random) )
 import Data.List (nub)

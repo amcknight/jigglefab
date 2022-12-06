@@ -3,7 +3,7 @@ module Chem.Electro
 , wireStruct
 ) where
 
-import Chem
+import Model.Chem
 import Color
 import Model.Struct
 import Model.Orb

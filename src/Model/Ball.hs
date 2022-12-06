@@ -5,12 +5,12 @@ module Model.Ball
 , extractOrb
 ) where
 
-import Pair
+import Util.Pair
 import Model.Point
-import Time
+import Model.Time
 import Model.Orb
 import Geometry.Vector
-import Utils
+import Util.Utils
 import GHC.Generics (Generic)
 import Data.Serialize (Serialize)
 

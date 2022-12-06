@@ -1,7 +1,7 @@
 {-# LANGUAGE DefaultSignatures #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
-module Chem
+module Model.Chem
 ( Reactant(..)
 , InReactant(..)
 , Chem, react, prereact, chemColor
@@ -9,9 +9,10 @@ module Chem
 ) where
 
 import Geometry.Space
-import Pair
+import Util.Pair
 import Data.Tuple
 import Color
+import Util.Side
 
 data Reactant c = LeftOnly c | RightOnly c | Exchange (Sided c) | Birth (Sided c) c
 

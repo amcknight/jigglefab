@@ -4,15 +4,15 @@ module Chem.Gate
 , gate
 ) where
 
-import Chem
-import Geometry.Space
+import Model.Chem
 import Model.Wall
 import StructLibrary
 import Color
 import Model.Struct
 import Model.Orb
-import Enumer
+import Util.Enumer
 import GHC.Generics
+import Util.Side
 
 data Sig = Red | Blue deriving (Show, Eq, Ord, Generic, Enumer)
 data Active = Off | On Sig deriving (Show, Eq, Ord, Generic, Enumer)

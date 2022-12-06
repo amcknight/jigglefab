@@ -9,7 +9,7 @@ module Draw
 ) where
 import Geometry.Vector
 import Graphics.Gloss
-import Pair
+import Util.Pair
 import Pane.Frame
 
 toTranslate :: Position -> Picture -> Picture

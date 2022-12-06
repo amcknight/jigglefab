@@ -5,8 +5,7 @@ module Chem.Encode
 , encoder
 ) where
 
-import Chem
-import Geometry.Space
+import Model.Chem
 import Model.Wall
 import StructLibrary
 import Color
@@ -14,7 +13,8 @@ import Geometry.Vector
 import Model.Struct
 import Model.Orb
 import GHC.Generics
-import Enumer
+import Util.Enumer
+import Util.Side
 
 data Sig = Red | Blue deriving (Show, Eq, Ord, Generic, Enumer)
 data Active = Off | On Sig deriving (Show, Eq, Ord, Generic, Enumer)

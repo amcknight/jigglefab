@@ -7,18 +7,18 @@ module Chem.Core
 
 import qualified Data.Vector as V
 
-import Chem
-import Geometry.Space
+import Model.Chem
 import Color
 import Model.Struct
 import Geometry.Vector
-import Pair
+import Util.Pair
 import Geometry.Angle
 import Model.Wall
 import Model.Orb
 import StructLibrary
 import GHC.Generics
-import Enumer
+import Util.Enumer
+import Util.Side
 
 data Sig = Red | Blue deriving (Show, Eq, Ord, Generic, Enumer)
 data Active a = Off | On a deriving (Show, Eq, Ord, Generic, Enumer)

@@ -1,4 +1,4 @@
-module Utils
+module Util.Utils
 ( R
 , sort3
 , allEq, anyEq
@@ -25,12 +25,12 @@ anyEq :: Ord a => [a] -> Bool
 anyEq = anyEq' . sort
 anyEq' :: Eq a => [a] -> Bool
 anyEq' [] = False
-anyEq' [x] = False
+anyEq' [_] = False
 anyEq' (x:y:xs) = x == y || anyEq' (y:xs)
 
 firstDupIndices :: Eq a => [a] -> Maybe (Int, Int)
 firstDupIndices [] = Nothing
-firstDupIndices [x] = Nothing
+firstDupIndices [_] = Nothing
 firstDupIndices (x:xs) = case elemIndex x xs of
   Nothing -> fmap (\(i,j) -> (i+1,j+1)) (firstDupIndices xs)
   Just j -> Just (0, j+1)

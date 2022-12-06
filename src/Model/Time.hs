@@ -1,4 +1,4 @@
-module Time 
+module Model.Time 
 ( Time
 , Duration
 , Speed

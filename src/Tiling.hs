@@ -9,7 +9,7 @@ import Data.Maybe (catMaybes)
 import qualified Data.Vector as V
 import Geometry.Vector
 import Geometry.Line
-import Pair
+import Util.Pair
 import Geometry.CrossPoint
 import Voronoi.Pie
 import Voronoi.Tri

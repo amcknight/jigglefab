@@ -10,15 +10,14 @@ import System.Random (getStdGen, StdGen)
 import qualified Data.Vector as V
 import qualified Color as C
 import Geometry.Circle
-import Geometry.Space
 import Model.Point
 import Model.Ball
-import Pair
+import Util.Pair
 import Model.Model
 import Model.Wall
 import Model.Form
 import Control.Monad.State
-import Chem
+import Model.Chem
 import Graphics.Gloss
 import Graphics.Gloss.Interface.IO.Interact
 import Graphics.Gloss.Interface.Environment
@@ -35,11 +34,12 @@ import Voronoi.Sweep
 import Draw
 import Pane.View
 import Pane.Frame
-import Enumer
+import Util.Enumer
 import Pane.MousePos
 import DrawDebug
 import Chem.Buckle (turnbuckle)
 import Geometry.Bound
+import Util.Side
 
 run :: IO ()
 run = runSeeded =<< getStdGen

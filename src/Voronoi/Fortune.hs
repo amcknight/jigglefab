@@ -11,7 +11,7 @@ import Geometry.CrossPoint
 import Voronoi.Edge
 import Data.List (sortOn)
 import qualified Data.List.Index as I
-import Utils
+import Util.Utils
 
 voronoi :: [Position] -> [Edge]
 voronoi ps = case firstDupIndices ps of 

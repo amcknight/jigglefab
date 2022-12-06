@@ -10,13 +10,14 @@ module Model.Point
 ) where
 
 import Geometry.Vector
-import Time
+import Model.Time
 import Geometry.Space
-import Pair
+import Util.Pair
 import Graphics.Gloss.Geometry.Line (closestPointOnLine)
 import Geometry.Circle
 import GHC.Generics (Generic)
 import Data.Serialize (Serialize)
+import Util.Side
 
 data Point = Point
   { pointPos :: Position

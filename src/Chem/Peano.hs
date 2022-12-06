@@ -3,14 +3,14 @@ module Chem.Peano
 , placement
 ) where
 
-import Chem
+import Model.Chem
 import Color
 import Geometry.Vector
 import Model.Wall
 import StructLibrary
 import Model.Struct
 import GHC.Generics
-import Enumer
+import Util.Enumer
 
 data Peano = No | Yes | Tail | Wrap Peano deriving (Show, Eq, Ord, Generic, Enumer)
 

@@ -3,12 +3,12 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Enumer
+module Util.Enumer
 ( Enumer(..)
 ) where
 
 import GHC.Generics
-import Geometry.Space
+import Util.Side
 
 deriving instance Enumer Side
 

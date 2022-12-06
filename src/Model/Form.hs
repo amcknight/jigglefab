@@ -17,20 +17,21 @@ import Data.Vector.Serialize()
 import qualified Data.Vector as V
 import Model.Ball
 import Model.Wall
-import Pair
-import Time
+import Util.Pair
+import Model.Time
 import Model.Hit
 import Model.HitTime
 import Geometry.Space
 import Model.Point
 import Geometry.Vector
 import Model.Struct
-import Utils
+import Util.Utils
 import Model.Orb
 import Geometry.Circle
 import Data.Vector (toList)
 import GHC.Generics (Generic)
 import Data.Serialize (Serialize)
+import Util.Side
 
 data Form c = Form
   { walls :: V.Vector Wall

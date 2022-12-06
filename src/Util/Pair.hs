@@ -1,6 +1,6 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE FlexibleInstances #-}
-module Pair
+module Util.Pair
 ( P
 , pmap
 , pair
@@ -12,9 +12,6 @@ module Pair
 , overlaps1
 , overlaps2
 ) where
-
-import Data.Containers.ListUtils (nubOrd)
-import Data.Maybe (mapMaybe)
 
 type P a = (a, a)
 

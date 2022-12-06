@@ -2,12 +2,12 @@ module Model.Hit
 ( Hit (Hit, hitTime, hitSide, ixPair)
 ) where
 
-import Time
-import Geometry.Space
-import Pair
+import Model.Time
+import Util.Pair
 import Data.Ord
 import GHC.Generics (Generic)
 import Data.Serialize (Serialize)
+import Util.Side
 
 data Hit = Hit
   { hitTime :: Time

@@ -5,7 +5,7 @@ module Geometry.Circle
 
 import Geometry.Vector
 import Geometry.Space
-import Utils
+import Util.Utils
 import GHC.Generics (Generic)
 import Data.Serialize (Serialize)
 

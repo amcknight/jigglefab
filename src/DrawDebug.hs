@@ -4,11 +4,11 @@ module DrawDebug
 ) where
 
 import Graphics.Gloss
-import Chem
+import Model.Chem
 import Model.Orb
 import Voronoi.Beach
 import Voronoi.Event
-import Pair
+import Util.Pair
 import Geometry.Vector
 import Geometry.Circle
 import qualified Data.Vector as V
