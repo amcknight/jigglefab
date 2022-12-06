@@ -12,11 +12,14 @@ import Orb
 import Geometry.Vector
 import Utils
 import GHC.Generics (Generic)
+import Data.Serialize (Serialize)
 
 data Ball c = Ball
   { point :: Point
   , chem :: c
   } deriving (Show, Generic)
+
+instance Serialize c => Serialize (Ball c)
 
 instance HasPos (Ball c) where
   pos = pos . point

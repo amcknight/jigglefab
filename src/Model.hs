@@ -25,6 +25,7 @@ import Chem
 import HitTime
 import Struct
 import Utils
+import Data.Serialize (Serialize)
 
 type SideMap = M.Map (P Int) Side
 data Model c = Model
@@ -34,6 +35,8 @@ data Model c = Model
   , bbSides :: SideMap
   , bounces :: [Hit]
   } deriving (Show, Generic)
+
+instance Serialize c => Serialize (Model c)
 
 instance Mover (Model c) where
   move dt (Model sp f wss hss hs) = Model sp (move dt f) wss hss (fmap (move dt) hs)

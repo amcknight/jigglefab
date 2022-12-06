@@ -9,8 +9,11 @@ import Point
 import Geometry.Vector
 import Geometry.Circle
 import GHC.Generics (Generic)
+import Data.Serialize (Serialize)
 
 data Wall = VLine Double | HLine Double | Rock Circle deriving (Eq, Show, Generic)
+
+instance Serialize Wall
 
 rock :: Position -> Radius -> Wall
 rock p = Rock . Circle p

@@ -10,7 +10,6 @@ module Enumer
 import GHC.Generics
 import Geometry.Space
 
-deriving instance Generic Side
 deriving instance Enumer Side
 
 class GEnumer f where

@@ -5,13 +5,16 @@ module Geometry.Circle
 
 import Geometry.Vector
 import Geometry.Space
-import GHC.Generics (Generic)
 import Utils
+import GHC.Generics (Generic)
+import Data.Serialize (Serialize)
 
 data Circle = Circle
   { circPos :: Position
   , circRad :: Radius
   } deriving (Show, Eq, Generic)
+
+instance Serialize Circle
 
 instance HasPos Circle where
   pos = circPos

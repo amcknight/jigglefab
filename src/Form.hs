@@ -13,6 +13,7 @@ module Form
 , toBonk
 ) where
 
+import Data.Vector.Serialize()
 import qualified Data.Vector as V
 import Ball
 import Wall
@@ -29,13 +30,16 @@ import Orb
 import Geometry.Circle
 import Data.Vector (toList)
 import GHC.Generics (Generic)
+import Data.Serialize (Serialize)
 
 data Form c = Form
   { walls :: V.Vector Wall
   , balls :: V.Vector (Ball c)
   } deriving (Show, Generic)
 
-instance Mover (Form c) where 
+instance Serialize c => Serialize (Form c)
+
+instance Mover (Form c) where
   move dt (Form ws bs) = Form ws $ fmap (move dt) bs
 
 instance Semigroup (Form c) where

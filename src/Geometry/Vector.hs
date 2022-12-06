@@ -29,7 +29,7 @@ import Geometry.Angle
 import Geometry.Space
 import Utils
 import Pair
-import Control.Monad.State ( MonadState(put, get) )
+import Control.Monad.State
 import System.Random ( Random(randomR, random) )
 import Data.List (nub)
 import Data.Maybe (mapMaybe)

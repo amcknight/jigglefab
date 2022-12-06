@@ -92,6 +92,7 @@ library:
     - ilist
     - vector
     - cereal
+    - cereal-vector
 
 executables:
   chains-exe:
