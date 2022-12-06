@@ -1,4 +1,4 @@
-module HitTime
+module Model.HitTime
 ( CircleHitTime(..)
 , hitTimes
 , asList
@@ -7,7 +7,7 @@ module HitTime
 import Time
 import Geometry.Space
 import Pair
-import Point
+import Model.Point
 import Geometry.Vector
 
 data CircleHitTime = NoHit | InHit Time | OutAndInHit Time Time

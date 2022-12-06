@@ -1,4 +1,4 @@
-module Model
+module Model.Model
 ( Model (speed, form)
 , buildModel
 , step
@@ -15,15 +15,15 @@ import qualified Data.Vector as V
 import Geometry.Space
 import Time
 import Pair
-import Point
-import Ball
-import Hit
-import Wall
+import Model.Point
+import Model.Ball
+import Model.Hit
+import Model.Wall
 import Geometry.Vector
-import Form
+import Model.Form
 import Chem
-import HitTime
-import Struct
+import Model.HitTime
+import Model.Struct
 import Utils
 import Data.Serialize (Serialize)
 
@@ -53,7 +53,7 @@ buildModel sp st = do
     populateHits (Model sp f wss hss _) = Model sp f wss hss $ L.sort $ hitsFromIps f $ bounceIndices f
 
     prereactAll :: Chem c => Model c -> Model c
-    prereactAll m = foldr prereactPair m (innerIps m)
+    prereactAll m = foldr prereactPair m $ innerIps m
 
     prereactPair :: Chem c => P Int -> Model c -> Model c
     prereactPair ip m = replacePair ip In newBs m

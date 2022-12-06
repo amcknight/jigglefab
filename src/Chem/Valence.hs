@@ -19,11 +19,11 @@ import Chem
 import Geometry.Space
 import Pair
 import Color
-import Struct
-import Orb
+import Model.Struct
+import Model.Orb
 import Geometry.Vector
 import StructLibrary
-import Wall
+import Model.Wall
 import GHC.Generics
 
 data Valence = Valence

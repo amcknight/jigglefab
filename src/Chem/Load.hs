@@ -5,11 +5,11 @@ module Chem.Load
 
 import Chem
 import Geometry.Space
-import Wall
+import Model.Wall
 import StructLibrary
 import Color
 import Geometry.Vector
-import Struct
+import Model.Struct
 import GHC.Generics
 import Enumer
 

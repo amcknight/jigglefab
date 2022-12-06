@@ -10,12 +10,12 @@ import qualified Data.Vector as V
 import Chem
 import Geometry.Space
 import Color
-import Struct
+import Model.Struct
 import Geometry.Vector
 import Pair
 import Geometry.Angle
-import Wall
-import Orb
+import Model.Wall
+import Model.Orb
 import StructLibrary
 import GHC.Generics
 import Enumer

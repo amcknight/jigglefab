@@ -1,11 +1,11 @@
-module Wall
+module Model.Wall
 ( Wall (..)
 , rock
 , wSide
 ) where
 
 import Geometry.Space
-import Point
+import Model.Point
 import Geometry.Vector
 import Geometry.Circle
 import GHC.Generics (Generic)

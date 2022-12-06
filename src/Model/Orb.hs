@@ -1,4 +1,4 @@
-module Orb
+module Model.Orb
 ( Orb (..)
 ) where
 

@@ -7,8 +7,8 @@ import Chem
 import Color
 import Geometry.Vector
 import Geometry.Space
-import Struct
-import Orb
+import Model.Struct
+import Model.Orb
 import Enumer
 import GHC.Generics
 

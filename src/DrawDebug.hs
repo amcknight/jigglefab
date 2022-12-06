@@ -5,7 +5,7 @@ module DrawDebug
 
 import Graphics.Gloss
 import Chem
-import Orb
+import Model.Orb
 import Voronoi.Beach
 import Voronoi.Event
 import Pair

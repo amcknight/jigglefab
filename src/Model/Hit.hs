@@ -1,4 +1,4 @@
-module Hit
+module Model.Hit
 ( Hit (Hit, hitTime, hitSide, ixPair)
 ) where
 

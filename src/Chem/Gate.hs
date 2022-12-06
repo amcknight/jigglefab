@@ -6,11 +6,11 @@ module Chem.Gate
 
 import Chem
 import Geometry.Space
-import Wall
+import Model.Wall
 import StructLibrary
 import Color
-import Struct
-import Orb
+import Model.Struct
+import Model.Orb
 import Enumer
 import GHC.Generics
 

@@ -7,12 +7,12 @@ module Chem.Encode
 
 import Chem
 import Geometry.Space
-import Wall
+import Model.Wall
 import StructLibrary
 import Color
 import Geometry.Vector
-import Struct
-import Orb
+import Model.Struct
+import Model.Orb
 import GHC.Generics
 import Enumer
 

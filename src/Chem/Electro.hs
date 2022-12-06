@@ -5,9 +5,9 @@ module Chem.Electro
 
 import Chem
 import Color
-import Struct
-import Orb
-import Wall
+import Model.Struct
+import Model.Orb
+import Model.Wall
 import StructLibrary
 import GHC.Generics
 

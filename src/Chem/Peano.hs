@@ -6,9 +6,9 @@ module Chem.Peano
 import Chem
 import Color
 import Geometry.Vector
-import Wall
+import Model.Wall
 import StructLibrary
-import Struct
+import Model.Struct
 import GHC.Generics
 import Enumer
 

@@ -1,4 +1,4 @@
-module Point
+module Model.Point
 ( Point (Point)
 , Position
 , Velocity

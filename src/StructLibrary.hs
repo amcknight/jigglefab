@@ -10,12 +10,12 @@ module StructLibrary
 , box
 ) where
 
-import Point
+import Model.Point
 import Geometry.Angle
 import Geometry.Vector
-import Orb
-import Wall
-import Struct
+import Model.Orb
+import Model.Wall
+import Model.Struct
 
 box :: Vector -> Vector -> Struct c
 box (x1,y1) (x2,y2) =

@@ -11,20 +11,20 @@ import qualified Data.Vector as V
 import qualified Color as C
 import Geometry.Circle
 import Geometry.Space
-import Point
-import Ball
+import Model.Point
+import Model.Ball
 import Pair
-import Model
-import Wall
-import Form
+import Model.Model
+import Model.Wall
+import Model.Form
 import Control.Monad.State
 import Chem
 import Graphics.Gloss
 import Graphics.Gloss.Interface.IO.Interact
 import Graphics.Gloss.Interface.Environment
 import Geometry.Vector
-import Struct
-import Orb
+import Model.Struct
+import Model.Orb
 import Tiling
 import Voronoi.Fortune
 import Geometry.Line
