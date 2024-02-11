@@ -13,6 +13,7 @@ Subject to drastic changes. Consider these rough thoughts about future functiona
 - - Draw out wire chains
 
 ## Version 0.4
+- A Position generator from sidedness and containment information
 - Sub-circuits Editor
 - - Parts can be loaded, rotated, expanded, combined, snapped together
 - Chemistry Editor
