@@ -1,4 +1,4 @@
-# chains
+# JiggleFab
 
 An attempt to demonstrate the first _organic-feeling visualizable Universal Constructor_ supported by a simple artificial chemistry that doesn't cheat by baking in too much stuff. What counts as "cheating" and "too much stuff" is an aesthetic I can't yet fully specify but you'll see details and examples in the bottom-up explanation of my choices below.
 
@@ -26,9 +26,9 @@ A possible simplifying law would be to separate reactions into pass-through vs c
 
 # Chemistry
 
-The primary design used across chemistries is the concept of a Wire. A Wire ball has a dormant state and a signal state. When a Wire collides with a Wire from the inside, then their states are swapped. This allows the signal to travel down Wire chains without letting externally colliding Wires transfer signal. By positioning Wire balls inside each other intransitively we can build up (name drop) chains of Wire that act like real wires (accept signal travels in both directions randomly without further rules).
+The primary design used across chemistries is the concept of a Wire. A Wire ball has a dormant state and a signal state. When a Wire collides with a Wire from the inside, then their states are swapped. By positioning Wire balls inside each other intransitively we can build chains of Wire that signal can travel down without letting externally colliding Wires transfer signal. Setting Wire to swap signal only to empty Wire ensures that signal order is preserved on a wire. Without further rules the signal travels randomly but if order is preserved and there is enough signal on the wire, the signals act like pressure pushing signals in the preferred direction.
 
-When dealing with Wire signals, it's useful to have balls in a different chemical state that treat "inputs" differently from "outputs". So something is required to distinguish these cases. Most chemistries use Ports which generally get signals from Wire OR drop signals onto Wires, but NOT vice versa. So an input Port would take signals from Wires without swapping its held state back to the Wire. Then another non-Wire ball can react differently with Ports holding signal than empty input Ports. Output Ports would do the opposite. There are also designs such as the sync Port which requires two Ports with signal to collide before starting dowstream reactions. This allows for building logic gates that don't require synchronized signal timing.
+It's useful to have balls in another chemical state that treat "inputs" differently from "outputs". Most of these chemistries use Port balls which get signals from Wire OR drop signals onto Wires, but NOT vice versa. So an input Port takes signal from Wire without swapping its held signal back to the Wire and an output Port rejects signal from Wire but will drop its held signal onto a Wire if the Wire is empty. Then other non-Wire non-Port balls can react differently with Ports holding signal than empty Ports, allowing directionality and real signalling to occur.
 
 Throughout, every ball is implementing identical reactions and only acts differently due to two ball states and the sidedness of the reaction. Specifically, a Wire could become a Port or vice versa depending on the chemistry. This project contains many chemistries so that I can experiment but only one chemistry is actually run in any given simulation.
 
