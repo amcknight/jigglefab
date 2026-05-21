@@ -13,3 +13,4 @@ poll_*.png
 seq_*.png
 jig*.png
 desktop_check.png
+scripts/verify-out/
