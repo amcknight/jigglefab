@@ -458,6 +458,8 @@ git commit -m "Add Scenario trait, Invariants, and geometric_bonds helper"
 
 ## Task 4: `DisconnectedChains` scenario
 
+> **Implementation note:** the serpentine layout fallback originally specified in this task was dropped during implementation — no default-sweep scenario triggers it, and the 5.0 column spacing made the serpentine "chain" segmented (column transitions exceeded the bond radius). The implementation panics instead if a chain doesn't fit. See commit `c7a4e6c`.
+
 **Files:**
 - Modify: `src/bench/chains.rs`
 

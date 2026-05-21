@@ -52,7 +52,7 @@ All use the wire chemistry — bond-count invariant is meaningful (wire's `insid
 
 `DisconnectedChains { chain_count, chain_len, world_size }` lays vertical chains across the world. Beads within a chain spaced 0.667 apart (just inside the bond threshold of 1.0). Chains laid out in a 2D grid pattern: as many chains per row as fit at horizontal spacing 5.0, then wrap to the next row with vertical row-spacing `chain_len × 0.667 + 2.0`. Chains never overlap initially; no cross-chain bonds at t=0. Each chain starts with one `on` bead at index 0, rest `off`.
 
-If a single chain's vertical extent (`chain_len × 0.667`) exceeds `world_size`, the chain serpentines (alternating columns, snake-style). For the sweep below, only `chains_5x300` triggers that path; others fit a single chain in one column.
+Each chain must fit vertically in `world_size`; otherwise `build()` panics. Every scenario in the default sweep below is sized to satisfy this — no in-the-wild scenario needs a fallback layout.
 
 Default sweep (run by `cargo run --bin bench` with no `--scenarios` arg):
 
@@ -62,7 +62,7 @@ Default sweep (run by `cargo run --bin bench` with no `--scenarios` arg):
 | chains_30x30 | 30 × 30 | 128 | 900 | 0.055 | 2 rows × 15 | more chains, multi-row layout |
 | chains_50x30 | 50 × 30 | 256 | 1500 | 0.023 | 1 row × 50 | the deployed bump target |
 | chains_10x100 | 10 × 100 | 128 | 1000 | 0.061 | 1 row × 10 | longer chains; the handoff's crash case |
-| chains_5x300 | 5 × 300 | 256 | 1500 | 0.023 | 1 row × 5 (no serpentine needed at world 256) | very long chains |
+| chains_5x300 | 5 × 300 | 256 | 1500 | 0.023 | 1 row × 5 | very long chains |
 | chains_100x30 | 100 × 30 | 256 | 3000 | 0.046 | 2 rows × 50 | past the wall |
 
 Opt-in only (run with `--scenarios chains_100x100`):
