@@ -128,7 +128,7 @@ mod tests {
         let chem = load_chemistry("chemistries/grey.toml").unwrap();
         let g = chem.state_index("grey").unwrap() as u32;
         let mut sim = Sim {
-            positions: vec![Vec2::new(5.0, 5.0), Vec2::new(6.5, 5.0)],
+            positions: vec![Vec2::new(5.0, 5.0), Vec2::new(7.0, 5.0)],
             velocities: vec![Vec2::new(1.0, 0.0), Vec2::new(-1.0, 0.0)],
             states: vec![g, g],
             chemistry: chem,

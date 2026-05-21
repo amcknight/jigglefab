@@ -1,6 +1,11 @@
 use glam::Vec2;
 
-pub const CELL_SIZE: f32 = 1.0;
+// Cell size is 2*RADIUS so that any pair with center-distance < RADIUS (a bond)
+// AND any pair that could cross the bond boundary within one frame is guaranteed
+// to live in same-or-adjacent cells. Two cells (k apart, axis-aligned) have
+// minimum center-to-center distance (k-1)*CELL_SIZE; with CELL_SIZE = 2, cells
+// 2 apart have min distance 2 — well beyond the bond threshold of 1.
+pub const CELL_SIZE: f32 = 2.0;
 
 pub struct Grid {
     world_size: f32,
