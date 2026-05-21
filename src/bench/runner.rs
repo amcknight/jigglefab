@@ -133,6 +133,23 @@ pub fn run_scenario(scenario: &dyn Scenario, args: &BenchArgs) -> ScenarioResult
     let bonds_lost = invariants.initial_bond_set.difference(&final_bonds).count();
     let bonds_added = final_bonds.difference(&invariants.initial_bond_set).count();
 
+    let determinism_verified = if args.verify_determinism {
+        let (mut sim2, _) = scenario.build();
+        for _ in 0..args.warmup_frames {
+            for _ in 0..args.substeps {
+                sim2.step(frame_dt);
+            }
+        }
+        for _ in 0..frames_completed {
+            for _ in 0..args.substeps {
+                sim2.step(frame_dt);
+            }
+        }
+        Some(sim2.positions == sim.positions && sim2.states == sim.states)
+    } else {
+        None
+    };
+
     ScenarioResult {
         name: scenario.name(),
         bead_count,
@@ -149,7 +166,7 @@ pub fn run_scenario(scenario: &dyn Scenario, args: &BenchArgs) -> ScenarioResult
         bonds_preserved,
         bonds_lost,
         bonds_added,
-        determinism_verified: None,
+        determinism_verified,
     }
 }
 
@@ -227,5 +244,20 @@ mod tests {
         // Even truncated, the result struct should be filled in (percentiles
         // not panic, mean > 0 once we have samples).
         assert!(r.frame_time_ms.mean >= 0.0);
+    }
+
+    #[test]
+    fn run_scenario_with_verify_determinism_sets_field() {
+        let scenario = DisconnectedChains { chain_count: 2, chain_len: 5, world_size: 30.0 };
+        let args = BenchArgs {
+            substeps: 2,
+            frames: 5,
+            warmup_frames: 0,
+            max_wall_seconds: 60.0,
+            verify_determinism: true,
+        };
+        let r = run_scenario(&scenario, &args);
+        // Two runs of the same scenario with the same seed should be bit-identical.
+        assert_eq!(r.determinism_verified, Some(true));
     }
 }
