@@ -7,6 +7,7 @@ pub mod grid;
 pub mod sim;
 pub mod render;
 pub mod app;
+pub mod bench;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn run() -> anyhow::Result<()> {
