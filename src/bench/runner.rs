@@ -208,4 +208,24 @@ mod tests {
         assert_eq!(r.bonds_lost, 0);
         assert_eq!(r.bonds_added, 0);
     }
+
+    #[test]
+    fn run_scenario_truncates_on_wall_clock_cap() {
+        // A long-running scenario with a tight wall budget should report
+        // truncated=true and frames_completed < frames_requested.
+        let scenario = DisconnectedChains { chain_count: 5, chain_len: 30, world_size: 50.0 };
+        let args = BenchArgs {
+            substeps: 10,
+            frames: 100_000,           // way more than will fit
+            warmup_frames: 0,
+            max_wall_seconds: 0.05,    // 50 ms budget
+            verify_determinism: false,
+        };
+        let r = run_scenario(&scenario, &args);
+        assert!(r.truncated, "should have truncated under 50ms budget");
+        assert!(r.frames_completed < 100_000, "fewer frames than requested");
+        // Even truncated, the result struct should be filled in (percentiles
+        // not panic, mean > 0 once we have samples).
+        assert!(r.frame_time_ms.mean >= 0.0);
+    }
 }
