@@ -17,7 +17,8 @@ struct BeadGpu {
 struct CameraUbo {
     view_proj: [[f32; 4]; 4],
     radius: f32,
-    _pad: [f32; 3],
+    world_size: f32,
+    _pad: [f32; 2],
 }
 
 pub struct Renderer {
@@ -232,7 +233,8 @@ impl Renderer {
         let ubo = CameraUbo {
             view_proj: vp.to_cols_array_2d(),
             radius: crate::ccd::RADIUS,
-            _pad: [0.0; 3],
+            world_size,
+            _pad: [0.0; 2],
         };
         self.queue.write_buffer(&self.camera_buf, 0, bytemuck::bytes_of(&ubo));
     }
@@ -261,7 +263,11 @@ impl Renderer {
             pass.set_pipeline(&self.pipeline);
             pass.set_bind_group(0, &self.bind_group, &[]);
             pass.set_vertex_buffer(0, self.quad_vbuf.slice(..));
-            pass.draw(0..6, 0..bead_count as u32);
+            // Each bead is drawn 9 times: once at its position and 8 wrap-ghost
+            // copies at ±world_size offsets. Off-screen ghosts get clipped by
+            // the rasterizer for free. This makes bonds across the torus seam
+            // visible — without it, a chain straddling x=0 looks broken.
+            pass.draw(0..6, 0..(bead_count * 9) as u32);
         }
         self.queue.submit(std::iter::once(encoder.finish()));
         frame.present();
