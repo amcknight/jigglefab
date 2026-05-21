@@ -4,4 +4,4 @@ An attempt at the first organic-feeling visualizable Universal Constructor — a
 
 The original four-month, hand-written Haskell implementation lives in [`haskell/`](haskell/) and is still runnable (`cd haskell && stack run`). Read [`haskell/README.md`](haskell/README.md) for the substance — the physics, the chemical laws, and the wire/port/biochemistry prototypes built so far.
 
-A new implementation will live at the repo root, language TBD. Planning is in progress in [`METAPLAN.md`](METAPLAN.md).
+A new GPU-parallel implementation in Rust + wgpu is being built at the repo root. Engine design and plans live in [`docs/`](docs/).
