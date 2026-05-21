@@ -7,4 +7,4 @@ pub mod output;
 pub use scenario::{Scenario, Invariants, geometric_bonds};
 pub use chains::DisconnectedChains;
 pub use runner::{run_scenario, ScenarioResult, BenchArgs};
-// pub use output::{format_markdown, format_csv};
+pub use output::{format_markdown, format_csv};
