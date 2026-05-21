@@ -4,12 +4,24 @@ pub const RADIUS: f32 = 1.0;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Contact {
-    pub t: f32,        // time of contact in [0, dt]
-    pub inside: bool,  // true if pair is currently bonded (|d| < r)
+    pub t: f32,         // time of contact in [0, dt]
+    pub exiting: bool,  // true if |d| is increasing through R (inside → outside)
 }
 
-/// Returns the next contact in [0, dt] between two beads, or None if none.
-/// Pair positions/velocities can be passed in any order; the result is symmetric.
+/// Returns the next boundary crossing in [0, dt] for a pair, or None.
+///
+/// The returned `exiting` flag is the geometric direction at the crossing (sign
+/// of d|d|²/dt at t), not a "side the pair is on" assumption. The caller pairs
+/// this with the pair's topological bond state to pick a chemistry action:
+///
+/// - bonded + exiting  → reflect (the bond pulls them back inside)
+/// - free + entering   → reflect (hard-sphere collision)
+/// - bonded + entering → pass (drift correction: re-enter the bonded region)
+/// - free + exiting    → pass (drift correction: leave the inside region)
+///
+/// This decouples physics decisions from float-noisy `|d| vs R` comparisons,
+/// which used to flip a bonded pair to "free" on a single bit of arithmetic
+/// noise and let the chain disintegrate.
 pub fn next_contact(p1: Vec2, v1: Vec2, p2: Vec2, v2: Vec2, dt: f32) -> Option<Contact> {
     let d = p2 - p1;
     let dv = v2 - v1;
@@ -21,7 +33,6 @@ pub fn next_contact(p1: Vec2, v1: Vec2, p2: Vec2, v2: Vec2, dt: f32) -> Option<C
     let b = 2.0 * d.dot(dv);
     let c = d.dot(d) - r * r;
 
-    // If beads have zero relative velocity, no contact will be formed.
     if a < 1e-12 {
         return None;
     }
@@ -34,19 +45,23 @@ pub fn next_contact(p1: Vec2, v1: Vec2, p2: Vec2, v2: Vec2, dt: f32) -> Option<C
     let t_early = (-b - sqrt_disc) / (2.0 * a);
     let t_late = (-b + sqrt_disc) / (2.0 * a);
 
-    let currently_inside = c < 0.0; // |d|^2 < r^2
-
-    // Which root is "the next boundary crossing from where we are"?
-    // If currently outside (c > 0): we want t_early (the entry).
-    // If currently inside  (c < 0): t_early is negative-or-already-past;
-    //   t_late is the exit. We want t_late.
-    let t = if currently_inside { t_late } else { t_early };
-
-    if t < 0.0 || t > dt {
-        return None;
+    // Smallest non-negative root within the dt window.
+    let mut best: Option<f32> = None;
+    for t in [t_early, t_late] {
+        if t >= 0.0 && t <= dt {
+            best = Some(match best {
+                None => t,
+                Some(prev) => prev.min(t),
+            });
+        }
     }
+    let t = best?;
 
-    Some(Contact { t, inside: currently_inside })
+    // Direction at the crossing: sign of d|d|²/dt = 2 (d + dv*t) · dv.
+    let d_at_t = d + dv * t;
+    let exiting = d_at_t.dot(dv) > 0.0;
+
+    Some(Contact { t, exiting })
 }
 
 #[cfg(test)]
@@ -65,7 +80,7 @@ mod tests {
         let v2 = Vec2::new(-1.0, 0.0);
         let c = next_contact(p1, v1, p2, v2, 2.0).unwrap();
         assert!((c.t - 1.5).abs() < 1e-5);
-        assert!(!c.inside);
+        assert!(!c.exiting, "approaching from outside is an entry, not an exit");
     }
 
     #[test]
@@ -97,7 +112,7 @@ mod tests {
         let v2 = Vec2::new( 0.5, 0.0);
         let c = next_contact(p1, v1, p2, v2, 1.0).unwrap();
         assert!((c.t - 0.5).abs() < 1e-5);
-        assert!(c.inside);
+        assert!(c.exiting, "moving apart from inside is an exit");
     }
 
     #[test]

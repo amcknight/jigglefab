@@ -1,7 +1,8 @@
 use glam::Vec2;
+use std::collections::HashSet;
 use std::f32::consts::TAU;
 
-use crate::ccd::next_contact;
+use crate::ccd::{next_contact, RADIUS};
 use crate::chemistry::{Action, Chemistry};
 use crate::collide::reflect;
 use crate::fab::Fab;
@@ -11,12 +12,24 @@ use crate::rng::prng_f32;
 pub const WORLD_SIZE: f32 = 30.0;
 pub const SPEED: f32 = 1.0;
 
+// After a resolution the pair is at |d| ≈ R but a few ULPs off. We pin it to
+// R ± BOUNDARY_EPS on the topology-correct side so the next CCD iteration sees
+// a clean sign on c, and so a drifted bonded pair gets snapped back inside
+// (rather than slowly escaping the bond). Small enough to perturb other
+// neighbour distances by < ½ ULP per resolution.
+const BOUNDARY_EPS: f32 = 1e-5;
+
 pub struct Sim {
     pub positions: Vec<Vec2>,
     pub velocities: Vec<Vec2>,
     pub states: Vec<u32>,
     chemistry: Chemistry,
     grid: Grid,
+    // Set of currently-bonded pairs, keyed by (min(a,b), max(a,b)). Authoritative
+    // source of truth — initialised from initial geometry, then carried through
+    // sim time independent of float drift in |d|. For grey chemistry the set is
+    // invariant; future chemistries that form/break bonds will mutate it.
+    bonds: HashSet<(u32, u32)>,
     tick: u32,
 }
 
@@ -41,7 +54,63 @@ impl Sim {
             states.push(state_idx);
         }
         let grid = Grid::new(WORLD_SIZE);
-        Self { positions, velocities, states, chemistry, grid, tick: 0 }
+        let mut bonds = HashSet::new();
+        for i in 0..n {
+            for j in (i + 1)..n {
+                let pa = positions[i];
+                let pb = pa + grid.min_image(pa, positions[j]);
+                if (pb - pa).length() < RADIUS {
+                    bonds.insert((i as u32, j as u32));
+                }
+            }
+        }
+        Self { positions, velocities, states, chemistry, grid, bonds, tick: 0 }
+    }
+
+    fn is_bonded(&self, a: u32, b: u32) -> bool {
+        let key = if a < b { (a, b) } else { (b, a) };
+        self.bonds.contains(&key)
+    }
+
+    /// Walk the bond set and pull any pair that has drifted to |d| ≥ R back
+    /// inside, also flipping their normal velocity if it was still outward.
+    /// Without this, a bonded pair that gets nudged across R by a sibling
+    /// pair's snap (or any rare float drift) is invisible to the CCD: it's
+    /// already past the boundary and diverging, so `next_contact` returns
+    /// `None`. The pair would drift apart forever. Calling this once per
+    /// step bounds total drift to one frame's worth.
+    fn enforce_bonds(&mut self) {
+        let pairs: Vec<(u32, u32)> = self.bonds.iter().copied().collect();
+        for (a, b) in pairs {
+            let pa = self.positions[a as usize];
+            let pb_raw = self.positions[b as usize];
+            let pb = pa + self.grid.min_image(pa, pb_raw);
+            let d = pb - pa;
+            let dist = d.length();
+            if dist < RADIUS || dist < 1e-12 {
+                continue;
+            }
+            let n = d / dist;
+            // Snap back inside by enough margin that subsequent sibling snaps
+            // (each up to BOUNDARY_EPS / 2) can't immediately push us back out.
+            let target = RADIUS - BOUNDARY_EPS;
+            let correction = (target - dist) * 0.5;
+            self.positions[a as usize] = self.grid.wrap_pos(pa - n * correction);
+            let new_b = self.positions[b as usize] + n * correction;
+            self.positions[b as usize] = self.grid.wrap_pos(new_b);
+
+            // If their relative velocity is still outward, they would just
+            // drift back out — that means we missed a reflect when they
+            // originally crossed R. Apply the missed reflect now.
+            let va = self.velocities[a as usize];
+            let vb = self.velocities[b as usize];
+            let dv = vb - va;
+            if dv.dot(n) > 0.0 {
+                let (va_new, vb_new) = reflect(pa, va, pb, vb);
+                self.velocities[a as usize] = va_new;
+                self.velocities[b as usize] = vb_new;
+            }
+        }
     }
 
     pub fn step(&mut self, frame_dt: f32) {
@@ -56,7 +125,7 @@ impl Sim {
                 self.grid.insert(i as u32, p);
             }
 
-            // 2) Find earliest contact across candidate pairs.
+            // 2) Find earliest boundary crossing across candidate pairs.
             let mut earliest: Option<(f32, u32, u32, bool)> = None;
             for (a, b) in self.grid.candidate_pairs() {
                 let pa = self.positions[a as usize];
@@ -73,7 +142,7 @@ impl Sim {
                         Some((t0, a0, b0, _)) => key < (t0, a0, b0),
                     };
                     if new_best {
-                        earliest = Some((c.t, a, b, c.inside));
+                        earliest = Some((c.t, a, b, c.exiting));
                     }
                 }
             }
@@ -89,27 +158,67 @@ impl Sim {
             }
             dt_remaining -= advance_dt;
 
-            // 4) Resolve the contact (if any) per chemistry.
-            if let Some((_t, a, b, inside)) = earliest {
-                let sa = self.states[a as usize] as usize;
-                let sb = self.states[b as usize] as usize;
-                let action = self.chemistry.lookup(sa, sb, inside);
+            // 4) Resolve the contact (if any) per chemistry + topology + direction.
+            //
+            // Four cases:
+            //   bonded + exiting   → consult chemistry's inside-rule (reflect for grey)
+            //   free   + entering  → consult chemistry's outside-rule (reflect for grey)
+            //   bonded + entering  → Pass (drift correction: pair was outside, re-entering)
+            //   free   + exiting   → Pass (drift correction: pair was inside, leaving)
+            //
+            // The two drift-correction cases never fire in clean geometry; they only
+            // trigger when float noise (e.g. a neighbouring pair's snap perturbing one
+            // shared bead) has pushed this pair to the wrong side of R. The pass-through
+            // restores the geometry-topology alignment without spuriously swapping
+            // velocities.
+            if let Some((_t, a, b, exiting)) = earliest {
+                let bonded = self.is_bonded(a, b);
+                let action = if bonded == exiting {
+                    let sa = self.states[a as usize] as usize;
+                    let sb = self.states[b as usize] as usize;
+                    self.chemistry.lookup(sa, sb, bonded)
+                } else {
+                    Action::Pass
+                };
+
+                let pa = self.positions[a as usize];
+                let pb_raw = self.positions[b as usize];
+                let pb = pa + self.grid.min_image(pa, pb_raw);
+
                 if action == Action::Reflect {
-                    let pa = self.positions[a as usize];
-                    let pb_raw = self.positions[b as usize];
-                    let pb = pa + self.grid.min_image(pa, pb_raw);
                     let va = self.velocities[a as usize];
                     let vb = self.velocities[b as usize];
                     let (va_new, vb_new) = reflect(pa, va, pb, vb);
                     self.velocities[a as usize] = va_new;
                     self.velocities[b as usize] = vb_new;
                 }
-                // Action::Pass: no state change in P1's grey chemistry.
-                // (State-change logic lands in P2.)
+
+                // Snap to the topology-correct side of |d|=R regardless of action,
+                // so the next CCD iteration's `c` has the right sign and any drift
+                // caused by a sibling pair's earlier snap is reset.
+                let d = pb - pa;
+                let dist = d.length();
+                if dist > 1e-12 {
+                    let target = if bonded { RADIUS - BOUNDARY_EPS } else { RADIUS + BOUNDARY_EPS };
+                    let correction = (target - dist) * 0.5;
+                    let n = d / dist;
+                    self.positions[a as usize] = self.grid.wrap_pos(pa - n * correction);
+                    let new_b = self.positions[b as usize] + n * correction;
+                    self.positions[b as usize] = self.grid.wrap_pos(new_b);
+                }
             } else {
                 break; // no contact this frame
             }
         }
+
+        // Repair any bond that drifted past R during the frame's CCD pass.
+        // Pairs whose exit was missed (e.g. consistently outpriced by other
+        // pairs across iterations and never reached) end up at |d| > R; we
+        // pull them back inside and apply the missed reflect. Running this
+        // at end-of-step (rather than start) means external observers
+        // reading positions after `step` always see bonds within R.
+        self.enforce_bonds();
+
         self.tick += 1;
     }
 
@@ -133,6 +242,7 @@ mod tests {
             states: vec![g, g],
             chemistry: chem,
             grid: Grid::new(WORLD_SIZE),
+            bonds: HashSet::new(),
             tick: 0,
         };
         // Step a frame long enough to cover the collision (t = 0.5).
@@ -140,6 +250,48 @@ mod tests {
         // After collision, velocities should be reversed.
         assert!((sim.velocities[0] - Vec2::new(-1.0, 0.0)).length() < 1e-3);
         assert!((sim.velocities[1] - Vec2::new( 1.0, 0.0)).length() < 1e-3);
+    }
+
+    #[test]
+    fn two_bonded_beads_stay_bonded_over_time() {
+        // Two beads start bonded at |d| = 0.5, moving apart at relative speed 2
+        // along the y-axis. With R = 1 and Action::Reflect on both inside and
+        // outside contacts, the bond should hold forever: they exit at |d|=R,
+        // reflect (swap normal v), pass through each other, exit on the other
+        // side, reflect, repeat. Period = 1.0. Over 20 sim seconds (1200 frames
+        // at dt = 1/60) the pair must never drift past |d| = R + tolerance.
+        let chem = load_chemistry("chemistries/grey.toml").unwrap();
+        let g = chem.state_index("grey").unwrap() as u32;
+        let mut bonds = HashSet::new();
+        bonds.insert((0u32, 1u32));
+        let mut sim = Sim {
+            positions: vec![Vec2::new(15.0, 14.75), Vec2::new(15.0, 15.25)],
+            velocities: vec![Vec2::new(0.0, -1.0), Vec2::new(0.0, 1.0)],
+            states: vec![g, g],
+            chemistry: chem,
+            grid: Grid::new(WORLD_SIZE),
+            bonds,
+            tick: 0,
+        };
+        let dt = 1.0 / 60.0;
+        let mut max_dist = 0.0f32;
+        let mut max_at_frame = 0usize;
+        for i in 0..1200 {
+            sim.step(dt);
+            // World is 30 wide and beads stay near y=15, so no torus wrap.
+            let d = (sim.positions[0] - sim.positions[1]).length();
+            if d > max_dist {
+                max_dist = d;
+                max_at_frame = i;
+            }
+        }
+        assert!(
+            max_dist <= crate::ccd::RADIUS + 1e-3,
+            "bond broke: max |d| = {} at frame {} (R = {})",
+            max_dist,
+            max_at_frame,
+            crate::ccd::RADIUS,
+        );
     }
 
     #[test]
