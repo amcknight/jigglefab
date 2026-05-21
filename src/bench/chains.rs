@@ -16,9 +16,8 @@ const SEED: u64 = 42;
 /// Chains within a row are at 5.0 horizontal spacing. Rows wrap when the
 /// world width is exhausted, with vertical gap `chain_len * 0.667 + 2.0`.
 ///
-/// If a single chain's vertical extent exceeds world height, the chain
-/// serpentines (alternating columns, snake-style) so it fits without
-/// self-wrapping on the torus.
+/// Each chain must fit vertically in `world_size`; longer chains will panic
+/// at `build()`. The default sweep is configured to never trigger this.
 ///
 /// One `on` bead at index 0 of each chain; rest `off`. Uses the wire
 /// chemistry — bonds are invariant by topology.
@@ -31,11 +30,12 @@ pub struct DisconnectedChains {
 impl DisconnectedChains {
     fn layout(&self) -> Vec<Vec2> {
         let chain_extent_y = (self.chain_len as f32 - 1.0) * BEAD_SPACING;
-        if chain_extent_y < self.world_size {
-            self.grid_layout()
-        } else {
-            self.serpentine_layout()
-        }
+        assert!(
+            chain_extent_y < self.world_size,
+            "chain too long for world: chain_extent_y = {} >= world_size = {}",
+            chain_extent_y, self.world_size,
+        );
+        self.grid_layout()
     }
 
     fn grid_layout(&self) -> Vec<Vec2> {
@@ -51,27 +51,6 @@ impl DisconnectedChains {
             for b in 0..self.chain_len {
                 positions.push(Vec2::new(x, y0 + (b as f32) * BEAD_SPACING));
             }
-        }
-        positions
-    }
-
-    fn serpentine_layout(&self) -> Vec<Vec2> {
-        assert_eq!(self.chain_count, 1, "serpentine only supports single-chain scenarios");
-        // Chain runs down a column, hits world_size, jumps over to the next
-        // column with horizontal offset CHAIN_SPACING_X, and runs up. Net
-        // effect: a single long chain folded to fit in a small world.
-        let mut positions = Vec::with_capacity(self.chain_len as usize);
-        let column_height = (self.world_size / BEAD_SPACING).floor() as u32;
-        for b in 0..self.chain_len {
-            let col = b / column_height;
-            let row_in_col = b % column_height;
-            let x = CHAIN_SPACING_X * (col as f32) + (CHAIN_SPACING_X / 2.0);
-            let y = if col % 2 == 0 {
-                BEAD_SPACING * (row_in_col as f32) + 1.0
-            } else {
-                self.world_size - BEAD_SPACING * (row_in_col as f32) - 1.0
-            };
-            positions.push(Vec2::new(x, y));
         }
         positions
     }
@@ -140,18 +119,10 @@ mod tests {
     }
 
     #[test]
-    fn serpentine_layout_fits_long_chain_in_small_world() {
-        // Single chain of 300 beads × 0.667 = 200 vertical extent.
-        // In a world of 64, must serpentine. World 64 means ~96 beads per column,
-        // so 300 beads needs ~3 columns.
+    #[should_panic(expected = "chain too long for world")]
+    fn build_panics_when_chain_too_long_for_world() {
         let s = DisconnectedChains { chain_count: 1, chain_len: 300, world_size: 64.0 };
-        let (sim, inv) = s.build();
-        assert_eq!(sim.positions.len(), 300);
-        // The serpentine folds the chain into 4 columns of ~95 beads each.
-        // Beads within a column are bonded (0.667 < RADIUS=1.0), but beads at
-        // column transitions are 5.0 apart (x-gap = CHAIN_SPACING_X >> RADIUS).
-        // 3 transitions × 1 missing bond = 299 - 3 = 296 bonds.
-        assert_eq!(inv.initial_bond_set.len(), 296);
+        let _ = s.build();
     }
 
     #[test]
