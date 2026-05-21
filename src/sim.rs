@@ -21,6 +21,22 @@ pub const SPEED: f32 = 1.0;
 // neighbour distances by < ½ ULP per resolution.
 const BOUNDARY_EPS: f32 = 1e-5;
 
+/// Per-step counters populated inside `Sim::step`. Returned by value via
+/// `last_step_metrics()`. The cost of populating them is a few `+=`s per
+/// CCD iteration — negligible vs the work being measured, so no cfg gating.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct StepMetrics {
+    /// Number of contacts the step resolved before `dt_remaining` ran out.
+    pub contacts_resolved: u32,
+    /// Sum of `grid.candidate_pairs()` lengths across all iterations of the
+    /// step (not the per-iteration mean — divide by `contacts_resolved + 1`
+    /// for that).
+    pub candidate_pairs: u32,
+    /// True if the step terminated by exhausting `iter_cap`. Indicates the
+    /// scheduler ran out of budget before resolving all contacts.
+    pub iter_cap_hit: bool,
+}
+
 pub struct Sim {
     pub positions: Vec<Vec2>,
     pub velocities: Vec<Vec2>,
@@ -32,6 +48,7 @@ pub struct Sim {
     // sim time independent of float drift in |d|. For grey chemistry the set is
     // invariant; future chemistries that form/break bonds will mutate it.
     bonds: HashSet<(u32, u32)>,
+    last_metrics: StepMetrics,
     tick: u32,
 }
 
@@ -73,10 +90,12 @@ impl Sim {
                 }
             }
         }
-        Self { positions, velocities, states, chemistry, grid, bonds, tick: 0 }
+        Self { positions, velocities, states, chemistry, grid, bonds, last_metrics: StepMetrics::default(), tick: 0 }
     }
 
     pub fn tick(&self) -> u32 { self.tick }
+
+    pub fn last_step_metrics(&self) -> StepMetrics { self.last_metrics }
 
     fn is_bonded(&self, a: u32, b: u32) -> bool {
         let key = if a < b { (a, b) } else { (b, a) };
@@ -128,6 +147,7 @@ impl Sim {
         let mut dt_remaining = frame_dt;
         // Cap iterations to avoid pathological infinite loops (paranoia, shouldn't fire).
         let mut iter_cap = self.positions.len() * 64;
+        let mut metrics = StepMetrics::default();
         while dt_remaining > 0.0 && iter_cap > 0 {
             iter_cap -= 1;
             // 1) Bin into grid.
@@ -138,7 +158,9 @@ impl Sim {
 
             // 2) Find earliest boundary crossing across candidate pairs.
             let mut earliest: Option<(f32, u32, u32, bool)> = None;
-            for (a, b) in self.grid.candidate_pairs() {
+            let pairs = self.grid.candidate_pairs();
+            metrics.candidate_pairs = metrics.candidate_pairs.saturating_add(pairs.len() as u32);
+            for (a, b) in pairs {
                 let pa = self.positions[a as usize];
                 let pb_raw = self.positions[b as usize];
                 // Use min-image so pairs across the wrap see the short distance.
@@ -178,6 +200,7 @@ impl Sim {
             // velocities. Drift corrections only happen under float noise
             // (e.g. a sibling pair's snap perturbing a shared bead).
             if let Some((_t, a, b, exiting)) = earliest {
+                metrics.contacts_resolved = metrics.contacts_resolved.saturating_add(1);
                 let action = {
                     let bonded = self.is_bonded(a, b);
                     if bonded == exiting {
@@ -235,6 +258,10 @@ impl Sim {
             }
         }
 
+        if iter_cap == 0 {
+            metrics.iter_cap_hit = true;
+        }
+
         // Repair any bond that drifted past R during the frame's CCD pass.
         // Pairs whose exit was missed (e.g. consistently outpriced by other
         // pairs across iterations and never reached) end up at |d| > R; we
@@ -244,6 +271,7 @@ impl Sim {
         self.enforce_bonds();
 
         self.tick += 1;
+        self.last_metrics = metrics;
     }
 
 }
@@ -266,6 +294,7 @@ mod tests {
             chemistry: chem,
             grid: Grid::new(WORLD_SIZE),
             bonds: HashSet::new(),
+            last_metrics: StepMetrics::default(),
             tick: 0,
         };
         // Step a frame long enough to cover the collision (t = 0.5).
@@ -294,6 +323,7 @@ mod tests {
             chemistry: chem,
             grid: Grid::new(WORLD_SIZE),
             bonds,
+            last_metrics: StepMetrics::default(),
             tick: 0,
         };
         let dt = 1.0 / 60.0;
@@ -356,6 +386,7 @@ mod tests {
             chemistry: chem,
             grid: Grid::new(WORLD_SIZE),
             bonds,
+            last_metrics: StepMetrics::default(),
             tick: 0,
         };
         sim.step(1.0);
@@ -382,6 +413,7 @@ mod tests {
             chemistry: chem,
             grid: Grid::new(WORLD_SIZE),
             bonds: HashSet::new(),
+            last_metrics: StepMetrics::default(),
             tick: 0,
         };
         sim.step(1.0);
@@ -391,5 +423,28 @@ mod tests {
         // Velocities reflected — chains have physical extent.
         assert!((sim.velocities[0] - Vec2::new(-1.0, 0.0)).length() < 1e-3);
         assert!((sim.velocities[1] - Vec2::new( 1.0, 0.0)).length() < 1e-3);
+    }
+
+    #[test]
+    fn step_metrics_reports_contacts_and_pairs() {
+        // Two beads on collision course at speed 1; one head-on contact
+        // resolved in this step.
+        let chem = load_chemistry("chemistries/grey.toml").unwrap();
+        let g = chem.state_index("grey").unwrap() as u32;
+        let mut sim = Sim {
+            positions: vec![Vec2::new(5.0, 5.0), Vec2::new(7.0, 5.0)],
+            velocities: vec![Vec2::new(1.0, 0.0), Vec2::new(-1.0, 0.0)],
+            states: vec![g, g],
+            chemistry: chem,
+            grid: Grid::new(WORLD_SIZE),
+            bonds: HashSet::new(),
+            last_metrics: StepMetrics::default(),
+            tick: 0,
+        };
+        sim.step(1.0);
+        let m = sim.last_step_metrics();
+        assert_eq!(m.contacts_resolved, 1, "exactly one head-on contact in this step");
+        assert!(m.candidate_pairs >= 1, "at least one candidate pair scanned");
+        assert!(!m.iter_cap_hit, "iter cap should not be near for two beads");
     }
 }
