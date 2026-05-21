@@ -1307,7 +1307,7 @@ impl Renderer {
                 })],
                 depth_stencil_attachment: None,
                 timestamp_writes: None,
-                occlusion_query_writes: None,
+                occlusion_query_set: None,
             });
         }
         self.queue.submit(std::iter::once(encoder.finish()));
@@ -1409,6 +1409,7 @@ Create `shaders/beads.wgsl`:
 ```wgsl
 struct Bead {
     pos: vec2<f32>,
+    _pad: vec2<f32>,  // forces 16-byte stride to match Rust-side BeadGpu
 };
 
 struct Camera {
@@ -1717,7 +1718,7 @@ impl Renderer {
                 })],
                 depth_stencil_attachment: None,
                 timestamp_writes: None,
-                occlusion_query_writes: None,
+                occlusion_query_set: None,
             });
             pass.set_pipeline(&self.pipeline);
             pass.set_bind_group(0, &self.bind_group, &[]);

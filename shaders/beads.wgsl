@@ -1,5 +1,6 @@
 struct Bead {
     pos: vec2<f32>,
+    _pad: vec2<f32>,  // forces 16-byte stride to match Rust-side BeadGpu
 };
 
 struct Camera {
