@@ -41,9 +41,7 @@ impl Sim {
     /// Per-state colors for rendering, defined by the chemistry. The renderer
     /// uploads this once at startup and indexes into it per-bead.
     pub fn palette(&self) -> Vec<[f32; 3]> { self.chemistry.colors.clone() }
-}
 
-impl Sim {
     pub fn from_fab(fab: &Fab, chemistry: Chemistry) -> Self {
         let n = fab.beads.len();
         let mut positions = Vec::with_capacity(n);
@@ -77,6 +75,8 @@ impl Sim {
         }
         Self { positions, velocities, states, chemistry, grid, bonds, tick: 0 }
     }
+
+    pub fn tick(&self) -> u32 { self.tick }
 
     fn is_bonded(&self, a: u32, b: u32) -> bool {
         let key = if a < b { (a, b) } else { (b, a) };
@@ -171,25 +171,25 @@ impl Sim {
 
             // 4) Resolve the contact (if any) per chemistry + topology + direction.
             //
-            // Four cases:
-            //   bonded + exiting   → consult chemistry's inside-rule (reflect for grey)
-            //   free   + entering  → consult chemistry's outside-rule (reflect for grey)
-            //   bonded + entering  → Pass (drift correction: pair was outside, re-entering)
-            //   free   + exiting   → Pass (drift correction: pair was inside, leaving)
-            //
-            // The two drift-correction cases never fire in clean geometry; they only
-            // trigger when float noise (e.g. a neighbouring pair's snap perturbing one
-            // shared bead) has pushed this pair to the wrong side of R. The pass-through
-            // restores the geometry-topology alignment without spuriously swapping
-            // velocities.
+            // The contact case is (bonded?, exiting?). When they agree the
+            // chemistry rule fires (inside=bonded). When they disagree it's a
+            // drift correction — geometry is on the wrong side of R for the
+            // topology, so we Pass to restore alignment without swapping
+            // velocities. Drift corrections only happen under float noise
+            // (e.g. a sibling pair's snap perturbing a shared bead).
             if let Some((_t, a, b, exiting)) = earliest {
-                let bonded = self.is_bonded(a, b);
-                let action = if bonded == exiting {
-                    let sa = self.states[a as usize] as usize;
-                    let sb = self.states[b as usize] as usize;
-                    self.chemistry.lookup(sa, sb, bonded)
-                } else {
-                    Action::Pass
+                let action = {
+                    let bonded = self.is_bonded(a, b);
+                    if bonded == exiting {
+                        let sa = self.states[a as usize] as usize;
+                        let sb = self.states[b as usize] as usize;
+                        self.chemistry.lookup(sa, sb, bonded)
+                    } else {
+                        // Drift correction: the pair's geometric side disagrees
+                        // with its topology. Pass-through pulls them back into
+                        // alignment without spuriously changing velocities.
+                        Action::Pass
+                    }
                 };
 
                 let pa = self.positions[a as usize];
@@ -212,20 +212,10 @@ impl Sim {
                 }
 
                 // Snap onto the side of |d|=R the pair is heading toward
-                // *after* this action, so the next CCD iteration's `c` has
-                // a clean sign and we don't immediately re-trigger.
-                //
+                // *after* this action, so the next CCD iteration sees a clean
+                // sign on `c` and we don't immediately re-trigger.
                 //   Reflect: pair bounces back to the side it came from.
                 //   Pass:    pair continues to the opposite side.
-                //
-                // Picking the post-action side from `bonded` alone (the old
-                // logic) was correct only as long as bonded ↔ inside, i.e.
-                // when free pairs always reflected and bonded pairs always
-                // stayed. The wire chemistry's outside=pass rule breaks
-                // that — a free pair can now legitimately end up inside R
-                // (passing through each other), and snapping it back to
-                // R+EPS while it's still moving inward ping-pongs against
-                // the boundary every CCD iteration.
                 let post_state_inside = match action {
                     Action::Reflect | Action::ReflectSwap => exiting,
                     Action::Pass => !exiting,
@@ -240,10 +230,6 @@ impl Sim {
                     let new_b = self.positions[b as usize] + n * correction;
                     self.positions[b as usize] = self.grid.wrap_pos(new_b);
                 }
-                // `bonded` is now only used inside the contact-resolution
-                // arm above; silence the unused-binding warning that
-                // appears when neither Reflect arm touches it.
-                let _ = bonded;
             } else {
                 break; // no contact this frame
             }
@@ -260,7 +246,6 @@ impl Sim {
         self.tick += 1;
     }
 
-    pub fn tick(&self) -> u32 { self.tick }
 }
 
 #[cfg(test)]
