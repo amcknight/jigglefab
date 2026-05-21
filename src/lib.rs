@@ -10,6 +10,5 @@ pub mod app;
 
 pub fn run() -> anyhow::Result<()> {
     env_logger::init();
-    println!("jigglefab P1");
-    Ok(())
+    app::run()
 }
