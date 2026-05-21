@@ -1,0 +1,11 @@
+states = ["grey"]
+
+[[rule]]
+states = ["grey", "grey"]
+inside = false
+action = "reflect"
+
+[[rule]]
+states = ["grey", "grey"]
+inside = true
+action = "reflect"
