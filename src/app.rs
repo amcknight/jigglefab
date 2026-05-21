@@ -1,6 +1,8 @@
 use winit::application::ApplicationHandler;
 use winit::event::WindowEvent;
-use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop, EventLoopProxy};
+use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
+#[cfg(target_arch = "wasm32")]
+use winit::event_loop::EventLoopProxy;
 use winit::window::{Window, WindowId};
 use std::sync::Arc;
 use web_time::Instant;
@@ -16,14 +18,16 @@ use crate::chemistry::parse_chemistry;
 use crate::fab::parse_fab;
 
 use crate::render::Renderer;
-use crate::sim::{Sim, WORLD_SIZE};
+use crate::sim::Sim;
 
 const FRAME_DT: f32 = 1.0 / 60.0;
 
+// The deployed web build now ships the wire chemistry as the headline demo —
+// a long bonded chain where the "on" signal walks the bead-string visibly.
 #[cfg(target_arch = "wasm32")]
-const GREY_30_TOML: &str = include_str!("../fabs/grey-30.toml");
+const FAB_TOML: &str = include_str!("../fabs/wire-100.toml");
 #[cfg(target_arch = "wasm32")]
-const GREY_CHEMISTRY_TOML: &str = include_str!("../chemistries/grey.toml");
+const CHEMISTRY_TOML: &str = include_str!("../chemistries/wire.toml");
 
 pub enum UserEvent {
     RendererReady(Renderer),
@@ -83,22 +87,25 @@ impl ApplicationHandler<UserEvent> for App {
         let window = Arc::new(event_loop.create_window(attrs).expect("create window"));
 
         #[cfg(not(target_arch = "wasm32"))]
-        let fab = load_fab("fabs/grey-30.toml").expect("load fab");
+        let fab = load_fab("fabs/wire-100.toml").expect("load fab");
         #[cfg(target_arch = "wasm32")]
-        let fab = parse_fab(GREY_30_TOML).expect("parse fab");
+        let fab = parse_fab(FAB_TOML).expect("parse fab");
 
         #[cfg(not(target_arch = "wasm32"))]
-        let chem = load_chemistry("chemistries/grey.toml").expect("load chem");
+        let chem = load_chemistry(&format!("chemistries/{}.toml", fab.meta.chemistry))
+            .expect("load chem");
         #[cfg(target_arch = "wasm32")]
-        let chem = parse_chemistry(GREY_CHEMISTRY_TOML).expect("parse chem");
+        let chem = parse_chemistry(CHEMISTRY_TOML).expect("parse chem");
 
         let sim = Sim::from_fab(&fab, chem);
+        let world_size = sim.world_size();
+        let palette = sim.palette();
 
         #[cfg(not(target_arch = "wasm32"))]
         {
             let mut renderer = pollster::block_on(Renderer::new(window.clone(), sim.positions.len()))
                 .expect("create renderer");
-            renderer.update_camera(WORLD_SIZE);
+            renderer.update_camera(world_size, &palette);
             self.renderer = Some(renderer);
         }
 
@@ -110,7 +117,7 @@ impl ApplicationHandler<UserEvent> for App {
             wasm_bindgen_futures::spawn_local(async move {
                 let mut renderer = Renderer::new(window_clone, n).await
                     .expect("create renderer");
-                renderer.update_camera(WORLD_SIZE);
+                renderer.update_camera(world_size, &palette);
                 let _ = proxy.send_event(UserEvent::RendererReady(renderer));
             });
         }
@@ -122,11 +129,20 @@ impl ApplicationHandler<UserEvent> for App {
 
     fn user_event(&mut self, _event_loop: &ActiveEventLoop, event: UserEvent) {
         match event {
-            UserEvent::RendererReady(renderer) => {
-                self.renderer = Some(renderer);
-                if let Some(w) = &self.window {
+            UserEvent::RendererReady(mut renderer) => {
+                // On web the async wgpu init started before winit's
+                // ResizeObserver had populated the canvas size, so the surface
+                // was configured at 1×1. Reconfigure to the actual viewport
+                // now that we have a renderer to talk to.
+                if let (Some(w), Some(sim)) = (&self.window, &self.sim) {
+                    let size = w.inner_size();
+                    if size.width > 0 && size.height > 0 {
+                        renderer.resize(size);
+                        renderer.update_camera(sim.world_size(), &sim.palette());
+                    }
                     w.request_redraw();
                 }
+                self.renderer = Some(renderer);
             }
         }
     }
@@ -147,11 +163,11 @@ impl ApplicationHandler<UserEvent> for App {
             WindowEvent::CloseRequested => event_loop.exit(),
             WindowEvent::Resized(size) => {
                 renderer.resize(size);
-                renderer.update_camera(WORLD_SIZE);
+                renderer.update_camera(sim.world_size(), &sim.palette());
             }
             WindowEvent::RedrawRequested => {
                 sim.step(FRAME_DT);
-                renderer.update_beads(&sim.positions);
+                renderer.update_beads(&sim.positions, &sim.states);
                 if let Err(e) = renderer.render(sim.positions.len()) {
                     log::warn!("render error: {e:?}");
                 }

@@ -9,6 +9,8 @@ use crate::fab::Fab;
 use crate::grid::Grid;
 use crate::rng::prng_f32;
 
+// Default world size used when a fab doesn't specify one. Tests and the older
+// grey-30 fab still rely on this.
 pub const WORLD_SIZE: f32 = 30.0;
 pub const SPEED: f32 = 1.0;
 
@@ -34,6 +36,14 @@ pub struct Sim {
 }
 
 impl Sim {
+    pub fn world_size(&self) -> f32 { self.grid.world_size() }
+
+    /// Per-state colors for rendering, defined by the chemistry. The renderer
+    /// uploads this once at startup and indexes into it per-bead.
+    pub fn palette(&self) -> Vec<[f32; 3]> { self.chemistry.colors.clone() }
+}
+
+impl Sim {
     pub fn from_fab(fab: &Fab, chemistry: Chemistry) -> Self {
         let n = fab.beads.len();
         let mut positions = Vec::with_capacity(n);
@@ -53,7 +63,8 @@ impl Sim {
                 .expect("bead state not in chemistry") as u32;
             states.push(state_idx);
         }
-        let grid = Grid::new(WORLD_SIZE);
+        let world_size = fab.meta.world_size.unwrap_or(WORLD_SIZE);
+        let grid = Grid::new(world_size);
         let mut bonds = HashSet::new();
         for i in 0..n {
             for j in (i + 1)..n {
@@ -185,12 +196,19 @@ impl Sim {
                 let pb_raw = self.positions[b as usize];
                 let pb = pa + self.grid.min_image(pa, pb_raw);
 
-                if action == Action::Reflect {
+                if matches!(action, Action::Reflect | Action::ReflectSwap) {
                     let va = self.velocities[a as usize];
                     let vb = self.velocities[b as usize];
                     let (va_new, vb_new) = reflect(pa, va, pb, vb);
                     self.velocities[a as usize] = va_new;
                     self.velocities[b as usize] = vb_new;
+                }
+
+                // Wire-style swap: signal hops between the two beads when they
+                // bump. Same-state swaps are a no-op; different-state swaps
+                // move the signal along the chain by one step per collision.
+                if action == Action::ReflectSwap {
+                    self.states.swap(a as usize, b as usize);
                 }
 
                 // Snap to the topology-correct side of |d|=R regardless of action,
@@ -303,5 +321,41 @@ mod tests {
         for v in &sim.velocities {
             assert!((v.length() - SPEED).abs() < 1e-5);
         }
+        // No world_size in grey-30.toml → falls back to the default.
+        assert_eq!(sim.world_size(), WORLD_SIZE);
+    }
+
+    #[test]
+    fn fab_meta_world_size_propagates_to_sim() {
+        let fab = load_fab("fabs/wire-100.toml").unwrap();
+        let chem = load_chemistry("chemistries/wire.toml").unwrap();
+        let sim = Sim::from_fab(&fab, chem);
+        assert_eq!(sim.positions.len(), 100);
+        assert_eq!(sim.world_size(), 80.0);
+    }
+
+    #[test]
+    fn wire_swap_action_swaps_states_on_contact() {
+        // Two beads heading straight at each other with a wire chemistry.
+        // After they collide, their states must have swapped (and the
+        // velocities reflected, just like grey).
+        let chem = load_chemistry("chemistries/wire.toml").unwrap();
+        let off = chem.state_index("off").unwrap() as u32;
+        let on = chem.state_index("on").unwrap() as u32;
+        let mut sim = Sim {
+            positions: vec![Vec2::new(5.0, 5.0), Vec2::new(7.0, 5.0)],
+            velocities: vec![Vec2::new(1.0, 0.0), Vec2::new(-1.0, 0.0)],
+            states: vec![on, off],
+            chemistry: chem,
+            grid: Grid::new(WORLD_SIZE),
+            bonds: HashSet::new(),
+            tick: 0,
+        };
+        sim.step(1.0);
+        assert_eq!(sim.states[0], off, "left bead inherited the signal");
+        assert_eq!(sim.states[1], on, "right bead inherited the signal");
+        // Velocities should still reflect like grey.
+        assert!((sim.velocities[0] - Vec2::new(-1.0, 0.0)).length() < 1e-3);
+        assert!((sim.velocities[1] - Vec2::new( 1.0, 0.0)).length() < 1e-3);
     }
 }

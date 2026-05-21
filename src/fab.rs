@@ -13,6 +13,8 @@ pub struct Meta {
     pub name: String,
     pub chemistry: String,
     pub seed: u64,
+    #[serde(default)]
+    pub world_size: Option<f32>,
 }
 
 #[derive(Debug, Deserialize)]

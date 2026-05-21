@@ -9,8 +9,14 @@ use wgpu::util::DeviceExt;
 #[derive(Copy, Clone, Pod, Zeroable)]
 struct BeadGpu {
     pos: [f32; 2],
-    _pad: [f32; 2],
+    state: u32,
+    _pad: u32,
 }
+
+// Maximum number of chemistry states the renderer can colour. Today's
+// chemistries (grey: 1, wire: 2) use a tiny fraction; the upper bound is fixed
+// here so the UBO has a stable layout the shader can index.
+const MAX_STATES: usize = 8;
 
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
@@ -19,6 +25,8 @@ struct CameraUbo {
     radius: f32,
     world_size: f32,
     _pad: [f32; 2],
+    // vec4 per state for std140 alignment. .rgb is the colour; .a unused.
+    state_colors: [[f32; 4]; MAX_STATES],
 }
 
 pub struct Renderer {
@@ -191,7 +199,8 @@ impl Renderer {
         }
     }
 
-    pub fn update_beads(&mut self, positions: &[Vec2]) {
+    pub fn update_beads(&mut self, positions: &[Vec2], states: &[u32]) {
+        debug_assert_eq!(positions.len(), states.len());
         // Re-allocate the storage buffer if it's too small.
         if positions.len() > self.bead_capacity {
             self.bead_capacity = positions.len().next_power_of_two();
@@ -210,13 +219,13 @@ impl Renderer {
                 ],
             });
         }
-        let gpu_beads: Vec<BeadGpu> = positions.iter()
-            .map(|p| BeadGpu { pos: [p.x, p.y], _pad: [0.0; 2] })
+        let gpu_beads: Vec<BeadGpu> = positions.iter().zip(states.iter())
+            .map(|(p, &s)| BeadGpu { pos: [p.x, p.y], state: s, _pad: 0 })
             .collect();
         self.queue.write_buffer(&self.bead_buf, 0, bytemuck::cast_slice(&gpu_beads));
     }
 
-    pub fn update_camera(&mut self, world_size: f32) {
+    pub fn update_camera(&mut self, world_size: f32, palette: &[[f32; 3]]) {
         // Orthographic projection covering the whole world, square, centered.
         let aspect = self.size.width as f32 / self.size.height as f32;
         let (w, h) = if aspect >= 1.0 {
@@ -230,11 +239,21 @@ impl Renderer {
         let offset_y = (h - world_size) * 0.5;
         let view = Mat4::from_translation(glam::Vec3::new(offset_x, offset_y, 0.0));
         let vp = proj * view;
+        let mut state_colors = [[0.0f32, 0.0, 0.0, 1.0]; MAX_STATES];
+        for (i, slot) in state_colors.iter_mut().enumerate() {
+            // Cycle through the palette if there are more states than entries,
+            // but in practice we expect `palette.len() <= MAX_STATES`.
+            if !palette.is_empty() {
+                let c = palette[i % palette.len()];
+                *slot = [c[0], c[1], c[2], 1.0];
+            }
+        }
         let ubo = CameraUbo {
             view_proj: vp.to_cols_array_2d(),
             radius: crate::ccd::RADIUS,
             world_size,
             _pad: [0.0; 2],
+            state_colors,
         };
         self.queue.write_buffer(&self.camera_buf, 0, bytemuck::bytes_of(&ubo));
     }

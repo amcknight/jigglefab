@@ -1,0 +1,306 @@
+[meta]
+name = "100-bead wire chain in a larger world"
+chemistry = "wire"
+seed = 42
+world_size = 80.0
+
+[[bead]]
+state = "on"
+pos = [40.0, 7.000]
+[[bead]]
+state = "off"
+pos = [40.0, 7.667]
+[[bead]]
+state = "off"
+pos = [40.0, 8.334]
+[[bead]]
+state = "off"
+pos = [40.0, 9.001]
+[[bead]]
+state = "off"
+pos = [40.0, 9.668]
+[[bead]]
+state = "off"
+pos = [40.0, 10.335]
+[[bead]]
+state = "off"
+pos = [40.0, 11.002]
+[[bead]]
+state = "off"
+pos = [40.0, 11.669]
+[[bead]]
+state = "off"
+pos = [40.0, 12.336]
+[[bead]]
+state = "off"
+pos = [40.0, 13.003]
+[[bead]]
+state = "off"
+pos = [40.0, 13.670]
+[[bead]]
+state = "off"
+pos = [40.0, 14.337]
+[[bead]]
+state = "off"
+pos = [40.0, 15.004]
+[[bead]]
+state = "off"
+pos = [40.0, 15.671]
+[[bead]]
+state = "off"
+pos = [40.0, 16.338]
+[[bead]]
+state = "off"
+pos = [40.0, 17.005]
+[[bead]]
+state = "off"
+pos = [40.0, 17.672]
+[[bead]]
+state = "off"
+pos = [40.0, 18.339]
+[[bead]]
+state = "off"
+pos = [40.0, 19.006]
+[[bead]]
+state = "off"
+pos = [40.0, 19.673]
+[[bead]]
+state = "off"
+pos = [40.0, 20.340]
+[[bead]]
+state = "off"
+pos = [40.0, 21.007]
+[[bead]]
+state = "off"
+pos = [40.0, 21.674]
+[[bead]]
+state = "off"
+pos = [40.0, 22.341]
+[[bead]]
+state = "off"
+pos = [40.0, 23.008]
+[[bead]]
+state = "off"
+pos = [40.0, 23.675]
+[[bead]]
+state = "off"
+pos = [40.0, 24.342]
+[[bead]]
+state = "off"
+pos = [40.0, 25.009]
+[[bead]]
+state = "off"
+pos = [40.0, 25.676]
+[[bead]]
+state = "off"
+pos = [40.0, 26.343]
+[[bead]]
+state = "off"
+pos = [40.0, 27.010]
+[[bead]]
+state = "off"
+pos = [40.0, 27.677]
+[[bead]]
+state = "off"
+pos = [40.0, 28.344]
+[[bead]]
+state = "off"
+pos = [40.0, 29.011]
+[[bead]]
+state = "off"
+pos = [40.0, 29.678]
+[[bead]]
+state = "off"
+pos = [40.0, 30.345]
+[[bead]]
+state = "off"
+pos = [40.0, 31.012]
+[[bead]]
+state = "off"
+pos = [40.0, 31.679]
+[[bead]]
+state = "off"
+pos = [40.0, 32.346]
+[[bead]]
+state = "off"
+pos = [40.0, 33.013]
+[[bead]]
+state = "off"
+pos = [40.0, 33.680]
+[[bead]]
+state = "off"
+pos = [40.0, 34.347]
+[[bead]]
+state = "off"
+pos = [40.0, 35.014]
+[[bead]]
+state = "off"
+pos = [40.0, 35.681]
+[[bead]]
+state = "off"
+pos = [40.0, 36.348]
+[[bead]]
+state = "off"
+pos = [40.0, 37.015]
+[[bead]]
+state = "off"
+pos = [40.0, 37.682]
+[[bead]]
+state = "off"
+pos = [40.0, 38.349]
+[[bead]]
+state = "off"
+pos = [40.0, 39.016]
+[[bead]]
+state = "off"
+pos = [40.0, 39.683]
+[[bead]]
+state = "off"
+pos = [40.0, 40.350]
+[[bead]]
+state = "off"
+pos = [40.0, 41.017]
+[[bead]]
+state = "off"
+pos = [40.0, 41.684]
+[[bead]]
+state = "off"
+pos = [40.0, 42.351]
+[[bead]]
+state = "off"
+pos = [40.0, 43.018]
+[[bead]]
+state = "off"
+pos = [40.0, 43.685]
+[[bead]]
+state = "off"
+pos = [40.0, 44.352]
+[[bead]]
+state = "off"
+pos = [40.0, 45.019]
+[[bead]]
+state = "off"
+pos = [40.0, 45.686]
+[[bead]]
+state = "off"
+pos = [40.0, 46.353]
+[[bead]]
+state = "off"
+pos = [40.0, 47.020]
+[[bead]]
+state = "off"
+pos = [40.0, 47.687]
+[[bead]]
+state = "off"
+pos = [40.0, 48.354]
+[[bead]]
+state = "off"
+pos = [40.0, 49.021]
+[[bead]]
+state = "off"
+pos = [40.0, 49.688]
+[[bead]]
+state = "off"
+pos = [40.0, 50.355]
+[[bead]]
+state = "off"
+pos = [40.0, 51.022]
+[[bead]]
+state = "off"
+pos = [40.0, 51.689]
+[[bead]]
+state = "off"
+pos = [40.0, 52.356]
+[[bead]]
+state = "off"
+pos = [40.0, 53.023]
+[[bead]]
+state = "off"
+pos = [40.0, 53.690]
+[[bead]]
+state = "off"
+pos = [40.0, 54.357]
+[[bead]]
+state = "off"
+pos = [40.0, 55.024]
+[[bead]]
+state = "off"
+pos = [40.0, 55.691]
+[[bead]]
+state = "off"
+pos = [40.0, 56.358]
+[[bead]]
+state = "off"
+pos = [40.0, 57.025]
+[[bead]]
+state = "off"
+pos = [40.0, 57.692]
+[[bead]]
+state = "off"
+pos = [40.0, 58.359]
+[[bead]]
+state = "off"
+pos = [40.0, 59.026]
+[[bead]]
+state = "off"
+pos = [40.0, 59.693]
+[[bead]]
+state = "off"
+pos = [40.0, 60.360]
+[[bead]]
+state = "off"
+pos = [40.0, 61.027]
+[[bead]]
+state = "off"
+pos = [40.0, 61.694]
+[[bead]]
+state = "off"
+pos = [40.0, 62.361]
+[[bead]]
+state = "off"
+pos = [40.0, 63.028]
+[[bead]]
+state = "off"
+pos = [40.0, 63.695]
+[[bead]]
+state = "off"
+pos = [40.0, 64.362]
+[[bead]]
+state = "off"
+pos = [40.0, 65.029]
+[[bead]]
+state = "off"
+pos = [40.0, 65.696]
+[[bead]]
+state = "off"
+pos = [40.0, 66.363]
+[[bead]]
+state = "off"
+pos = [40.0, 67.030]
+[[bead]]
+state = "off"
+pos = [40.0, 67.697]
+[[bead]]
+state = "off"
+pos = [40.0, 68.364]
+[[bead]]
+state = "off"
+pos = [40.0, 69.031]
+[[bead]]
+state = "off"
+pos = [40.0, 69.698]
+[[bead]]
+state = "off"
+pos = [40.0, 70.365]
+[[bead]]
+state = "off"
+pos = [40.0, 71.032]
+[[bead]]
+state = "off"
+pos = [40.0, 71.699]
+[[bead]]
+state = "off"
+pos = [40.0, 72.366]
+[[bead]]
+state = "off"
+pos = [40.0, 73.033]

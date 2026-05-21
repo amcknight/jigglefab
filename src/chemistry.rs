@@ -5,11 +5,30 @@ use anyhow::{Result, bail};
 pub enum Action {
     Reflect,
     Pass,
+    // Reflect AND swap the two beads' state indices. The "wire" chemistry uses
+    // this for every contact: signal transfer is just state propagation along
+    // a chain of bonded beads.
+    ReflectSwap,
 }
+
+// Fallback colors used when a chemistry TOML doesn't specify `colors`. Indexed
+// by state. Beyond this length, colors cycle.
+const DEFAULT_PALETTE: [[f32; 3]; 8] = [
+    [0.78, 0.78, 0.80], // pale grey  — grey chemistry default
+    [1.00, 0.80, 0.25], // amber      — natural "charged / hot" cue
+    [0.30, 0.45, 0.85], // cool blue
+    [0.85, 0.40, 0.45], // rose
+    [0.50, 0.85, 0.40], // green
+    [0.85, 0.40, 0.85], // magenta
+    [0.40, 0.85, 0.85], // cyan
+    [0.85, 0.75, 0.40], // yellow
+];
 
 #[derive(Debug, Deserialize)]
 struct ChemistryFile {
     states: Vec<String>,
+    #[serde(default)]
+    colors: Option<Vec<[f32; 3]>>,
     #[serde(rename = "rule")]
     rules: Vec<RuleSpec>,
 }
@@ -24,6 +43,7 @@ struct RuleSpec {
 #[derive(Debug)]
 pub struct Chemistry {
     pub states: Vec<String>,
+    pub colors: Vec<[f32; 3]>,
     // Dense lookup: [stateA][stateB][inside as usize] -> Action
     table: Vec<Vec<[Action; 2]>>,
 }
@@ -53,6 +73,7 @@ pub fn parse_chemistry(text: &str) -> Result<Chemistry> {
         let action = match rule.action.as_str() {
             "reflect" => Action::Reflect,
             "pass" => Action::Pass,
+            "swap" | "reflect_swap" => Action::ReflectSwap,
             other => bail!("unknown action {:?}", other),
         };
         let inside_idx = rule.inside as usize;
@@ -60,7 +81,16 @@ pub fn parse_chemistry(text: &str) -> Result<Chemistry> {
         table[a][b][inside_idx] = action;
         table[b][a][inside_idx] = action;
     }
-    Ok(Chemistry { states: file.states, table })
+    let colors = match file.colors {
+        Some(c) => {
+            if c.len() != n {
+                bail!("colors length {} does not match states length {}", c.len(), n);
+            }
+            c
+        }
+        None => (0..n).map(|i| DEFAULT_PALETTE[i % DEFAULT_PALETTE.len()]).collect(),
+    };
+    Ok(Chemistry { states: file.states, colors, table })
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -80,5 +110,45 @@ mod tests {
         let g = chem.state_index("grey").unwrap();
         assert_eq!(chem.lookup(g, g, false), Action::Reflect);
         assert_eq!(chem.lookup(g, g, true), Action::Reflect);
+        // No `colors` in grey.toml — should fall back to the default palette.
+        assert_eq!(chem.colors.len(), 1);
+        assert_eq!(chem.colors[0], DEFAULT_PALETTE[0]);
+    }
+
+    #[test]
+    fn parses_swap_action_and_colors() {
+        let text = r#"
+states = ["off", "on"]
+colors = [[0.1, 0.2, 0.3], [0.9, 0.8, 0.7]]
+
+[[rule]]
+states = ["off", "on"]
+inside = false
+action = "swap"
+"#;
+        let chem = parse_chemistry(text).unwrap();
+        let off = chem.state_index("off").unwrap();
+        let on = chem.state_index("on").unwrap();
+        assert_eq!(chem.lookup(off, on, false), Action::ReflectSwap);
+        // Symmetry: rule (off,on) also applies to (on,off).
+        assert_eq!(chem.lookup(on, off, false), Action::ReflectSwap);
+        // Other entries fall back to the table default (Reflect).
+        assert_eq!(chem.lookup(off, off, false), Action::Reflect);
+        assert_eq!(chem.colors[0], [0.1, 0.2, 0.3]);
+        assert_eq!(chem.colors[1], [0.9, 0.8, 0.7]);
+    }
+
+    #[test]
+    fn rejects_colors_count_mismatch() {
+        let text = r#"
+states = ["a", "b"]
+colors = [[0.1, 0.2, 0.3]]
+
+[[rule]]
+states = ["a", "b"]
+inside = false
+action = "reflect"
+"#;
+        assert!(parse_chemistry(text).is_err());
     }
 }

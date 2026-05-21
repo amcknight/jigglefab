@@ -1,0 +1,41 @@
+# Wire — exactly like Grey (always reflect, inside and outside) except every
+# contact also swaps the two beads' states. Different-state swaps move the
+# signal one bead along the chain; same-state swaps are a no-op.
+states = ["off", "on"]
+
+# `off` is a quiet dim blue, `on` is a bright amber — high contrast so the
+# signal is visually obvious as it walks along the chain.
+colors = [
+    [0.20, 0.30, 0.55],
+    [1.00, 0.80, 0.25],
+]
+
+[[rule]]
+states = ["off", "off"]
+inside = false
+action = "swap"
+
+[[rule]]
+states = ["off", "off"]
+inside = true
+action = "swap"
+
+[[rule]]
+states = ["off", "on"]
+inside = false
+action = "swap"
+
+[[rule]]
+states = ["off", "on"]
+inside = true
+action = "swap"
+
+[[rule]]
+states = ["on", "on"]
+inside = false
+action = "swap"
+
+[[rule]]
+states = ["on", "on"]
+inside = true
+action = "swap"

@@ -1,0 +1,95 @@
+[meta]
+name = "30-bead wire chain (one charged)"
+chemistry = "wire"
+seed = 42
+
+[[bead]]
+state = "on"
+pos = [15.0, 5.000]
+[[bead]]
+state = "off"
+pos = [15.0, 5.667]
+[[bead]]
+state = "off"
+pos = [15.0, 6.334]
+[[bead]]
+state = "off"
+pos = [15.0, 7.001]
+[[bead]]
+state = "off"
+pos = [15.0, 7.668]
+[[bead]]
+state = "off"
+pos = [15.0, 8.335]
+[[bead]]
+state = "off"
+pos = [15.0, 9.002]
+[[bead]]
+state = "off"
+pos = [15.0, 9.669]
+[[bead]]
+state = "off"
+pos = [15.0, 10.336]
+[[bead]]
+state = "off"
+pos = [15.0, 11.003]
+[[bead]]
+state = "off"
+pos = [15.0, 11.670]
+[[bead]]
+state = "off"
+pos = [15.0, 12.337]
+[[bead]]
+state = "off"
+pos = [15.0, 13.004]
+[[bead]]
+state = "off"
+pos = [15.0, 13.671]
+[[bead]]
+state = "off"
+pos = [15.0, 14.338]
+[[bead]]
+state = "off"
+pos = [15.0, 15.005]
+[[bead]]
+state = "off"
+pos = [15.0, 15.672]
+[[bead]]
+state = "off"
+pos = [15.0, 16.339]
+[[bead]]
+state = "off"
+pos = [15.0, 17.006]
+[[bead]]
+state = "off"
+pos = [15.0, 17.673]
+[[bead]]
+state = "off"
+pos = [15.0, 18.340]
+[[bead]]
+state = "off"
+pos = [15.0, 19.007]
+[[bead]]
+state = "off"
+pos = [15.0, 19.674]
+[[bead]]
+state = "off"
+pos = [15.0, 20.341]
+[[bead]]
+state = "off"
+pos = [15.0, 21.008]
+[[bead]]
+state = "off"
+pos = [15.0, 21.675]
+[[bead]]
+state = "off"
+pos = [15.0, 22.342]
+[[bead]]
+state = "off"
+pos = [15.0, 23.009]
+[[bead]]
+state = "off"
+pos = [15.0, 23.676]
+[[bead]]
+state = "off"
+pos = [15.0, 24.343]
