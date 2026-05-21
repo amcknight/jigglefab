@@ -29,10 +29,15 @@ impl BeadSpec {
     }
 }
 
+pub fn parse_fab(text: &str) -> anyhow::Result<Fab> {
+    let fab: Fab = toml::from_str(text)?;
+    Ok(fab)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub fn load_fab(path: &str) -> anyhow::Result<Fab> {
     let text = std::fs::read_to_string(path)?;
-    let fab: Fab = toml::from_str(&text)?;
-    Ok(fab)
+    parse_fab(&text)
 }
 
 #[cfg(test)]

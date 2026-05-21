@@ -38,9 +38,8 @@ impl Chemistry {
     }
 }
 
-pub fn load_chemistry(path: &str) -> Result<Chemistry> {
-    let text = std::fs::read_to_string(path)?;
-    let file: ChemistryFile = toml::from_str(&text)?;
+pub fn parse_chemistry(text: &str) -> Result<Chemistry> {
+    let file: ChemistryFile = toml::from_str(text)?;
     let n = file.states.len();
     // Default everything to Reflect, then overwrite per rule.
     let mut table: Vec<Vec<[Action; 2]>> = (0..n)
@@ -62,6 +61,12 @@ pub fn load_chemistry(path: &str) -> Result<Chemistry> {
         table[b][a][inside_idx] = action;
     }
     Ok(Chemistry { states: file.states, table })
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn load_chemistry(path: &str) -> Result<Chemistry> {
+    let text = std::fs::read_to_string(path)?;
+    parse_chemistry(&text)
 }
 
 #[cfg(test)]

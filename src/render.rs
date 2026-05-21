@@ -51,7 +51,7 @@ impl Renderer {
             required_features: wgpu::Features::empty(),
             required_limits: wgpu::Limits::default(),
             memory_hints: wgpu::MemoryHints::Performance,
-        }, None).await?;
+        }, None).await.map_err(|e| anyhow::anyhow!("request_device failed: {e:?}"))?;
 
         let surface_caps = surface.get_capabilities(&adapter);
         let format = surface_caps.formats.iter().copied()

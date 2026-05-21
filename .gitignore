@@ -4,3 +4,12 @@
 target/
 *.log
 dist/
+
+# Local capture/debug artifacts (not committed)
+*.mp4
+frame*.png
+check_*.png
+poll_*.png
+seq_*.png
+jig*.png
+desktop_check.png

@@ -8,7 +8,21 @@ pub mod sim;
 pub mod render;
 pub mod app;
 
+#[cfg(not(target_arch = "wasm32"))]
 pub fn run() -> anyhow::Result<()> {
     env_logger::init();
     app::run()
+}
+
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::prelude::wasm_bindgen;
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen(start)]
+pub fn web_start() {
+    console_error_panic_hook::set_once();
+    let _ = console_log::init_with_level(log::Level::Info);
+    if let Err(e) = app::run() {
+        log::error!("app error: {e:?}");
+    }
 }

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <title>JiggleFab P1</title>
+    <link data-trunk rel="rust" data-target-name="jigglefab" />
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background: #0d0d12;
+            overflow: hidden;
+            font-family: system-ui, sans-serif;
+            color: #ccc;
+        }
+        canvas {
+            display: block;
+            position: absolute;
+            top: 0; left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+        #fallback {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            max-width: 80%;
+            line-height: 1.5;
+        }
+        #fallback a { color: #8af; }
+    </style>
+</head>
+<body>
+    <div id="fallback">
+        <h2>JiggleFab P1</h2>
+        <p>Loading… if nothing appears within a few seconds, your browser may not support WebGPU.</p>
+        <p>Tested on Chrome / Edge desktop (113+), Chrome Android (121+), Safari iOS 18+.</p>
+    </div>
+</body>
+</html>
