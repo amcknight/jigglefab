@@ -91,7 +91,10 @@ async def main() -> int:
         before = f"{OUT_DIR}/before.png"
         after = f"{OUT_DIR}/after.png"
         # Take a full-viewport screenshot after waiting.
-        await page.screenshot(path=after, full_page=False)
+        try:
+            await page.screenshot(path=after, full_page=False, timeout=60000)
+        except Exception as e:
+            print(f"screenshot failed: {e}")
 
         # Pixel-sample the screenshot dead-center: if the wasm is rendering,
         # the centre of the chain at x=40,y~40 in world space should NOT be

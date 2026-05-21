@@ -21,11 +21,16 @@ use crate::render::Renderer;
 use crate::sim::Sim;
 
 const FRAME_DT: f32 = 1.0 / 60.0;
+// Substeps per rendered frame. 10 = simulation runs 10× wall-clock speed
+// while keeping each step at the well-tested 1/60s — safer numerically
+// than one big dt because the CCD loop still uses the timestep its
+// precision was tuned for.
+const SUBSTEPS: u32 = 10;
 
 // The deployed web build now ships the wire chemistry as the headline demo —
-// a long bonded chain where the "on" signal walks the bead-string visibly.
+// ten parallel bonded chains, each with one "on" signal walking the bead.
 #[cfg(target_arch = "wasm32")]
-const FAB_TOML: &str = include_str!("../fabs/wire-100.toml");
+const FAB_TOML: &str = include_str!("../fabs/wire-10x100.toml");
 #[cfg(target_arch = "wasm32")]
 const CHEMISTRY_TOML: &str = include_str!("../chemistries/wire.toml");
 
@@ -87,7 +92,7 @@ impl ApplicationHandler<UserEvent> for App {
         let window = Arc::new(event_loop.create_window(attrs).expect("create window"));
 
         #[cfg(not(target_arch = "wasm32"))]
-        let fab = load_fab("fabs/wire-100.toml").expect("load fab");
+        let fab = load_fab("fabs/wire-10x100.toml").expect("load fab");
         #[cfg(target_arch = "wasm32")]
         let fab = parse_fab(FAB_TOML).expect("parse fab");
 
@@ -166,7 +171,9 @@ impl ApplicationHandler<UserEvent> for App {
                 renderer.update_camera(sim.world_size(), &sim.palette());
             }
             WindowEvent::RedrawRequested => {
-                sim.step(FRAME_DT);
+                for _ in 0..SUBSTEPS {
+                    sim.step(FRAME_DT);
+                }
                 renderer.update_beads(&sim.positions, &sim.states);
                 if let Err(e) = renderer.render(sim.positions.len()) {
                     log::warn!("render error: {e:?}");
