@@ -68,6 +68,12 @@ The only stack with first-class GPU compute *and* a real browser story without a
 - **No database.** Designs and chemistries are small files on disk.
 - **No deployment infrastructure designed yet.** Static hosting and release packaging are P4 concerns.
 
+## World topology
+
+The world is a **2D torus** — positions wrap around in both axes. No walls, no special-case wall-bead collision, no escape concern, no edge artifacts. Pair distance uses the minimum-image convention (the shortest of the wrapped distances). The spatial hash wraps too; the last grid cells in each axis are neighbours of the first.
+
+World size is hardcoded for P1. A variable / per-fab world size lands later; the fab file's `[meta]` table is the natural home for it. Listed under deferred decisions.
+
 ## Collision mechanism
 
 The Haskell uses a global event queue: each collision computes its time, all collisions are sorted, the earliest fires, ~2n events are removed and ~2n inserted, repeat. This is inherently sequential.
@@ -152,7 +158,7 @@ The Haskell "ball escapes its chain at speed" demon was a *scheduling* bug, not 
 
 - **CCD-faithful in/out transitions** as primary correctness mechanism.
 - **Hard speed clamp** as backstop: residual glitches become wobbles, never missiles.
-- **Watched invariants** that trip on the violation frame: total energy, no-escape-from-world-bounds, containment integrity (no bond appears/disappears without passing through its CCD-resolved transition).
+- **Watched invariants** that trip on the violation frame: total energy, containment integrity (no bond appears/disappears without passing through its CCD-resolved transition), bead count conservation when chemistry doesn't create/destroy. (No "no-escape" invariant: the world is a torus, see above.)
 - **Anomaly menagerie:** any tripped invariant or visually-flagged weirdness saves `(seed, initial_state, frame)` to a regression set. Triage: fix, or accept-and-document.
 
 ## Rendering
@@ -206,7 +212,7 @@ The implementation plan that follows this design targets **P1 only**. Subsequent
 - Renders all beads as filled circles, camera framed around the chain.
 - Camera hardcoded; no zoom/pan/UI.
 - Reruns with the same seed produce bit-identical pixel output frame-for-frame on the same machine.
-- World bounds are a hardcoded box large enough for the chain to wander; bounds-collision is also "reflect" (treat walls as immovable beads or as a separate hardcoded reflection — implementation detail for the plan).
+- World is a hardcoded-size torus; positions wrap. No walls. Size chosen so the chain has room to wander without immediately self-overlapping across the wrap.
 
 **Not in P1:**
 
@@ -232,6 +238,7 @@ Intentionally unpinned, with reasons:
 - **Deployment / hosting specifics** — defer until P4.
 - **Sub-structure naming** (knot, lace, fab) — provisional; will settle through use.
 - **Overlapping-but-not-bonded beads** — leave bonds emergent for now; revisit only if a design legitimately requires the edge case (e.g., 4 beads stacked at the same point with varying bondedness for a logic-gate knot). May add an optional bond-override addendum to the format then.
+- **Variable / per-fab world size** — hardcoded torus size for P1; move to the fab file's `[meta]` table when multiple fabs land.
 
 ## Guardrails
 
