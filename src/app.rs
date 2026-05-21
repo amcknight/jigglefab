@@ -21,13 +21,10 @@ use crate::render::Renderer;
 use crate::sim::Sim;
 
 const FRAME_DT: f32 = 1.0 / 60.0;
-// Substeps per rendered frame. The sequential CCD scheduler is the P1
-// bottleneck the design doc explicitly calls out — at 1000 beads × 10×
-// sim-time, contact backlog accumulates faster than one CPU thread can
-// drain and the page locks up after a few seconds. 3× sits inside the
-// chain_integrity-tested range and stays smooth; bump back up once the
-// P2 GPU-parallel CCD work lands.
-const SUBSTEPS: u32 = 3;
+// Substeps per rendered frame. Wire's outside rule now passes-through, so
+// the only contacts in the sim are the ~N bonded-pair oscillations — 10×
+// is safe again at 1000 beads.
+const SUBSTEPS: u32 = 10;
 
 // The deployed web build now ships the wire chemistry as the headline demo —
 // ten parallel bonded chains, each with one "on" signal walking the bead.

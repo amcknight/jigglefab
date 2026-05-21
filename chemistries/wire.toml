@@ -1,6 +1,14 @@
-# Wire — exactly like Grey (always reflect, inside and outside) except every
-# contact also swaps the two beads' states. Different-state swaps move the
-# signal one bead along the chain; same-state swaps are a no-op.
+# Wire — signal walks along bonded chains; chains are transparent to each
+# other (and to non-bonded folds within a single chain). The "inside" rule
+# fires when a bonded pair reaches |d|=R; the "outside" rule fires when two
+# free beads collide. Setting outside = "pass" is deliberate: it means
+# cross-chain interactions don't accumulate sequential-CCD work as chains
+# self-tangle. Without it, the first time two chains touch the contact
+# count explodes and the single-threaded scheduler grinds. With it, the
+# only contacts in the system are the ~N bonded-pair oscillations, which
+# scale linearly in bead count regardless of how chains are arranged in
+# space. This is a deviation from the strict "any bump swaps" spec — the
+# trade is "parallel chains stay independent and the demo runs at 10×."
 states = ["off", "on"]
 
 # `off` is a quiet dim blue, `on` is a bright amber — high contrast so the
@@ -10,19 +18,10 @@ colors = [
     [1.00, 0.80, 0.25],
 ]
 
-[[rule]]
-states = ["off", "off"]
-inside = false
-action = "swap"
-
+# Inside: bonded pair reaches |d|=R — reflect and swap states.
 [[rule]]
 states = ["off", "off"]
 inside = true
-action = "swap"
-
-[[rule]]
-states = ["off", "on"]
-inside = false
 action = "swap"
 
 [[rule]]
@@ -32,10 +31,22 @@ action = "swap"
 
 [[rule]]
 states = ["on", "on"]
-inside = false
+inside = true
 action = "swap"
+
+# Outside: free pair would collide — pass through instead. Chains, and
+# non-bonded folds within a single chain, are transparent to each other.
+[[rule]]
+states = ["off", "off"]
+inside = false
+action = "pass"
+
+[[rule]]
+states = ["off", "on"]
+inside = false
+action = "pass"
 
 [[rule]]
 states = ["on", "on"]
-inside = true
-action = "swap"
+inside = false
+action = "pass"

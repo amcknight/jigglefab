@@ -211,19 +211,39 @@ impl Sim {
                     self.states.swap(a as usize, b as usize);
                 }
 
-                // Snap to the topology-correct side of |d|=R regardless of action,
-                // so the next CCD iteration's `c` has the right sign and any drift
-                // caused by a sibling pair's earlier snap is reset.
+                // Snap onto the side of |d|=R the pair is heading toward
+                // *after* this action, so the next CCD iteration's `c` has
+                // a clean sign and we don't immediately re-trigger.
+                //
+                //   Reflect: pair bounces back to the side it came from.
+                //   Pass:    pair continues to the opposite side.
+                //
+                // Picking the post-action side from `bonded` alone (the old
+                // logic) was correct only as long as bonded ↔ inside, i.e.
+                // when free pairs always reflected and bonded pairs always
+                // stayed. The wire chemistry's outside=pass rule breaks
+                // that — a free pair can now legitimately end up inside R
+                // (passing through each other), and snapping it back to
+                // R+EPS while it's still moving inward ping-pongs against
+                // the boundary every CCD iteration.
+                let post_state_inside = match action {
+                    Action::Reflect | Action::ReflectSwap => exiting,
+                    Action::Pass => !exiting,
+                };
                 let d = pb - pa;
                 let dist = d.length();
                 if dist > 1e-12 {
-                    let target = if bonded { RADIUS - BOUNDARY_EPS } else { RADIUS + BOUNDARY_EPS };
+                    let target = if post_state_inside { RADIUS - BOUNDARY_EPS } else { RADIUS + BOUNDARY_EPS };
                     let correction = (target - dist) * 0.5;
                     let n = d / dist;
                     self.positions[a as usize] = self.grid.wrap_pos(pa - n * correction);
                     let new_b = self.positions[b as usize] + n * correction;
                     self.positions[b as usize] = self.grid.wrap_pos(new_b);
                 }
+                // `bonded` is now only used inside the contact-resolution
+                // arm above; silence the unused-binding warning that
+                // appears when neither Reflect arm touches it.
+                let _ = bonded;
             } else {
                 break; // no contact this frame
             }
@@ -335,10 +355,38 @@ mod tests {
     }
 
     #[test]
-    fn wire_swap_action_swaps_states_on_contact() {
-        // Two beads heading straight at each other with a wire chemistry.
-        // After they collide, their states must have swapped (and the
-        // velocities reflected, just like grey).
+    fn wire_bonded_pair_swaps_states_on_contact() {
+        // A bonded pair: signal must hop between them when they reach
+        // |d|=R (the "inside" rule of the wire chemistry).
+        let chem = load_chemistry("chemistries/wire.toml").unwrap();
+        let off = chem.state_index("off").unwrap() as u32;
+        let on = chem.state_index("on").unwrap() as u32;
+        let mut bonds = HashSet::new();
+        bonds.insert((0u32, 1u32));
+        let mut sim = Sim {
+            // Start close, moving apart, so they hit |d|=R from the inside.
+            positions: vec![Vec2::new(14.75, 5.0), Vec2::new(15.25, 5.0)],
+            velocities: vec![Vec2::new(-1.0, 0.0), Vec2::new(1.0, 0.0)],
+            states: vec![on, off],
+            chemistry: chem,
+            grid: Grid::new(WORLD_SIZE),
+            bonds,
+            tick: 0,
+        };
+        sim.step(1.0);
+        assert_eq!(sim.states[0], off, "signal hopped to the other bead");
+        assert_eq!(sim.states[1], on, "signal hopped to the other bead");
+        // And the bond holds: pair stays within R after the reflect.
+        let d = (sim.positions[0] - sim.positions[1]).length();
+        assert!(d <= crate::ccd::RADIUS + 1e-3, "bond should hold, |d|={d}");
+    }
+
+    #[test]
+    fn wire_free_pair_passes_through_without_swap() {
+        // A free pair (no bond): wire's outside rule is "pass" — the
+        // beads sail through each other without touching state or
+        // velocity. This is what keeps the 10×100 demo cheap when chains
+        // drift into each other.
         let chem = load_chemistry("chemistries/wire.toml").unwrap();
         let off = chem.state_index("off").unwrap() as u32;
         let on = chem.state_index("on").unwrap() as u32;
@@ -352,10 +400,10 @@ mod tests {
             tick: 0,
         };
         sim.step(1.0);
-        assert_eq!(sim.states[0], off, "left bead inherited the signal");
-        assert_eq!(sim.states[1], on, "right bead inherited the signal");
-        // Velocities should still reflect like grey.
-        assert!((sim.velocities[0] - Vec2::new(-1.0, 0.0)).length() < 1e-3);
-        assert!((sim.velocities[1] - Vec2::new( 1.0, 0.0)).length() < 1e-3);
+        assert_eq!(sim.states[0], on, "free-pair contact does not swap");
+        assert_eq!(sim.states[1], off, "free-pair contact does not swap");
+        // Velocities unchanged — beads have passed through each other.
+        assert!((sim.velocities[0] - Vec2::new(1.0, 0.0)).length() < 1e-3);
+        assert!((sim.velocities[1] - Vec2::new(-1.0, 0.0)).length() < 1e-3);
     }
 }

@@ -69,8 +69,21 @@ async def main() -> int:
             "})()"
         )
 
-        # Give the WASM bundle several seconds to init and start rendering.
-        await page.wait_for_timeout(4000)
+        # Sample several timepoints so we can detect a freeze: if the
+        # snapshots at t=3 s and t=15 s are byte-identical, the simulation
+        # stopped advancing — i.e. the user's "freezes after 1-2 s" report.
+        import hashlib
+        snapshots: dict[float, str] = {}
+        for t in (1.0, 3.0, 8.0, 15.0):
+            await page.wait_for_timeout(int(t * 1000) - sum(int(x * 1000) for x in [0.0] + sorted([k for k in snapshots])))
+            shot_path = f"{OUT_DIR}/t{int(t)}.png"
+            try:
+                await page.screenshot(path=shot_path, full_page=False, timeout=60000)
+                with open(shot_path, "rb") as f:
+                    snapshots[t] = hashlib.sha256(f.read()).hexdigest()[:16]
+            except Exception as e:
+                snapshots[t] = f"FAILED: {e}"
+                break
 
         # Inspect the canvas: did winit append one? What's its drawing-buffer
         # size and CSS size?
@@ -88,13 +101,9 @@ async def main() -> int:
             "}"
         )
 
-        before = f"{OUT_DIR}/before.png"
-        after = f"{OUT_DIR}/after.png"
+        after = f"{OUT_DIR}/t15.png"
         # Take a full-viewport screenshot after waiting.
-        try:
-            await page.screenshot(path=after, full_page=False, timeout=60000)
-        except Exception as e:
-            print(f"screenshot failed: {e}")
+        # (the per-timepoint screenshots above already wrote files)
 
         # Pixel-sample the screenshot dead-center: if the wasm is rendering,
         # the centre of the chain at x=40,y~40 in world space should NOT be
@@ -119,6 +128,12 @@ async def main() -> int:
         print(f"canvas:             {canvas_info}")
         print(f"2d sample probe:    {sample}")
         print(f"Screenshot:         {after}")
+        print()
+        print("Per-timepoint snapshot SHA-256 (first 16 hex):")
+        for t in sorted(snapshots):
+            print(f"  t={t:>4.1f}s  {snapshots[t]}")
+        if len({v for v in snapshots.values() if not v.startswith('FAILED')}) == 1 and len(snapshots) > 1:
+            print("  ⚠ All snapshots are identical — simulation is FROZEN")
         print()
         print("Console:")
         for line in console_lines:
