@@ -28,8 +28,12 @@ const SUBSTEPS: u32 = 10;
 
 // The deployed web build now ships the wire chemistry as the headline demo —
 // ten parallel bonded chains, each with one "on" signal walking the bead.
+// 30 beads per chain (was 100): with wire's outside=pass, long chains
+// can self-fold tightly because there's nothing pushing non-adjacent
+// beads apart, and the sequential CCD scheduler chokes on the resulting
+// pile-up of pass-through contacts. 30 keeps folds short.
 #[cfg(target_arch = "wasm32")]
-const FAB_TOML: &str = include_str!("../fabs/wire-10x100.toml");
+const FAB_TOML: &str = include_str!("../fabs/wire-10x30.toml");
 #[cfg(target_arch = "wasm32")]
 const CHEMISTRY_TOML: &str = include_str!("../chemistries/wire.toml");
 
@@ -91,7 +95,7 @@ impl ApplicationHandler<UserEvent> for App {
         let window = Arc::new(event_loop.create_window(attrs).expect("create window"));
 
         #[cfg(not(target_arch = "wasm32"))]
-        let fab = load_fab("fabs/wire-10x100.toml").expect("load fab");
+        let fab = load_fab("fabs/wire-10x30.toml").expect("load fab");
         #[cfg(target_arch = "wasm32")]
         let fab = parse_fab(FAB_TOML).expect("parse fab");
 

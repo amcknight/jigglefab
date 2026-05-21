@@ -382,11 +382,11 @@ mod tests {
     }
 
     #[test]
-    fn wire_free_pair_passes_through_without_swap() {
-        // A free pair (no bond): wire's outside rule is "pass" — the
-        // beads sail through each other without touching state or
-        // velocity. This is what keeps the 10×100 demo cheap when chains
-        // drift into each other.
+    fn wire_free_pair_reflects_without_swap() {
+        // A free pair (no bond): wire's outside rule is "reflect" — the
+        // beads bounce off each other (so chains have shape and bounce
+        // off neighbours) but the signal does NOT transfer, since the
+        // user's clarification is "only swap between bonded circles."
         let chem = load_chemistry("chemistries/wire.toml").unwrap();
         let off = chem.state_index("off").unwrap() as u32;
         let on = chem.state_index("on").unwrap() as u32;
@@ -400,10 +400,11 @@ mod tests {
             tick: 0,
         };
         sim.step(1.0);
+        // States preserved — free-pair contacts do not propagate signal.
         assert_eq!(sim.states[0], on, "free-pair contact does not swap");
         assert_eq!(sim.states[1], off, "free-pair contact does not swap");
-        // Velocities unchanged — beads have passed through each other.
-        assert!((sim.velocities[0] - Vec2::new(1.0, 0.0)).length() < 1e-3);
-        assert!((sim.velocities[1] - Vec2::new(-1.0, 0.0)).length() < 1e-3);
+        // Velocities reflected — chains have physical extent.
+        assert!((sim.velocities[0] - Vec2::new(-1.0, 0.0)).length() < 1e-3);
+        assert!((sim.velocities[1] - Vec2::new( 1.0, 0.0)).length() < 1e-3);
     }
 }

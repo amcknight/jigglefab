@@ -1,14 +1,9 @@
-# Wire — signal walks along bonded chains; chains are transparent to each
-# other (and to non-bonded folds within a single chain). The "inside" rule
-# fires when a bonded pair reaches |d|=R; the "outside" rule fires when two
-# free beads collide. Setting outside = "pass" is deliberate: it means
-# cross-chain interactions don't accumulate sequential-CCD work as chains
-# self-tangle. Without it, the first time two chains touch the contact
-# count explodes and the single-threaded scheduler grinds. With it, the
-# only contacts in the system are the ~N bonded-pair oscillations, which
-# scale linearly in bead count regardless of how chains are arranged in
-# space. This is a deviation from the strict "any bump swaps" spec — the
-# trade is "parallel chains stay independent and the demo runs at 10×."
+# Wire: bonded pair → reflect AND swap states (signal walks along the
+# chain). Free pair → reflect only (chains have physical extent and don't
+# pass through each other or self-collapse). Net effect:
+#   • Each bonded triple acts like a flexible link.
+#   • Two chains brushing each other bounce — no state mixing.
+#   • A chain folding on itself bounces internally — keeps chain extent.
 states = ["off", "on"]
 
 # `off` is a quiet dim blue, `on` is a bright amber — high contrast so the
@@ -18,7 +13,7 @@ colors = [
     [1.00, 0.80, 0.25],
 ]
 
-# Inside: bonded pair reaches |d|=R — reflect and swap states.
+# Inside (bonded pair at |d|=R) — reflect AND swap states.
 [[rule]]
 states = ["off", "off"]
 inside = true
@@ -34,19 +29,22 @@ states = ["on", "on"]
 inside = true
 action = "swap"
 
-# Outside: free pair would collide — pass through instead. Chains, and
-# non-bonded folds within a single chain, are transparent to each other.
+# Outside (free pair colliding) — reflect, but DO NOT swap states. The
+# user's clarification: "wire should only swap signal between bound
+# circles." So free contacts behave physically (bounce) without
+# propagating signal. This is the table default — listed explicitly here
+# so the chemistry is self-documenting.
 [[rule]]
 states = ["off", "off"]
 inside = false
-action = "pass"
+action = "reflect"
 
 [[rule]]
 states = ["off", "on"]
 inside = false
-action = "pass"
+action = "reflect"
 
 [[rule]]
 states = ["on", "on"]
 inside = false
-action = "pass"
+action = "reflect"
