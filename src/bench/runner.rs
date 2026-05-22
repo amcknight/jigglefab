@@ -129,9 +129,14 @@ pub fn run_scenario(scenario: &dyn Scenario, args: &BenchArgs) -> ScenarioResult
     } else { 0 };
 
     let final_bonds = geometric_bonds(&sim.positions, sim.world_size());
-    let bonds_preserved = final_bonds == invariants.initial_bond_set;
     let bonds_lost = invariants.initial_bond_set.difference(&final_bonds).count();
     let bonds_added = final_bonds.difference(&invariants.initial_bond_set).count();
+    // bonds_preserved tracks the real correctness violation: did any
+    // initially-bonded pair drift past R? bonds_added counts non-bonded pairs
+    // that happened to land within R at scenario end, which catches natural
+    // chain folding (no angular stiffness in wire chemistry) and is not a
+    // scheduler failure — see investigation 2026-05-21.
+    let bonds_preserved = bonds_lost == 0;
 
     let determinism_verified = if args.verify_determinism {
         let (mut sim2, _) = scenario.build();

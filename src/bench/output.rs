@@ -20,7 +20,7 @@ pub fn format_markdown(results: &[ScenarioResult]) -> String {
         let bonds_ok: String = if r.bonds_preserved {
             "y".to_string()
         } else {
-            format!("n (-{}/+{})", r.bonds_lost, r.bonds_added)
+            format!("n (-{})", r.bonds_lost)
         };
         out.push_str(&format!(
             "| {:<17} | {:>5} | {:>8.2} / {:>8.2} | {:>8.0} / {:>8.0} | {:>8.1} / {:>8.1} | {:>7.1} | {:>8} | {:>12.4} | {:>8} |\n",
