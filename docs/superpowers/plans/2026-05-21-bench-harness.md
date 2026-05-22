@@ -17,21 +17,21 @@
 **New files:**
 - `src/bench/mod.rs` — declares submodules, re-exports public types
 - `src/bench/scenario.rs` — `Scenario` trait, `Invariants` struct, `geometric_bonds()` helper
-- `src/bench/chains.rs` — `DisconnectedChains` scenario (single-row, multi-row, serpentine layouts)
+- `src/bench/chains.rs` — `DisconnectedChains` scenario (grid layout; panics if a chain doesn't fit — see Task 4 footnote on the dropped serpentine fallback)
 - `src/bench/runner.rs` — `run_scenario`, `ScenarioResult`, percentile computation, truncation
 - `src/bench/output.rs` — markdown + CSV formatters
 - `src/bin/bench.rs` — CLI parsing + `main` entry
 - `docs/bench-results/2026-05-21-baseline.md` — captured baseline run (Task 12)
-- `fabs/wire-50x30.toml` — bumped deploy fab (Task 13)
+- ~~`fabs/wire-50x30.toml` — bumped deploy fab (Task 13)~~ — Task 13 deferred; not created on this branch.
 
 **Modified files:**
 - `src/lib.rs:1-9` — add `pub mod bench;`
 - `src/sim.rs` — add `StepMetrics` struct + instrumented counters + `last_step_metrics()` accessor
 - `Cargo.toml` — add explicit `[[bin]]` entry for the bench binary
-- `src/app.rs:36, 98` — point to `wire-50x30.toml` (Task 13)
+- ~~`src/app.rs:36, 98` — point to `wire-50x30.toml` (Task 13)~~ — Task 13 deferred; `app.rs` untouched.
 
 **Deleted:**
-- `fabs/wire-10x30.toml` (Task 13; replaced by `wire-50x30.toml`)
+- ~~`fabs/wire-10x30.toml` (Task 13; replaced by `wire-50x30.toml`)~~ — Task 13 deferred; file kept.
 
 ---
 
@@ -614,15 +614,12 @@ mod tests {
     }
 
     #[test]
-    fn serpentine_layout_fits_long_chain_in_small_world() {
-        // Single chain of 300 beads × 0.667 = 200 vertical extent.
-        // In a world of 64, must serpentine. World 64 means ~96 beads per column,
-        // so 300 beads needs ~3 columns.
+    #[should_panic(expected = "chain too long for world")]
+    fn build_panics_when_chain_too_long_for_world() {
+        // Serpentine fallback was dropped (see Task 4 footnote) — chains that
+        // don't fit the world vertically now panic at build().
         let s = DisconnectedChains { chain_count: 1, chain_len: 300, world_size: 64.0 };
-        let (sim, inv) = s.build();
-        assert_eq!(sim.positions.len(), 300);
-        // Single chain → 299 intra-chain bonds, no others.
-        assert_eq!(inv.initial_bond_set.len(), 299);
+        let _ = s.build();
     }
 
     #[test]
@@ -665,7 +662,7 @@ Run `cargo check --lib` — expected PASS.
 
 ```powershell
 git add src/bench/chains.rs src/bench/mod.rs
-git commit -m "Add DisconnectedChains scenario (grid + serpentine layouts)"
+git commit -m "Add DisconnectedChains scenario (grid layout; serpentine fallback later dropped in c7a4e6c)"
 ```
 
 (If `src/fab.rs` was modified for `pub` access, include it: `git add src/fab.rs`.)
@@ -1560,7 +1557,9 @@ git commit -m "Capture pre-Phase-2 bench baseline"
 
 ---
 
-## Task 13: Bump deployed fab
+## Task 13: Bump deployed fab — **DEFERRED**
+
+> **Status (2026-05-21):** Deferred during the bench-harness branch. The baseline showed `chains_50x30` runs at ~0.1 fps, truncates after 4 frames, and loses 2 bonded pairs to scheduler starvation. Bumping the deployed demo to a config we know crawls and visibly tangles would regress the public site. Revisit after Phase 2 GPU-CCD lands and can sustain 1500+ beads. The task description below is preserved for that revisit.
 
 **Files:**
 - Delete: `fabs/wire-10x30.toml`
@@ -1707,7 +1706,7 @@ Walking through the spec section by section against the plan:
 - "Binary `src/bin/bench.rs`, invoked as `cargo run --release --bin bench`" → Task 2 (stub) + Task 10 (full).
 - All six default CLI args (`--scenarios`, `--substeps`, `--frames`, `--warmup`, `--max-wall-seconds`, `--csv`, `--verify-determinism`) → Task 10.
 - `Scenario` trait + `Invariants` struct → Task 3.
-- `DisconnectedChains` with grid + serpentine layout → Task 4.
+- `DisconnectedChains` with grid layout (serpentine fallback dropped, see Task 4 footnote) → Task 4.
 - Seven scenarios (six default + one opt-in) → Task 10 (`default_scenarios()` + `all_scenarios()`).
 - Headline metrics (frame_time, substep_time, effective_fps) → Tasks 5–6.
 - Diagnostic metrics (contacts/ss, candidate_pairs/ss mean, iter_cap_saturation_rate) → Tasks 5–6.
@@ -1719,7 +1718,7 @@ Walking through the spec section by section against the plan:
 - `--max-wall-seconds` semantics → Task 6 (logic) + Task 7 (test).
 - `--verify-determinism` → Task 8.
 - Baseline result capture → Task 12.
-- Deployed fab bump (separate deliverable per spec) → Task 13.
+- Deployed fab bump (separate deliverable per spec) → Task 13 — **deferred** during execution; spec deliverables 4-5 also deferred.
 
 All sections covered.
 

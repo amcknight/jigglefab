@@ -14,3 +14,6 @@ seq_*.png
 jig*.png
 desktop_check.png
 scripts/verify-out/
+
+# /wrap green-cache (test-skip fingerprint, regenerated locally)
+.claude/

@@ -91,8 +91,9 @@ Derived budget metric (option (b)'s "saturate the budget" answer, computed from 
 
 Invariants:
 
-- `bonds_preserved` — `final_bond_set == initial_bond_set`? bool.
-- `bonds_lost`, `bonds_added` — sizes of the symmetric difference, only emitted when `bonds_preserved == false`.
+- `bonds_preserved` — `bonds_lost == 0`? bool. *Note:* originally specified as `final_bond_set == initial_bond_set` but tightened during baseline capture (commit `e1839ba`) once we observed wire chains fold back on themselves, creating geometric-proximity intra-chain pairs that aren't scheduler failures. The real correctness violation is "did an initially-bonded pair drift past R without being caught," which is `bonds_lost`.
+- `bonds_lost` — count of `initial_bond_set − final_bond_set`. Always emitted (CSV + markdown). Non-zero means a chain pair escaped its bond — real violation.
+- `bonds_added` — count of `final_bond_set − initial_bond_set`. Emitted in CSV as raw diagnostic data, not in the headline markdown. Catches natural chain folding under load (no angular stiffness in wire chemistry) more often than scheduler failures, so it doesn't gate `bonds_preserved`.
 
 ## Instrumenting `Sim`
 
@@ -118,10 +119,10 @@ impl Sim {
 Stdout: markdown table, paste-friendly. One row per scenario. Truncated scenarios get a `*` next to their name and a footnote with frames-actually-completed.
 
 ```
-| scenario        | N    | frame_ms (mean/p99) | substep_us (mean/p99) | contacts/ss (mean/p99) | fps   | sub/16ms | bonds OK |
-|-----------------|------|---------------------|-----------------------|------------------------|-------|----------|----------|
-| chains_10x30    | 300  | 0.8 / 1.2           | 60 / 90               | 4 / 8                  | 1250  | 277      | y        |
-| chains_50x30 *  | 1500 | ...                 | ...                   | ...                    | ...   | ...      | y/n      |
+| scenario        | N    | frame_ms (mean/p99) | substep_us (mean/p99) | contacts/ss (mean/p99) | fps   | sub/16ms | iter_cap_sat | bonds OK |
+|-----------------|------|---------------------|-----------------------|------------------------|-------|----------|--------------|----------|
+| chains_10x30    | 300  | 0.8 / 1.2           | 60 / 90               | 4 / 8                  | 1250  | 277      | 0.0000       | y        |
+| chains_50x30 *  | 1500 | ...                 | ...                   | ...                    | ...   | ...      | ...          | n (-N)   |
 ```
 
 CSV (`--csv`): one row per scenario, one column per metric, plus a header row. Machine-readable for plotting later. No commitment to a stable schema yet.
@@ -160,7 +161,7 @@ Memory ceilings, CCD numerical garbage at huge world coordinates, and tunneling 
 2. `src/sim.rs` — add `StepMetrics` and `last_step_metrics`.
 3. `docs/bench-results/2026-05-21-baseline.md` — captured first-run table, committed as the baseline reference.
 
-Separate from this spec (committed alongside but not part of the harness work):
+Separate from this spec (originally planned for committed-alongside; **deferred** during the bench-harness branch — see plan Task 13 status):
 
-4. Rename `fabs/wire-10x30.toml` → `fabs/wire-50x30.toml`, bump `world_size = 50` → `256`, expand to 50 chains × 30 beads.
-5. Update `app.rs:36` and `app.rs:98` to point to the new path.
+4. ~~Rename `fabs/wire-10x30.toml` → `fabs/wire-50x30.toml`, bump `world_size = 50` → `256`, expand to 50 chains × 30 beads.~~ Deferred — baseline numbers (commit `dd6a7d9`) show 50×30 crawls at ~0.1 fps and breaks 2 bonded pairs on the current scheduler. The deploy bump waits for Phase 2.
+5. ~~Update `app.rs:36` and `app.rs:98` to point to the new path.~~ Deferred with item 4.

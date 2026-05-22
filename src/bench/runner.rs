@@ -64,19 +64,27 @@ pub struct ScenarioResult {
 
 use web_time::Instant;
 
+use crate::sim::Sim;
+
 use super::scenario::{Scenario, geometric_bonds};
+
+/// Step `sim` through `frames` rendered-frames, each containing `substeps`
+/// sub-steps of `frame_dt`. No metric collection — used for both warmup and
+/// the determinism re-run.
+fn drive_frames(sim: &mut Sim, frame_dt: f32, frames: u32, substeps: u32) {
+    for _ in 0..frames {
+        for _ in 0..substeps {
+            sim.step(frame_dt);
+        }
+    }
+}
 
 pub fn run_scenario(scenario: &dyn Scenario, args: &BenchArgs) -> ScenarioResult {
     let (mut sim, invariants) = scenario.build();
     let bead_count = sim.positions.len() as u32;
     let frame_dt = 1.0 / 60.0;
 
-    // Warmup — discard timings.
-    for _ in 0..args.warmup_frames {
-        for _ in 0..args.substeps {
-            sim.step(frame_dt);
-        }
-    }
+    drive_frames(&mut sim, frame_dt, args.warmup_frames, args.substeps);
 
     let run_start = Instant::now();
     let total_substeps_planned = (args.frames as usize) * (args.substeps as usize);
@@ -117,10 +125,10 @@ pub fn run_scenario(scenario: &dyn Scenario, args: &BenchArgs) -> ScenarioResult
         contacts_per_substep.push(0.0);
     }
 
-    let frame_time = Percentiles::from_samples(&mut frame_times_ms.clone());
-    let substep_time = Percentiles::from_samples(&mut substep_times_us.clone());
-    let contacts = Percentiles::from_samples(&mut contacts_per_substep.clone());
     let total_substeps = substep_times_us.len().max(1);
+    let frame_time = Percentiles::from_samples(&mut frame_times_ms);
+    let substep_time = Percentiles::from_samples(&mut substep_times_us);
+    let contacts = Percentiles::from_samples(&mut contacts_per_substep);
     let candidate_pairs_mean = candidate_pairs_total as f64 / total_substeps as f64;
     let iter_cap_saturation_rate = iter_cap_hits as f64 / total_substeps as f64;
     let effective_fps = if frame_time.mean > 0.0 { 1000.0 / frame_time.mean } else { 0.0 };
@@ -140,16 +148,7 @@ pub fn run_scenario(scenario: &dyn Scenario, args: &BenchArgs) -> ScenarioResult
 
     let determinism_verified = if args.verify_determinism {
         let (mut sim2, _) = scenario.build();
-        for _ in 0..args.warmup_frames {
-            for _ in 0..args.substeps {
-                sim2.step(frame_dt);
-            }
-        }
-        for _ in 0..frames_completed {
-            for _ in 0..args.substeps {
-                sim2.step(frame_dt);
-            }
-        }
+        drive_frames(&mut sim2, frame_dt, args.warmup_frames + frames_completed, args.substeps);
         Some(sim2.positions == sim.positions && sim2.states == sim.states)
     } else {
         None

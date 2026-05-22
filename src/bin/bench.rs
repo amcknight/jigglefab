@@ -127,14 +127,12 @@ fn main() -> ExitCode {
 
     let mut results: Vec<ScenarioResult> = Vec::with_capacity(scenarios.len());
     for scenario in &scenarios {
-        eprintln!("running {} (N={})...", scenario.name(), {
-            let (s, _) = scenario.build();
-            s.positions.len()
-        });
+        eprintln!("running {}...", scenario.name());
         let r = run_scenario(scenario.as_ref(), &parsed.bench);
         eprintln!(
-            "  {} frame_ms mean={:.2} p99={:.2} fps={:.1} bonds_ok={} truncated={}",
-            r.name, r.frame_time_ms.mean, r.frame_time_ms.p99, r.effective_fps, r.bonds_preserved, r.truncated
+            "  {} N={} frame_ms mean={:.2} p99={:.2} fps={:.1} bonds_ok={} truncated={}",
+            r.name, r.bead_count, r.frame_time_ms.mean, r.frame_time_ms.p99,
+            r.effective_fps, r.bonds_preserved, r.truncated,
         );
         results.push(r);
     }
