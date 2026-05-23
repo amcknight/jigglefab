@@ -56,6 +56,26 @@ impl Chemistry {
     pub fn lookup(&self, a: usize, b: usize, inside: bool) -> Action {
         self.table[a][b][inside as usize]
     }
+
+    /// Linearised action table for GPU upload.
+    /// Index: `state_a * n_states * 2 + state_b * 2 + inside as usize`
+    /// Values: 0 = Reflect, 1 = Pass, 2 = ReflectSwap
+    pub fn action_table_flat(&self) -> Vec<u32> {
+        let n = self.states.len();
+        let mut out = Vec::with_capacity(n * n * 2);
+        for a in 0..n {
+            for b in 0..n {
+                for inside in [false, true] {
+                    out.push(match self.table[a][b][inside as usize] {
+                        Action::Reflect => 0,
+                        Action::Pass => 1,
+                        Action::ReflectSwap => 2,
+                    });
+                }
+            }
+        }
+        out
+    }
 }
 
 pub fn parse_chemistry(text: &str) -> Result<Chemistry> {
@@ -150,5 +170,15 @@ inside = false
 action = "reflect"
 "#;
         assert!(parse_chemistry(text).is_err());
+    }
+
+    #[test]
+    fn action_table_flat_wire() {
+        // Load wire chemistry
+        let chem = load_chemistry("chemistries/wire.toml").unwrap();
+        let table = chem.action_table_flat();
+        let n = chem.states.len();
+        assert_eq!(table.len(), n * n * 2);
+        assert!(table.iter().all(|&v| v <= 2));
     }
 }
