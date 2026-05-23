@@ -37,7 +37,7 @@ fn advance_beads(@builtin(global_invocation_id) gid: vec3u) {
     let i = gid.x;
     if i >= params.n_beads { return; }
 
-    let dt_remaining = bitcast<f32>(iter_state[1]);
+    let dt_remaining = bitcast<f32>(atomicLoad(&iter_state[1]));
     let best_t = contacts[0].t;
     let t_advance = select(dt_remaining, best_t, best_t < INF_T);
 
@@ -50,7 +50,7 @@ fn advance_beads(@builtin(global_invocation_id) gid: vec3u) {
 @compute @workgroup_size(1)
 fn resolve_contact() {
     let best = contacts[0];
-    let dt_remaining = bitcast<f32>(iter_state[1]);
+    let dt_remaining = bitcast<f32>(atomicLoad(&iter_state[1]));
 
     if best.t >= INF_T {
         // No contact — all beads advanced by dt_remaining; we're done.

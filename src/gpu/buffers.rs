@@ -15,8 +15,10 @@ pub struct GpuParams {
 }
 
 /// Estimate max candidate pairs: each bead scans 9 cells × max_per_cell neighbours / 2 for uniqueness.
+/// Capped at 256*256=65536 so reduce_local emits at most 256 scratch entries, which reduce_global (1 wg of 256) can handle.
 pub fn max_pairs_for(n_beads: u32, max_per_cell: u32) -> u32 {
-    n_beads * max_per_cell * 9 / 2 + 64
+    let uncapped = n_beads * max_per_cell * 9 / 2 + 64;
+    uncapped.min(256 * 256)  // reduce_global can handle at most 256 scratch entries
 }
 
 pub struct GpuBuffers {

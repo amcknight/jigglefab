@@ -179,11 +179,8 @@ impl Scheduler for GpuEventLoop {
     fn step(&mut self, sim: &mut Sim, dt: f32) -> StepMetrics {
         let n = sim.positions.len() as u32;
 
-        // Sync bond set if it changed since last frame.
-        let new_bonds = Self::sort_bonds(sim);
-        if new_bonds != self.bonds_sorted {
-            self.bonds_sorted = new_bonds;
-        }
+        // Sync bond set from sim — upload happens in upload_frame regardless.
+        self.bonds_sorted = Self::sort_bonds(sim);
 
         let params = self.make_params(sim, dt);
 
