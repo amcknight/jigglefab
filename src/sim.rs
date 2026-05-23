@@ -109,7 +109,7 @@ impl Sim {
     /// already past the boundary and diverging, so `next_contact` returns
     /// `None`. The pair would drift apart forever. Calling this once per
     /// step bounds total drift to one frame's worth.
-    pub(crate) fn enforce_bonds_pub(&mut self) {
+    pub(crate) fn enforce_bonds(&mut self) {
         let pairs: Vec<(u32, u32)> = self.bonds.iter().copied().collect();
         for (a, b) in pairs {
             let pa = self.positions[a as usize];
@@ -268,7 +268,7 @@ impl Sim {
         // pull them back inside and apply the missed reflect. Running this
         // at end-of-step (rather than start) means external observers
         // reading positions after `step` always see bonds within R.
-        self.enforce_bonds_pub();
+        self.enforce_bonds();
 
         self.tick += 1;
         self.last_metrics = metrics;
