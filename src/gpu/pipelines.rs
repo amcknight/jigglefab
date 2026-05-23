@@ -109,11 +109,13 @@ impl GpuPipelines {
             (0, uniform_binding()), (1, storage_ro()),
             (2, storage_rw()), (3, storage_rw()),
         ]);
-        // advance_beads: params, positions(rw), velocities(ro), states(ro),
-        //                contacts(ro), iter_state(ro)
+        // advance_beads: params, positions(rw), velocities(rw), states(rw),
+        //                contacts(ro), iter_state(rw)
+        // velocities and states are declared read_write in the shared shader module
+        // (resolve_contact writes them), so the layout must match.
         let bgl_advance = make_bgl(device, "advance_beads", &[
-            (0, uniform_binding()), (1, storage_rw()), (2, storage_ro()),
-            (3, storage_ro()), (4, storage_ro()), (5, storage_ro()),
+            (0, uniform_binding()), (1, storage_rw()), (2, storage_rw()),
+            (3, storage_rw()), (4, storage_ro()), (5, storage_rw()),
         ]);
         // resolve_contact: params, positions(rw), velocities(rw), states(rw),
         //                  contacts(ro), iter_state(rw), chemistry(ro)

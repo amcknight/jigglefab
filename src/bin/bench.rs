@@ -7,6 +7,10 @@ use jigglefab::bench::{
     run_scenario,
 };
 use jigglefab::scheduler::{CpuSequential, Scheduler};
+#[cfg(not(target_arch = "wasm32"))]
+use jigglefab::gpu::context::GpuContext;
+#[cfg(not(target_arch = "wasm32"))]
+use jigglefab::gpu::scheduler::GpuEventLoop;
 
 struct ParsedArgs {
     bench: BenchArgs,
@@ -25,7 +29,7 @@ fn print_usage() {
     eprintln!("  --max-wall-seconds <S>  Per-scenario wall cap (default: 300)");
     eprintln!("  --csv <path>            Write CSV to this path");
     eprintln!("  --verify-determinism    Re-run each scenario and check bit-equality");
-    eprintln!("  --scheduler <name>      Scheduler to use: cpu (default: cpu)");
+    eprintln!("  --scheduler <name>      Scheduler to use: cpu, gpu (default: cpu)");
     eprintln!("  --help                  Show this message");
 }
 
@@ -127,14 +131,15 @@ fn main() -> ExitCode {
         }
     };
 
-    let mut scheduler: Box<dyn Scheduler> = match parsed.scheduler.as_str() {
-        "cpu" => Box::new(CpuSequential),
+    // Validate scheduler name before doing any work.
+    match parsed.scheduler.as_str() {
+        "cpu" | "gpu" => {}
         other => {
-            eprintln!("error: unknown scheduler {:?} (only 'cpu' supported yet)", other);
+            eprintln!("error: unknown scheduler {:?} (valid: cpu, gpu)", other);
             print_usage();
             return ExitCode::from(2);
         }
-    };
+    }
 
     let scenarios = select_scenarios(parsed.scenarios_filter.clone());
     if scenarios.is_empty() {
@@ -145,7 +150,34 @@ fn main() -> ExitCode {
     let mut results: Vec<ScenarioResult> = Vec::with_capacity(scenarios.len());
     for scenario in &scenarios {
         eprintln!("running {}...", scenario.name());
-        let r = run_scenario(scenario.as_ref(), &parsed.bench, scheduler.as_mut());
+
+        // For GPU, GpuEventLoop is baked to a specific sim's buffer sizes, so
+        // we build a sizing sim first, then create a fresh scheduler for each
+        // scenario. A fresh GpuContext (new headless device) is used per
+        // scenario to avoid sharing ownership across the move into GpuEventLoop.
+        #[cfg(not(target_arch = "wasm32"))]
+        let r = if parsed.scheduler == "gpu" {
+            let (sizing_sim, _) = scenario.build();
+            let ctx = match GpuContext::new_headless() {
+                Ok(c) => c,
+                Err(e) => {
+                    eprintln!("error: GPU context failed for {}: {e}", scenario.name());
+                    return ExitCode::from(1);
+                }
+            };
+            let mut gpu_sched: Box<dyn Scheduler> = Box::new(GpuEventLoop::new(ctx, &sizing_sim));
+            run_scenario(scenario.as_ref(), &parsed.bench, gpu_sched.as_mut())
+        } else {
+            let mut cpu_sched: Box<dyn Scheduler> = Box::new(CpuSequential);
+            run_scenario(scenario.as_ref(), &parsed.bench, cpu_sched.as_mut())
+        };
+
+        #[cfg(target_arch = "wasm32")]
+        let r = {
+            let mut cpu_sched: Box<dyn Scheduler> = Box::new(CpuSequential);
+            run_scenario(scenario.as_ref(), &parsed.bench, cpu_sched.as_mut())
+        };
+
         eprintln!(
             "  {} N={} frame_ms mean={:.2} p99={:.2} fps={:.1} bonds_ok={} truncated={}",
             r.name, r.bead_count, r.frame_time_ms.mean, r.frame_time_ms.p99,

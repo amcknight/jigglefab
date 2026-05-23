@@ -95,7 +95,7 @@ impl GpuBuffers {
         let contacts       = mk(contacts_bytes.max(4),   U::STORAGE);
         let reduce_scratch = mk(scratch_bytes.max(4),    U::STORAGE);
         let chemistry      = mk(chem_bytes.max(4),       storage_ro);
-        let iter_state     = mk(12,                      U::STORAGE | U::COPY_SRC);
+        let iter_state     = mk(12,                      U::STORAGE | U::COPY_SRC | U::COPY_DST);
         let readback       = mk(readback_bytes.max(4),   U::MAP_READ | U::COPY_DST);
 
         GpuBuffers {

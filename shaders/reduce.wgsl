@@ -37,7 +37,11 @@ fn reduce_local(
 ) {
     let pair_count = iter_state[2];
     let idx = gid.x;
-    wg_contacts[lid.x] = select(sentinel(), contacts[idx], idx < pair_count);
+    if idx < pair_count {
+        wg_contacts[lid.x] = contacts[idx];
+    } else {
+        wg_contacts[lid.x] = sentinel();
+    }
     workgroupBarrier();
 
     for (var stride: u32 = 128u; stride > 0u; stride >>= 1u) {
@@ -61,7 +65,11 @@ fn reduce_global(
 ) {
     // scratch has at most ceil(max_pairs/256) entries; pad with sentinels.
     let scratch_count = (params.max_pairs + 255u) / 256u;
-    wg_contacts[lid.x] = select(sentinel(), reduce_scratch[lid.x], lid.x < scratch_count);
+    if lid.x < scratch_count {
+        wg_contacts[lid.x] = reduce_scratch[lid.x];
+    } else {
+        wg_contacts[lid.x] = sentinel();
+    }
     workgroupBarrier();
 
     for (var stride: u32 = 128u; stride > 0u; stride >>= 1u) {

@@ -103,8 +103,8 @@ fn resolve_contact() {
         action == ACTION_REFLECT || action == ACTION_REFLECT_SWAP);
     if dist > 1e-12 {
         let n = d / dist;
-        let target = select(RADIUS + BOUNDARY_EPS, RADIUS - BOUNDARY_EPS, post_inside);
-        let correction = (target - dist) * 0.5;
+        let snap_dist = select(RADIUS + BOUNDARY_EPS, RADIUS - BOUNDARY_EPS, post_inside);
+        let correction = (snap_dist - dist) * 0.5;
         positions[a] = wrap_pos(pa - n * correction, params.world_size);
         positions[b] = wrap_pos(pb_raw + n * correction, params.world_size);
     }

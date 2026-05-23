@@ -117,6 +117,20 @@ impl ApplicationHandler<UserEvent> for App {
             let mut renderer = pollster::block_on(Renderer::new(window.clone(), sim.positions.len()))
                 .expect("create renderer");
             renderer.update_camera(world_size, &palette);
+
+            // Upgrade to GPU scheduler now that we have the wgpu device/queue
+            // from the renderer. GpuEventLoop shares the same device as the
+            // renderer, so there is no duplicate GPU context.
+            {
+                use crate::gpu::context::GpuContext;
+                use crate::gpu::scheduler::GpuEventLoop;
+                let ctx = GpuContext::from_renderer(
+                    renderer.device.clone(),
+                    renderer.queue.clone(),
+                );
+                self.scheduler = Box::new(GpuEventLoop::new(ctx, &sim));
+            }
+
             self.renderer = Some(renderer);
         }
 
