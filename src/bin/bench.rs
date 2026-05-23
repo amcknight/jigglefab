@@ -6,11 +6,13 @@ use jigglefab::bench::{
     BenchArgs, DisconnectedChains, Scenario, ScenarioResult, format_csv, format_markdown,
     run_scenario,
 };
+use jigglefab::scheduler::{CpuSequential, Scheduler};
 
 struct ParsedArgs {
     bench: BenchArgs,
     scenarios_filter: Option<Vec<String>>,
     csv_path: Option<String>,
+    scheduler: String,
 }
 
 fn print_usage() {
@@ -23,6 +25,7 @@ fn print_usage() {
     eprintln!("  --max-wall-seconds <S>  Per-scenario wall cap (default: 300)");
     eprintln!("  --csv <path>            Write CSV to this path");
     eprintln!("  --verify-determinism    Re-run each scenario and check bit-equality");
+    eprintln!("  --scheduler <name>      Scheduler to use: cpu (default: cpu)");
     eprintln!("  --help                  Show this message");
 }
 
@@ -30,6 +33,7 @@ fn parse_args() -> Result<ParsedArgs, String> {
     let mut bench = BenchArgs::default();
     let mut scenarios_filter: Option<Vec<String>> = None;
     let mut csv_path: Option<String> = None;
+    let mut scheduler = String::from("cpu");
     let argv: Vec<String> = env::args().skip(1).collect();
     let mut i = 0;
     while i < argv.len() {
@@ -70,11 +74,15 @@ fn parse_args() -> Result<ParsedArgs, String> {
             "--verify-determinism" => {
                 bench.verify_determinism = true;
             }
+            "--scheduler" => {
+                i += 1;
+                scheduler = argv.get(i).ok_or("--scheduler needs a value")?.clone();
+            }
             other => return Err(format!("unknown arg: {}", other)),
         }
         i += 1;
     }
-    Ok(ParsedArgs { bench, scenarios_filter, csv_path })
+    Ok(ParsedArgs { bench, scenarios_filter, csv_path, scheduler })
 }
 
 /// The default sweep. Excludes `chains_100x100` (opt-in via --scenarios).
@@ -114,6 +122,15 @@ fn main() -> ExitCode {
         Ok(p) => p,
         Err(e) => {
             eprintln!("error: {}", e);
+            print_usage();
+            return ExitCode::from(2);
+        }
+    };
+
+    let _scheduler: Box<dyn Scheduler> = match parsed.scheduler.as_str() {
+        "cpu" => Box::new(CpuSequential),
+        other => {
+            eprintln!("error: unknown scheduler {:?} (only 'cpu' supported yet)", other);
             print_usage();
             return ExitCode::from(2);
         }

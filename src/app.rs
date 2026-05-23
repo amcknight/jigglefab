@@ -18,6 +18,7 @@ use crate::chemistry::parse_chemistry;
 use crate::fab::parse_fab;
 
 use crate::render::Renderer;
+use crate::scheduler::{CpuSequential, Scheduler};
 use crate::sim::Sim;
 
 const FRAME_DT: f32 = 1.0 / 60.0;
@@ -45,6 +46,7 @@ pub struct App {
     window: Option<Arc<Window>>,
     renderer: Option<Renderer>,
     sim: Option<Sim>,
+    scheduler: Box<dyn Scheduler>,
     last_frame: Instant,
     #[cfg(target_arch = "wasm32")]
     proxy: Option<EventLoopProxy<UserEvent>>,
@@ -56,6 +58,7 @@ impl App {
             window: None,
             renderer: None,
             sim: None,
+            scheduler: Box::new(CpuSequential),
             last_frame: Instant::now(),
             #[cfg(target_arch = "wasm32")]
             proxy: None,
@@ -165,18 +168,23 @@ impl ApplicationHandler<UserEvent> for App {
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
         let Some(window) = &self.window else { return };
-        let Some(renderer) = &mut self.renderer else { return };
-        let Some(sim) = &mut self.sim else { return };
         match event {
             WindowEvent::CloseRequested => event_loop.exit(),
             WindowEvent::Resized(size) => {
+                let Some(renderer) = &mut self.renderer else { return };
+                let Some(sim) = &mut self.sim else { return };
                 renderer.resize(size);
                 renderer.update_camera(sim.world_size(), &sim.palette());
             }
             WindowEvent::RedrawRequested => {
-                for _ in 0..SUBSTEPS {
-                    sim.step(FRAME_DT);
+                let Some(renderer) = &mut self.renderer else { return };
+                {
+                    let sim = self.sim.as_mut().unwrap();
+                    for _ in 0..SUBSTEPS {
+                        self.scheduler.step(sim, FRAME_DT);
+                    }
                 }
+                let sim = self.sim.as_mut().unwrap();
                 renderer.update_beads(&sim.positions, &sim.states);
                 if let Err(e) = renderer.render(sim.positions.len()) {
                     log::warn!("render error: {e:?}");
