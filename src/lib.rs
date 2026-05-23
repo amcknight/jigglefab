@@ -8,6 +8,8 @@ pub mod sim;
 pub mod render;
 pub mod app;
 pub mod bench;
+pub mod scheduler;
+pub mod gpu;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn run() -> anyhow::Result<()> {

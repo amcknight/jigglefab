@@ -41,13 +41,13 @@ pub struct Sim {
     pub positions: Vec<Vec2>,
     pub velocities: Vec<Vec2>,
     pub states: Vec<u32>,
-    chemistry: Chemistry,
+    pub(crate) chemistry: Chemistry,
     grid: Grid,
     // Set of currently-bonded pairs, keyed by (min(a,b), max(a,b)). Authoritative
     // source of truth — initialised from initial geometry, then carried through
     // sim time independent of float drift in |d|. For grey chemistry the set is
     // invariant; future chemistries that form/break bonds will mutate it.
-    bonds: HashSet<(u32, u32)>,
+    pub(crate) bonds: HashSet<(u32, u32)>,
     last_metrics: StepMetrics,
     tick: u32,
 }
@@ -109,7 +109,7 @@ impl Sim {
     /// already past the boundary and diverging, so `next_contact` returns
     /// `None`. The pair would drift apart forever. Calling this once per
     /// step bounds total drift to one frame's worth.
-    fn enforce_bonds(&mut self) {
+    pub(crate) fn enforce_bonds_pub(&mut self) {
         let pairs: Vec<(u32, u32)> = self.bonds.iter().copied().collect();
         for (a, b) in pairs {
             let pa = self.positions[a as usize];
@@ -268,7 +268,7 @@ impl Sim {
         // pull them back inside and apply the missed reflect. Running this
         // at end-of-step (rather than start) means external observers
         // reading positions after `step` always see bonds within R.
-        self.enforce_bonds();
+        self.enforce_bonds_pub();
 
         self.tick += 1;
         self.last_metrics = metrics;
