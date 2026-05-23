@@ -31,8 +31,8 @@ struct CameraUbo {
 
 pub struct Renderer {
     pub surface: wgpu::Surface<'static>,
-    pub device: wgpu::Device,
-    pub queue: wgpu::Queue,
+    pub device: Arc<wgpu::Device>,
+    pub queue: Arc<wgpu::Queue>,
     pub config: wgpu::SurfaceConfiguration,
     pub size: winit::dpi::PhysicalSize<u32>,
     pipeline: wgpu::RenderPipeline,
@@ -55,12 +55,14 @@ impl Renderer {
             force_fallback_adapter: false,
         }).await.ok_or_else(|| anyhow::anyhow!("no adapter found"))?;
 
-        let (device, queue) = adapter.request_device(&wgpu::DeviceDescriptor {
+        let (device_raw, queue_raw) = adapter.request_device(&wgpu::DeviceDescriptor {
             label: Some("jigglefab device"),
             required_features: wgpu::Features::empty(),
             required_limits: wgpu::Limits::default(),
             memory_hints: wgpu::MemoryHints::Performance,
         }, None).await.map_err(|e| anyhow::anyhow!("request_device failed: {e:?}"))?;
+        let device = Arc::new(device_raw);
+        let queue = Arc::new(queue_raw);
 
         let surface_caps = surface.get_capabilities(&adapter);
         let format = surface_caps.formats.iter().copied()
@@ -256,6 +258,10 @@ impl Renderer {
             state_colors,
         };
         self.queue.write_buffer(&self.camera_buf, 0, bytemuck::bytes_of(&ubo));
+    }
+
+    pub fn gpu_context(&self) -> (Arc<wgpu::Device>, Arc<wgpu::Queue>) {
+        (self.device.clone(), self.queue.clone())
     }
 
     pub fn render(&self, bead_count: usize) -> Result<()> {
