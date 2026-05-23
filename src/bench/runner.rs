@@ -64,6 +64,7 @@ pub struct ScenarioResult {
 
 use web_time::Instant;
 
+use crate::scheduler::Scheduler;
 use crate::sim::Sim;
 
 use super::scenario::{Scenario, geometric_bonds};
@@ -71,20 +72,20 @@ use super::scenario::{Scenario, geometric_bonds};
 /// Step `sim` through `frames` rendered-frames, each containing `substeps`
 /// sub-steps of `frame_dt`. No metric collection — used for both warmup and
 /// the determinism re-run.
-fn drive_frames(sim: &mut Sim, frame_dt: f32, frames: u32, substeps: u32) {
+fn drive_frames(sim: &mut Sim, scheduler: &mut dyn Scheduler, frame_dt: f32, frames: u32, substeps: u32) {
     for _ in 0..frames {
         for _ in 0..substeps {
-            sim.step(frame_dt);
+            scheduler.step(sim, frame_dt);
         }
     }
 }
 
-pub fn run_scenario(scenario: &dyn Scenario, args: &BenchArgs) -> ScenarioResult {
+pub fn run_scenario(scenario: &dyn Scenario, args: &BenchArgs, scheduler: &mut dyn Scheduler) -> ScenarioResult {
     let (mut sim, invariants) = scenario.build();
     let bead_count = sim.positions.len() as u32;
     let frame_dt = 1.0 / 60.0;
 
-    drive_frames(&mut sim, frame_dt, args.warmup_frames, args.substeps);
+    drive_frames(&mut sim, scheduler, frame_dt, args.warmup_frames, args.substeps);
 
     let run_start = Instant::now();
     let total_substeps_planned = (args.frames as usize) * (args.substeps as usize);
@@ -104,10 +105,9 @@ pub fn run_scenario(scenario: &dyn Scenario, args: &BenchArgs) -> ScenarioResult
         let frame_start = Instant::now();
         for _ in 0..args.substeps {
             let substep_start = Instant::now();
-            sim.step(frame_dt);
+            let m = scheduler.step(&mut sim, frame_dt);
             let elapsed_us = substep_start.elapsed().as_micros() as f64;
             substep_times_us.push(elapsed_us);
-            let m = sim.last_step_metrics();
             contacts_per_substep.push(m.contacts_resolved as f64);
             candidate_pairs_total = candidate_pairs_total.saturating_add(m.candidate_pairs as u64);
             if m.iter_cap_hit { iter_cap_hits += 1; }
@@ -148,7 +148,7 @@ pub fn run_scenario(scenario: &dyn Scenario, args: &BenchArgs) -> ScenarioResult
 
     let determinism_verified = if args.verify_determinism {
         let (mut sim2, _) = scenario.build();
-        drive_frames(&mut sim2, frame_dt, args.warmup_frames + frames_completed, args.substeps);
+        drive_frames(&mut sim2, scheduler, frame_dt, args.warmup_frames + frames_completed, args.substeps);
         Some(sim2.positions == sim.positions && sim2.states == sim.states)
     } else {
         None
@@ -177,6 +177,7 @@ pub fn run_scenario(scenario: &dyn Scenario, args: &BenchArgs) -> ScenarioResult
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::scheduler::CpuSequential;
 
     #[test]
     fn percentiles_basic() {
@@ -220,7 +221,7 @@ mod tests {
             max_wall_seconds: 60.0,
             verify_determinism: false,
         };
-        let r = run_scenario(&scenario, &args);
+        let r = run_scenario(&scenario, &args, &mut CpuSequential);
         assert_eq!(r.name, "chains_2x5");
         assert_eq!(r.bead_count, 10);
         assert_eq!(r.frames_completed, 10);
@@ -242,7 +243,7 @@ mod tests {
             max_wall_seconds: 0.05,    // 50 ms budget
             verify_determinism: false,
         };
-        let r = run_scenario(&scenario, &args);
+        let r = run_scenario(&scenario, &args, &mut CpuSequential);
         assert!(r.truncated, "should have truncated under 50ms budget");
         assert!(r.frames_completed < 100_000, "fewer frames than requested");
         // Even truncated, the result struct should be filled in (percentiles
@@ -260,7 +261,7 @@ mod tests {
             max_wall_seconds: 60.0,
             verify_determinism: true,
         };
-        let r = run_scenario(&scenario, &args);
+        let r = run_scenario(&scenario, &args, &mut CpuSequential);
         // Two runs of the same scenario with the same seed should be bit-identical.
         assert_eq!(r.determinism_verified, Some(true));
     }

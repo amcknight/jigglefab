@@ -127,7 +127,7 @@ fn main() -> ExitCode {
         }
     };
 
-    let _scheduler: Box<dyn Scheduler> = match parsed.scheduler.as_str() {
+    let mut scheduler: Box<dyn Scheduler> = match parsed.scheduler.as_str() {
         "cpu" => Box::new(CpuSequential),
         other => {
             eprintln!("error: unknown scheduler {:?} (only 'cpu' supported yet)", other);
@@ -145,7 +145,7 @@ fn main() -> ExitCode {
     let mut results: Vec<ScenarioResult> = Vec::with_capacity(scenarios.len());
     for scenario in &scenarios {
         eprintln!("running {}...", scenario.name());
-        let r = run_scenario(scenario.as_ref(), &parsed.bench);
+        let r = run_scenario(scenario.as_ref(), &parsed.bench, scheduler.as_mut());
         eprintln!(
             "  {} N={} frame_ms mean={:.2} p99={:.2} fps={:.1} bonds_ok={} truncated={}",
             r.name, r.bead_count, r.frame_time_ms.mean, r.frame_time_ms.p99,
