@@ -2,6 +2,7 @@
 name = "jigglefab"
 version = "0.1.0"
 edition = "2021"
+default-run = "jigglefab-bin"
 
 [lib]
 crate-type = ["cdylib", "rlib"]

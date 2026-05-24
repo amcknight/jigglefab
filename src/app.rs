@@ -8,9 +8,9 @@ use std::sync::Arc;
 use web_time::Instant;
 
 #[cfg(not(target_arch = "wasm32"))]
-use crate::chemistry::load_chemistry;
+use crate::bench::chains::DisconnectedChains;
 #[cfg(not(target_arch = "wasm32"))]
-use crate::fab::load_fab;
+use crate::bench::scenario::Scenario;
 
 #[cfg(target_arch = "wasm32")]
 use crate::chemistry::parse_chemistry;
@@ -98,17 +98,24 @@ impl ApplicationHandler<UserEvent> for App {
         let window = Arc::new(event_loop.create_window(attrs).expect("create window"));
 
         #[cfg(not(target_arch = "wasm32"))]
-        let fab = load_fab("fabs/wire-10x30.toml").expect("load fab");
-        #[cfg(target_arch = "wasm32")]
-        let fab = parse_fab(FAB_TOML).expect("parse fab");
+        let sim = {
+            // Native build: GPU CCD demo — 30 × 30 = 900 beads, the bead count
+            // where the CPU scheduler craters (2.6 fps in the baseline bench).
+            let scenario = DisconnectedChains {
+                chain_count: 30,
+                chain_len: 30,
+                world_size: 128.0,
+            };
+            let (sim, _invariants) = scenario.build();
+            sim
+        };
 
-        #[cfg(not(target_arch = "wasm32"))]
-        let chem = load_chemistry(&format!("chemistries/{}.toml", fab.meta.chemistry))
-            .expect("load chem");
         #[cfg(target_arch = "wasm32")]
-        let chem = parse_chemistry(CHEMISTRY_TOML).expect("parse chem");
-
-        let sim = Sim::from_fab(&fab, chem);
+        let sim = {
+            let fab = parse_fab(FAB_TOML).expect("parse fab");
+            let chem = parse_chemistry(CHEMISTRY_TOML).expect("parse chem");
+            Sim::from_fab(&fab, chem)
+        };
         let world_size = sim.world_size();
         let palette = sim.palette();
 
