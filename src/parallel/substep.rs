@@ -95,7 +95,7 @@ pub fn do_substep(
     clear_substep_flags(pool);
 }
 
-fn advance_all(pool: &mut BeadPool, grid: &Grid, dt_sub: f32) {
+pub(crate) fn advance_all(pool: &mut BeadPool, grid: &Grid, dt_sub: f32) {
     let slots: Vec<u32> = pool.alive_slots().collect();
     for slot in slots {
         let b = pool.get_mut(slot);
@@ -107,7 +107,23 @@ fn advance_all(pool: &mut BeadPool, grid: &Grid, dt_sub: f32) {
     }
 }
 
-fn clear_substep_flags(pool: &mut BeadPool) {
+/// Rayon-parallel advance: each bead is independent (no cross-bead reads),
+/// so par_iter_mut over the pool's bead slice bit-matches the sequential
+/// version. Both alive_slots ordering and the wrap_pos function are
+/// deterministic, so output is identical regardless of thread schedule.
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn advance_all_par(pool: &mut BeadPool, grid: &Grid, dt_sub: f32) {
+    use rayon::prelude::*;
+    pool.beads_mut().par_iter_mut().for_each(|b| {
+        if !b.alive || b.born_this_substep {
+            return;
+        }
+        let new_pos = b.pos + b.vel * dt_sub;
+        b.pos = grid.wrap_pos(new_pos);
+    });
+}
+
+pub(crate) fn clear_substep_flags(pool: &mut BeadPool) {
     for b in pool.beads_mut() {
         b.born_this_substep = false;
     }
@@ -339,6 +355,41 @@ mod tests {
         do_substep(&mut pool, &mut grid, &chem, &mut bonds, 1.0);
         assert!((pool.get(a).vel.x - (-1.0)).abs() < 1e-3);
         assert!((pool.get(b).vel.x - 1.0).abs() < 1e-3);
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn parallel_advance_bit_matches_sequential() {
+        let mut pool_a = BeadPool::with_capacity(32);
+        let mut pool_b = BeadPool::with_capacity(32);
+        let mut stack = [Op::nop(); STACK_CAP];
+        stack[0] = Op::sig_legacy(0);
+        for i in 0..30 {
+            let bead = Bead {
+                pos: Vec2::new(15.0 + (i % 5) as f32, 5.0 + (i / 5) as f32 * 0.667),
+                vel: Vec2::new(0.3, -0.7),
+                tag: Tag::Wire,
+                payload: 0,
+                alive: true,
+                born_this_substep: false,
+                stack_len: 1,
+                stack,
+            };
+            pool_a.alloc(bead);
+            pool_b.alloc(bead);
+        }
+        pool_a.get_mut(5).born_this_substep = true;
+        pool_b.get_mut(5).born_this_substep = true;
+        let grid = Grid::new(30.0);
+        let dt = 1.0 / 240.0;
+        advance_all(&mut pool_a, &grid, dt);
+        advance_all_par(&mut pool_b, &grid, dt);
+        for slot in 0..30u32 {
+            let a = pool_a.get(slot);
+            let b = pool_b.get(slot);
+            assert_eq!(a.pos.x.to_bits(), b.pos.x.to_bits(), "slot {slot} pos.x");
+            assert_eq!(a.pos.y.to_bits(), b.pos.y.to_bits(), "slot {slot} pos.y");
+        }
     }
 
     #[cfg(not(target_arch = "wasm32"))]
