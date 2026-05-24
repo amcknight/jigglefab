@@ -57,6 +57,8 @@ impl Sim {
 
     pub fn chemistry(&self) -> &Chemistry { &self.chemistry }
 
+    pub fn bonds(&self) -> &HashSet<(u32, u32)> { &self.bonds }
+
     /// Per-state colors for rendering, defined by the chemistry. The renderer
     /// uploads this once at startup and indexes into it per-bead.
     pub fn palette(&self) -> Vec<[f32; 3]> { self.chemistry.colors.clone() }
