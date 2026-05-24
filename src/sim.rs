@@ -55,6 +55,8 @@ pub struct Sim {
 impl Sim {
     pub fn world_size(&self) -> f32 { self.grid.world_size() }
 
+    pub fn chemistry(&self) -> &Chemistry { &self.chemistry }
+
     /// Per-state colors for rendering, defined by the chemistry. The renderer
     /// uploads this once at startup and indexes into it per-bead.
     pub fn palette(&self) -> Vec<[f32; 3]> { self.chemistry.colors.clone() }

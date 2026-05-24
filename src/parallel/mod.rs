@@ -12,3 +12,6 @@ pub use substep::compute_active_contacts;
 
 pub mod resolve;
 pub use resolve::{resolve_pair, ResolveContext};
+
+pub mod scheduler;
+pub use scheduler::{CpuParallel, DEFAULT_DT_SUB};
