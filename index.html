@@ -249,7 +249,6 @@
             bar.appendChild(label);
             for (const s of SPEEDS) {
                 const a = document.createElement("a");
-                a.href = "#";
                 a.textContent = s + "×";
                 a.className = s === active ? "active" : "";
                 a.addEventListener("click", (e) => {
