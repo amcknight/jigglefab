@@ -68,12 +68,9 @@ pub fn build(
             Ok(Box::new(crate::parallel::CpuParallel::new(sim, chem)))
         }
         SchedulerKind::CpuParallelMt => {
-            // Placeholder until CpuParallelMt lands (MT-8). The variant
-            // is exposed through parse() so the bench arg parses; trying
-            // to actually build it surfaces a clean error.
-            Err(BuildError::Unsupported(
-                "CpuParallelMt not yet implemented (MT-8 not landed)",
-            ))
+            let chem = crate::chemistry::compile_chemistry(sim.chemistry())
+                .map_err(BuildError::ChemistryCompile)?;
+            Ok(Box::new(crate::parallel::CpuParallelMt::new(sim, chem)))
         }
         SchedulerKind::GpuEventLoop => {
             let ctx = gpu_ctx.ok_or(BuildError::Unsupported("no GpuContext supplied"))?;

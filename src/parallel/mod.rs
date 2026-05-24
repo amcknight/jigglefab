@@ -15,3 +15,8 @@ pub use resolve::{resolve_pair, ResolveContext};
 
 pub mod scheduler;
 pub use scheduler::{CpuParallel, DEFAULT_DT_SUB};
+
+#[cfg(not(target_arch = "wasm32"))]
+pub mod scheduler_mt;
+#[cfg(not(target_arch = "wasm32"))]
+pub use scheduler_mt::{CpuParallelMt, DEFAULT_DT_SUB as DEFAULT_DT_SUB_MT};
