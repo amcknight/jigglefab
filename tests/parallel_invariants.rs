@@ -48,6 +48,25 @@ fn no_free_pair_overlap_grey_30() {
 }
 
 #[test]
+fn wire_signal_count_conserved() {
+    let fab = load_fab("fabs/wire-30.toml").unwrap();
+    let chem = load_chemistry("chemistries/wire.toml").unwrap();
+    let mut sim = Sim::from_fab(&fab, chem);
+    let initial_on_count = sim.states.iter().filter(|&&s| s == 1).count();
+    let compiled = compile_chemistry(sim.chemistry()).unwrap();
+    let mut sched = CpuParallel::new(&sim, compiled);
+    for f in 0..600 {
+        sched.step(&mut sim, 1.0 / 60.0);
+        let on_count = sim.states.iter().filter(|&&s| s == 1).count();
+        assert_eq!(
+            on_count, initial_on_count,
+            "frame {}: wire signal count drifted ({} → {})",
+            f, initial_on_count, on_count
+        );
+    }
+}
+
+#[test]
 fn bonds_stay_within_radius_plus_eps_grey_30() {
     let fab = load_fab("fabs/grey-30.toml").unwrap();
     let chem = load_chemistry("chemistries/grey.toml").unwrap();
