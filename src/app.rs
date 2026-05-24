@@ -62,6 +62,26 @@ fn pick_fab_from_url() -> (&'static str, &'static str) {
     }
 }
 
+#[cfg(target_arch = "wasm32")]
+fn install_window_speed_setter() {
+    use wasm_bindgen::closure::Closure;
+    use wasm_bindgen::JsCast;
+
+    // Closure is leaked intentionally — it lives for the lifetime of the page.
+    let cb = Closure::wrap(Box::new(|m: f32| {
+        crate::speed::set_speed(m);
+    }) as Box<dyn Fn(f32)>);
+
+    if let Some(window) = web_sys::window() {
+        let _ = js_sys::Reflect::set(
+            &window,
+            &wasm_bindgen::JsValue::from_str("__jigglefabSetSpeed"),
+            cb.as_ref().unchecked_ref(),
+        );
+    }
+    cb.forget();
+}
+
 pub enum UserEvent {
     RendererReady(Renderer),
 }
@@ -184,6 +204,7 @@ impl ApplicationHandler<UserEvent> for App {
             use crate::parallel::CpuParallel;
             let compiled = compile_chemistry(sim.chemistry()).expect("compile chemistry");
             self.scheduler = Box::new(CpuParallel::new(&sim, compiled));
+            install_window_speed_setter();
 
             let proxy = self.proxy.clone().expect("proxy not set before resumed()");
             let window_clone = window.clone();
