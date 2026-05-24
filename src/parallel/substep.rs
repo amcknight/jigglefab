@@ -1,9 +1,47 @@
 use std::collections::HashSet;
 
-use crate::ccd::next_contact;
+use crate::ccd::{next_contact, RADIUS};
 use crate::chemistry::CompiledChemistry;
+use crate::collide::reflect;
 use crate::grid::Grid;
 use crate::parallel::{coloring, resolve, BeadPool, Pair};
+
+const BOND_EPS: f32 = 1e-5;
+
+// Pull any bonded pair that drifted past R back inside, and flip their
+// normal velocity if it was still outward. Matches Sim::enforce_bonds:
+// without this, a bonded pair nudged across R by a sibling pair's snap
+// is invisible to the next substep's CCD and would drift apart forever.
+pub fn enforce_bonds(pool: &mut BeadPool, grid: &Grid, bonds: &HashSet<(u32, u32)>) {
+    let pairs: Vec<(u32, u32)> = bonds.iter().copied().collect();
+    for (a, b) in pairs {
+        if !pool.get(a).alive || !pool.get(b).alive {
+            continue;
+        }
+        let pa = pool.get(a).pos;
+        let pb_raw = pool.get(b).pos;
+        let pb = pa + grid.min_image(pa, pb_raw);
+        let d = pb - pa;
+        let dist = d.length();
+        if dist < RADIUS || dist < 1e-12 {
+            continue;
+        }
+        let n = d / dist;
+        let target = RADIUS - BOND_EPS;
+        let correction = (target - dist) * 0.5;
+        let new_a = grid.wrap_pos(pa - n * correction);
+        let new_b = grid.wrap_pos(pool.get(b).pos + n * correction);
+        pool.get_mut(a).pos = new_a;
+        pool.get_mut(b).pos = new_b;
+        let va = pool.get(a).vel;
+        let vb = pool.get(b).vel;
+        if (vb - va).dot(n) > 0.0 {
+            let (va_new, vb_new) = reflect(pa, va, pb, vb);
+            pool.get_mut(a).vel = va_new;
+            pool.get_mut(b).vel = vb_new;
+        }
+    }
+}
 
 pub fn do_substep(
     pool: &mut BeadPool,
@@ -53,6 +91,7 @@ pub fn do_substep(
         pool.free(slot);
         bonds.retain(|&(a, b)| a != slot && b != slot);
     }
+    enforce_bonds(pool, grid, bonds);
     clear_substep_flags(pool);
 }
 
@@ -137,6 +176,82 @@ mod tests {
         assert_eq!(contacts.len(), 1);
         // Contact when |d| = 1 (RADIUS): start 1.5 apart, closing at 2/s → t = 0.25.
         assert!((contacts[0].t - 0.25).abs() < 1e-5);
+    }
+
+    #[test]
+    fn bonded_pair_stays_within_radius_after_substeps() {
+        let mut pool = BeadPool::with_capacity(4);
+        let mut stack = [Op::nop(); STACK_CAP];
+        stack[0] = Op::sig_legacy(0);
+        let a = pool.alloc(Bead {
+            pos: Vec2::new(15.0, 14.75),
+            vel: Vec2::new(0.0, -1.0),
+            tag: Tag::Wire,
+            payload: 0,
+            alive: true,
+            born_this_substep: false,
+            stack_len: 1,
+            stack,
+        });
+        let b = pool.alloc(Bead {
+            pos: Vec2::new(15.0, 15.25),
+            vel: Vec2::new(0.0, 1.0),
+            tag: Tag::Wire,
+            payload: 0,
+            alive: true,
+            born_this_substep: false,
+            stack_len: 1,
+            stack,
+        });
+        let mut grid = Grid::new(30.0);
+        let mut bonds: std::collections::HashSet<(u32, u32)> = Default::default();
+        bonds.insert((a.min(b), a.max(b)));
+        let chem = {
+            let mut c = crate::chemistry::CompiledChemistry::empty();
+            let key = crate::chemistry::BeadKey {
+                tag: Tag::Wire,
+                top_op: Op::sig_legacy(0),
+            };
+            c.insert_rule(
+                key,
+                key,
+                crate::chemistry::Side::Out,
+                crate::chemistry::Rule {
+                    kind: crate::chemistry::ReactionKind::Exchange,
+                    new_state_a: crate::chemistry::NewState::keep_with(Op::sig_legacy(0)),
+                    new_state_b: crate::chemistry::NewState::keep_with(Op::sig_legacy(0)),
+                    birth_state: None,
+                },
+            );
+            c.insert_rule(
+                key,
+                key,
+                crate::chemistry::Side::In,
+                crate::chemistry::Rule {
+                    kind: crate::chemistry::ReactionKind::Exchange,
+                    new_state_a: crate::chemistry::NewState::keep_with(Op::sig_legacy(0)),
+                    new_state_b: crate::chemistry::NewState::keep_with(Op::sig_legacy(0)),
+                    birth_state: None,
+                },
+            );
+            c
+        };
+        let dt = 1.0 / 60.0;
+        let mut max_dist = 0f32;
+        for _ in 0..1200 {
+            for _ in 0..4 {
+                do_substep(&mut pool, &mut grid, &chem, &mut bonds, dt / 4.0);
+            }
+            let d = (pool.get(a).pos - pool.get(b).pos).length();
+            if d > max_dist {
+                max_dist = d;
+            }
+        }
+        assert!(
+            max_dist <= RADIUS + 1e-3,
+            "bond stayed within R + eps; max = {}",
+            max_dist
+        );
     }
 
     #[test]
