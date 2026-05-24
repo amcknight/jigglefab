@@ -22,8 +22,6 @@ mod native {
         ScenarioResult,
     };
     use jigglefab::gpu::context::GpuContext;
-    use jigglefab::gpu::scheduler::GpuEventLoop;
-    use jigglefab::scheduler::{CpuSequential, Scheduler};
 
     struct ParsedArgs {
         bench: BenchArgs,
@@ -42,7 +40,7 @@ mod native {
         eprintln!("  --max-wall-seconds <S>  Per-scenario wall cap (default: 300)");
         eprintln!("  --csv <path>            Write CSV to this path");
         eprintln!("  --verify-determinism    Re-run each scenario and check bit-equality");
-        eprintln!("  --scheduler <name>      Scheduler to use: cpu, cpu-parallel, gpu (default: cpu)");
+        eprintln!("  --scheduler <name>      cpu, cpu-parallel, cpu-parallel-mt, gpu (default: cpu)");
         eprintln!("  --help                  Show this message");
     }
 
@@ -141,16 +139,13 @@ mod native {
             }
         };
 
-        match parsed.scheduler.as_str() {
-            "cpu" | "cpu-parallel" | "gpu" => {}
-            other => {
-                eprintln!(
-                    "error: unknown scheduler {:?} (valid: cpu, cpu-parallel, gpu)",
-                    other
-                );
-                print_usage();
-                return ExitCode::from(2);
-            }
+        if jigglefab::scheduler_selector::SchedulerKind::parse(&parsed.scheduler).is_none() {
+            eprintln!(
+                "error: unknown scheduler {:?} (valid: cpu, cpu-parallel, cpu-parallel-mt, gpu)",
+                parsed.scheduler
+            );
+            print_usage();
+            return ExitCode::from(2);
         }
 
         let scenarios = select_scenarios(parsed.scenarios_filter.clone());
@@ -163,42 +158,33 @@ mod native {
         for scenario in &scenarios {
             eprintln!("running {}...", scenario.name());
 
-            let r = match parsed.scheduler.as_str() {
-                "gpu" => {
-                    let (sizing_sim, _) = scenario.build();
-                    let ctx = match GpuContext::new_headless() {
-                        Ok(c) => c,
-                        Err(e) => {
-                            eprintln!("error: GPU context failed for {}: {e}", scenario.name());
-                            return ExitCode::from(1);
-                        }
-                    };
-                    let mut gpu_sched: Box<dyn Scheduler> =
-                        Box::new(GpuEventLoop::new(ctx, &sizing_sim));
-                    run_scenario(scenario.as_ref(), &parsed.bench, gpu_sched.as_mut())
+            let kind = jigglefab::scheduler_selector::SchedulerKind::parse(&parsed.scheduler)
+                .expect("scheduler kind already validated above");
+            let (sizing_sim, _) = scenario.build();
+            // GPU needs its own headless context per scenario.
+            let gpu_ctx = if matches!(
+                kind,
+                jigglefab::scheduler_selector::SchedulerKind::GpuEventLoop
+            ) {
+                match GpuContext::new_headless() {
+                    Ok(c) => Some(c),
+                    Err(e) => {
+                        eprintln!("error: GPU context failed for {}: {e}", scenario.name());
+                        return ExitCode::from(1);
+                    }
                 }
-                "cpu-parallel" => {
-                    let (sizing_sim, _) = scenario.build();
-                    let compiled =
-                        match jigglefab::chemistry::compile_chemistry(sizing_sim.chemistry()) {
-                            Ok(c) => c,
-                            Err(e) => {
-                                eprintln!(
-                                    "error: compile_chemistry failed for {}: {e}",
-                                    scenario.name()
-                                );
-                                return ExitCode::from(1);
-                            }
-                        };
-                    let mut sched: Box<dyn Scheduler> =
-                        Box::new(jigglefab::parallel::CpuParallel::new(&sizing_sim, compiled));
-                    run_scenario(scenario.as_ref(), &parsed.bench, sched.as_mut())
-                }
-                _ => {
-                    let mut cpu_sched: Box<dyn Scheduler> = Box::new(CpuSequential);
-                    run_scenario(scenario.as_ref(), &parsed.bench, cpu_sched.as_mut())
-                }
+            } else {
+                None
             };
+            let mut sched =
+                match jigglefab::scheduler_selector::build(kind, &sizing_sim, gpu_ctx) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        eprintln!("error: scheduler build failed for {}: {e}", scenario.name());
+                        return ExitCode::from(1);
+                    }
+                };
+            let r = run_scenario(scenario.as_ref(), &parsed.bench, sched.as_mut());
 
             eprintln!(
                 "  {} N={} frame_ms mean={:.2} p99={:.2} fps={:.1} bonds_ok={} truncated={}",
