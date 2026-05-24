@@ -1,6 +1,9 @@
 use serde::Deserialize;
 use anyhow::{Result, bail};
 
+pub mod opcodes;
+pub use opcodes::{Op, OpKind, Sig};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Action {
     Reflect,
