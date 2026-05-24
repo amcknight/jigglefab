@@ -1,0 +1,2406 @@
+[meta]
+name = "20 parallel 30-bead wire chains"
+chemistry = "wire"
+seed = 42
+world_size = 66.0
+
+[[bead]]
+state = "on"
+pos = [3.00, 5.000]
+
+[[bead]]
+state = "off"
+pos = [3.00, 5.667]
+
+[[bead]]
+state = "off"
+pos = [3.00, 6.334]
+
+[[bead]]
+state = "off"
+pos = [3.00, 7.001]
+
+[[bead]]
+state = "off"
+pos = [3.00, 7.668]
+
+[[bead]]
+state = "off"
+pos = [3.00, 8.335]
+
+[[bead]]
+state = "off"
+pos = [3.00, 9.002]
+
+[[bead]]
+state = "off"
+pos = [3.00, 9.669]
+
+[[bead]]
+state = "off"
+pos = [3.00, 10.336]
+
+[[bead]]
+state = "off"
+pos = [3.00, 11.003]
+
+[[bead]]
+state = "off"
+pos = [3.00, 11.670]
+
+[[bead]]
+state = "off"
+pos = [3.00, 12.337]
+
+[[bead]]
+state = "off"
+pos = [3.00, 13.004]
+
+[[bead]]
+state = "off"
+pos = [3.00, 13.671]
+
+[[bead]]
+state = "off"
+pos = [3.00, 14.338]
+
+[[bead]]
+state = "off"
+pos = [3.00, 15.005]
+
+[[bead]]
+state = "off"
+pos = [3.00, 15.672]
+
+[[bead]]
+state = "off"
+pos = [3.00, 16.339]
+
+[[bead]]
+state = "off"
+pos = [3.00, 17.006]
+
+[[bead]]
+state = "off"
+pos = [3.00, 17.673]
+
+[[bead]]
+state = "off"
+pos = [3.00, 18.340]
+
+[[bead]]
+state = "off"
+pos = [3.00, 19.007]
+
+[[bead]]
+state = "off"
+pos = [3.00, 19.674]
+
+[[bead]]
+state = "off"
+pos = [3.00, 20.341]
+
+[[bead]]
+state = "off"
+pos = [3.00, 21.008]
+
+[[bead]]
+state = "off"
+pos = [3.00, 21.675]
+
+[[bead]]
+state = "off"
+pos = [3.00, 22.342]
+
+[[bead]]
+state = "off"
+pos = [3.00, 23.009]
+
+[[bead]]
+state = "off"
+pos = [3.00, 23.676]
+
+[[bead]]
+state = "off"
+pos = [3.00, 24.343]
+
+[[bead]]
+state = "on"
+pos = [6.00, 5.000]
+
+[[bead]]
+state = "off"
+pos = [6.00, 5.667]
+
+[[bead]]
+state = "off"
+pos = [6.00, 6.334]
+
+[[bead]]
+state = "off"
+pos = [6.00, 7.001]
+
+[[bead]]
+state = "off"
+pos = [6.00, 7.668]
+
+[[bead]]
+state = "off"
+pos = [6.00, 8.335]
+
+[[bead]]
+state = "off"
+pos = [6.00, 9.002]
+
+[[bead]]
+state = "off"
+pos = [6.00, 9.669]
+
+[[bead]]
+state = "off"
+pos = [6.00, 10.336]
+
+[[bead]]
+state = "off"
+pos = [6.00, 11.003]
+
+[[bead]]
+state = "off"
+pos = [6.00, 11.670]
+
+[[bead]]
+state = "off"
+pos = [6.00, 12.337]
+
+[[bead]]
+state = "off"
+pos = [6.00, 13.004]
+
+[[bead]]
+state = "off"
+pos = [6.00, 13.671]
+
+[[bead]]
+state = "off"
+pos = [6.00, 14.338]
+
+[[bead]]
+state = "off"
+pos = [6.00, 15.005]
+
+[[bead]]
+state = "off"
+pos = [6.00, 15.672]
+
+[[bead]]
+state = "off"
+pos = [6.00, 16.339]
+
+[[bead]]
+state = "off"
+pos = [6.00, 17.006]
+
+[[bead]]
+state = "off"
+pos = [6.00, 17.673]
+
+[[bead]]
+state = "off"
+pos = [6.00, 18.340]
+
+[[bead]]
+state = "off"
+pos = [6.00, 19.007]
+
+[[bead]]
+state = "off"
+pos = [6.00, 19.674]
+
+[[bead]]
+state = "off"
+pos = [6.00, 20.341]
+
+[[bead]]
+state = "off"
+pos = [6.00, 21.008]
+
+[[bead]]
+state = "off"
+pos = [6.00, 21.675]
+
+[[bead]]
+state = "off"
+pos = [6.00, 22.342]
+
+[[bead]]
+state = "off"
+pos = [6.00, 23.009]
+
+[[bead]]
+state = "off"
+pos = [6.00, 23.676]
+
+[[bead]]
+state = "off"
+pos = [6.00, 24.343]
+
+[[bead]]
+state = "on"
+pos = [9.00, 5.000]
+
+[[bead]]
+state = "off"
+pos = [9.00, 5.667]
+
+[[bead]]
+state = "off"
+pos = [9.00, 6.334]
+
+[[bead]]
+state = "off"
+pos = [9.00, 7.001]
+
+[[bead]]
+state = "off"
+pos = [9.00, 7.668]
+
+[[bead]]
+state = "off"
+pos = [9.00, 8.335]
+
+[[bead]]
+state = "off"
+pos = [9.00, 9.002]
+
+[[bead]]
+state = "off"
+pos = [9.00, 9.669]
+
+[[bead]]
+state = "off"
+pos = [9.00, 10.336]
+
+[[bead]]
+state = "off"
+pos = [9.00, 11.003]
+
+[[bead]]
+state = "off"
+pos = [9.00, 11.670]
+
+[[bead]]
+state = "off"
+pos = [9.00, 12.337]
+
+[[bead]]
+state = "off"
+pos = [9.00, 13.004]
+
+[[bead]]
+state = "off"
+pos = [9.00, 13.671]
+
+[[bead]]
+state = "off"
+pos = [9.00, 14.338]
+
+[[bead]]
+state = "off"
+pos = [9.00, 15.005]
+
+[[bead]]
+state = "off"
+pos = [9.00, 15.672]
+
+[[bead]]
+state = "off"
+pos = [9.00, 16.339]
+
+[[bead]]
+state = "off"
+pos = [9.00, 17.006]
+
+[[bead]]
+state = "off"
+pos = [9.00, 17.673]
+
+[[bead]]
+state = "off"
+pos = [9.00, 18.340]
+
+[[bead]]
+state = "off"
+pos = [9.00, 19.007]
+
+[[bead]]
+state = "off"
+pos = [9.00, 19.674]
+
+[[bead]]
+state = "off"
+pos = [9.00, 20.341]
+
+[[bead]]
+state = "off"
+pos = [9.00, 21.008]
+
+[[bead]]
+state = "off"
+pos = [9.00, 21.675]
+
+[[bead]]
+state = "off"
+pos = [9.00, 22.342]
+
+[[bead]]
+state = "off"
+pos = [9.00, 23.009]
+
+[[bead]]
+state = "off"
+pos = [9.00, 23.676]
+
+[[bead]]
+state = "off"
+pos = [9.00, 24.343]
+
+[[bead]]
+state = "on"
+pos = [12.00, 5.000]
+
+[[bead]]
+state = "off"
+pos = [12.00, 5.667]
+
+[[bead]]
+state = "off"
+pos = [12.00, 6.334]
+
+[[bead]]
+state = "off"
+pos = [12.00, 7.001]
+
+[[bead]]
+state = "off"
+pos = [12.00, 7.668]
+
+[[bead]]
+state = "off"
+pos = [12.00, 8.335]
+
+[[bead]]
+state = "off"
+pos = [12.00, 9.002]
+
+[[bead]]
+state = "off"
+pos = [12.00, 9.669]
+
+[[bead]]
+state = "off"
+pos = [12.00, 10.336]
+
+[[bead]]
+state = "off"
+pos = [12.00, 11.003]
+
+[[bead]]
+state = "off"
+pos = [12.00, 11.670]
+
+[[bead]]
+state = "off"
+pos = [12.00, 12.337]
+
+[[bead]]
+state = "off"
+pos = [12.00, 13.004]
+
+[[bead]]
+state = "off"
+pos = [12.00, 13.671]
+
+[[bead]]
+state = "off"
+pos = [12.00, 14.338]
+
+[[bead]]
+state = "off"
+pos = [12.00, 15.005]
+
+[[bead]]
+state = "off"
+pos = [12.00, 15.672]
+
+[[bead]]
+state = "off"
+pos = [12.00, 16.339]
+
+[[bead]]
+state = "off"
+pos = [12.00, 17.006]
+
+[[bead]]
+state = "off"
+pos = [12.00, 17.673]
+
+[[bead]]
+state = "off"
+pos = [12.00, 18.340]
+
+[[bead]]
+state = "off"
+pos = [12.00, 19.007]
+
+[[bead]]
+state = "off"
+pos = [12.00, 19.674]
+
+[[bead]]
+state = "off"
+pos = [12.00, 20.341]
+
+[[bead]]
+state = "off"
+pos = [12.00, 21.008]
+
+[[bead]]
+state = "off"
+pos = [12.00, 21.675]
+
+[[bead]]
+state = "off"
+pos = [12.00, 22.342]
+
+[[bead]]
+state = "off"
+pos = [12.00, 23.009]
+
+[[bead]]
+state = "off"
+pos = [12.00, 23.676]
+
+[[bead]]
+state = "off"
+pos = [12.00, 24.343]
+
+[[bead]]
+state = "on"
+pos = [15.00, 5.000]
+
+[[bead]]
+state = "off"
+pos = [15.00, 5.667]
+
+[[bead]]
+state = "off"
+pos = [15.00, 6.334]
+
+[[bead]]
+state = "off"
+pos = [15.00, 7.001]
+
+[[bead]]
+state = "off"
+pos = [15.00, 7.668]
+
+[[bead]]
+state = "off"
+pos = [15.00, 8.335]
+
+[[bead]]
+state = "off"
+pos = [15.00, 9.002]
+
+[[bead]]
+state = "off"
+pos = [15.00, 9.669]
+
+[[bead]]
+state = "off"
+pos = [15.00, 10.336]
+
+[[bead]]
+state = "off"
+pos = [15.00, 11.003]
+
+[[bead]]
+state = "off"
+pos = [15.00, 11.670]
+
+[[bead]]
+state = "off"
+pos = [15.00, 12.337]
+
+[[bead]]
+state = "off"
+pos = [15.00, 13.004]
+
+[[bead]]
+state = "off"
+pos = [15.00, 13.671]
+
+[[bead]]
+state = "off"
+pos = [15.00, 14.338]
+
+[[bead]]
+state = "off"
+pos = [15.00, 15.005]
+
+[[bead]]
+state = "off"
+pos = [15.00, 15.672]
+
+[[bead]]
+state = "off"
+pos = [15.00, 16.339]
+
+[[bead]]
+state = "off"
+pos = [15.00, 17.006]
+
+[[bead]]
+state = "off"
+pos = [15.00, 17.673]
+
+[[bead]]
+state = "off"
+pos = [15.00, 18.340]
+
+[[bead]]
+state = "off"
+pos = [15.00, 19.007]
+
+[[bead]]
+state = "off"
+pos = [15.00, 19.674]
+
+[[bead]]
+state = "off"
+pos = [15.00, 20.341]
+
+[[bead]]
+state = "off"
+pos = [15.00, 21.008]
+
+[[bead]]
+state = "off"
+pos = [15.00, 21.675]
+
+[[bead]]
+state = "off"
+pos = [15.00, 22.342]
+
+[[bead]]
+state = "off"
+pos = [15.00, 23.009]
+
+[[bead]]
+state = "off"
+pos = [15.00, 23.676]
+
+[[bead]]
+state = "off"
+pos = [15.00, 24.343]
+
+[[bead]]
+state = "on"
+pos = [18.00, 5.000]
+
+[[bead]]
+state = "off"
+pos = [18.00, 5.667]
+
+[[bead]]
+state = "off"
+pos = [18.00, 6.334]
+
+[[bead]]
+state = "off"
+pos = [18.00, 7.001]
+
+[[bead]]
+state = "off"
+pos = [18.00, 7.668]
+
+[[bead]]
+state = "off"
+pos = [18.00, 8.335]
+
+[[bead]]
+state = "off"
+pos = [18.00, 9.002]
+
+[[bead]]
+state = "off"
+pos = [18.00, 9.669]
+
+[[bead]]
+state = "off"
+pos = [18.00, 10.336]
+
+[[bead]]
+state = "off"
+pos = [18.00, 11.003]
+
+[[bead]]
+state = "off"
+pos = [18.00, 11.670]
+
+[[bead]]
+state = "off"
+pos = [18.00, 12.337]
+
+[[bead]]
+state = "off"
+pos = [18.00, 13.004]
+
+[[bead]]
+state = "off"
+pos = [18.00, 13.671]
+
+[[bead]]
+state = "off"
+pos = [18.00, 14.338]
+
+[[bead]]
+state = "off"
+pos = [18.00, 15.005]
+
+[[bead]]
+state = "off"
+pos = [18.00, 15.672]
+
+[[bead]]
+state = "off"
+pos = [18.00, 16.339]
+
+[[bead]]
+state = "off"
+pos = [18.00, 17.006]
+
+[[bead]]
+state = "off"
+pos = [18.00, 17.673]
+
+[[bead]]
+state = "off"
+pos = [18.00, 18.340]
+
+[[bead]]
+state = "off"
+pos = [18.00, 19.007]
+
+[[bead]]
+state = "off"
+pos = [18.00, 19.674]
+
+[[bead]]
+state = "off"
+pos = [18.00, 20.341]
+
+[[bead]]
+state = "off"
+pos = [18.00, 21.008]
+
+[[bead]]
+state = "off"
+pos = [18.00, 21.675]
+
+[[bead]]
+state = "off"
+pos = [18.00, 22.342]
+
+[[bead]]
+state = "off"
+pos = [18.00, 23.009]
+
+[[bead]]
+state = "off"
+pos = [18.00, 23.676]
+
+[[bead]]
+state = "off"
+pos = [18.00, 24.343]
+
+[[bead]]
+state = "on"
+pos = [21.00, 5.000]
+
+[[bead]]
+state = "off"
+pos = [21.00, 5.667]
+
+[[bead]]
+state = "off"
+pos = [21.00, 6.334]
+
+[[bead]]
+state = "off"
+pos = [21.00, 7.001]
+
+[[bead]]
+state = "off"
+pos = [21.00, 7.668]
+
+[[bead]]
+state = "off"
+pos = [21.00, 8.335]
+
+[[bead]]
+state = "off"
+pos = [21.00, 9.002]
+
+[[bead]]
+state = "off"
+pos = [21.00, 9.669]
+
+[[bead]]
+state = "off"
+pos = [21.00, 10.336]
+
+[[bead]]
+state = "off"
+pos = [21.00, 11.003]
+
+[[bead]]
+state = "off"
+pos = [21.00, 11.670]
+
+[[bead]]
+state = "off"
+pos = [21.00, 12.337]
+
+[[bead]]
+state = "off"
+pos = [21.00, 13.004]
+
+[[bead]]
+state = "off"
+pos = [21.00, 13.671]
+
+[[bead]]
+state = "off"
+pos = [21.00, 14.338]
+
+[[bead]]
+state = "off"
+pos = [21.00, 15.005]
+
+[[bead]]
+state = "off"
+pos = [21.00, 15.672]
+
+[[bead]]
+state = "off"
+pos = [21.00, 16.339]
+
+[[bead]]
+state = "off"
+pos = [21.00, 17.006]
+
+[[bead]]
+state = "off"
+pos = [21.00, 17.673]
+
+[[bead]]
+state = "off"
+pos = [21.00, 18.340]
+
+[[bead]]
+state = "off"
+pos = [21.00, 19.007]
+
+[[bead]]
+state = "off"
+pos = [21.00, 19.674]
+
+[[bead]]
+state = "off"
+pos = [21.00, 20.341]
+
+[[bead]]
+state = "off"
+pos = [21.00, 21.008]
+
+[[bead]]
+state = "off"
+pos = [21.00, 21.675]
+
+[[bead]]
+state = "off"
+pos = [21.00, 22.342]
+
+[[bead]]
+state = "off"
+pos = [21.00, 23.009]
+
+[[bead]]
+state = "off"
+pos = [21.00, 23.676]
+
+[[bead]]
+state = "off"
+pos = [21.00, 24.343]
+
+[[bead]]
+state = "on"
+pos = [24.00, 5.000]
+
+[[bead]]
+state = "off"
+pos = [24.00, 5.667]
+
+[[bead]]
+state = "off"
+pos = [24.00, 6.334]
+
+[[bead]]
+state = "off"
+pos = [24.00, 7.001]
+
+[[bead]]
+state = "off"
+pos = [24.00, 7.668]
+
+[[bead]]
+state = "off"
+pos = [24.00, 8.335]
+
+[[bead]]
+state = "off"
+pos = [24.00, 9.002]
+
+[[bead]]
+state = "off"
+pos = [24.00, 9.669]
+
+[[bead]]
+state = "off"
+pos = [24.00, 10.336]
+
+[[bead]]
+state = "off"
+pos = [24.00, 11.003]
+
+[[bead]]
+state = "off"
+pos = [24.00, 11.670]
+
+[[bead]]
+state = "off"
+pos = [24.00, 12.337]
+
+[[bead]]
+state = "off"
+pos = [24.00, 13.004]
+
+[[bead]]
+state = "off"
+pos = [24.00, 13.671]
+
+[[bead]]
+state = "off"
+pos = [24.00, 14.338]
+
+[[bead]]
+state = "off"
+pos = [24.00, 15.005]
+
+[[bead]]
+state = "off"
+pos = [24.00, 15.672]
+
+[[bead]]
+state = "off"
+pos = [24.00, 16.339]
+
+[[bead]]
+state = "off"
+pos = [24.00, 17.006]
+
+[[bead]]
+state = "off"
+pos = [24.00, 17.673]
+
+[[bead]]
+state = "off"
+pos = [24.00, 18.340]
+
+[[bead]]
+state = "off"
+pos = [24.00, 19.007]
+
+[[bead]]
+state = "off"
+pos = [24.00, 19.674]
+
+[[bead]]
+state = "off"
+pos = [24.00, 20.341]
+
+[[bead]]
+state = "off"
+pos = [24.00, 21.008]
+
+[[bead]]
+state = "off"
+pos = [24.00, 21.675]
+
+[[bead]]
+state = "off"
+pos = [24.00, 22.342]
+
+[[bead]]
+state = "off"
+pos = [24.00, 23.009]
+
+[[bead]]
+state = "off"
+pos = [24.00, 23.676]
+
+[[bead]]
+state = "off"
+pos = [24.00, 24.343]
+
+[[bead]]
+state = "on"
+pos = [27.00, 5.000]
+
+[[bead]]
+state = "off"
+pos = [27.00, 5.667]
+
+[[bead]]
+state = "off"
+pos = [27.00, 6.334]
+
+[[bead]]
+state = "off"
+pos = [27.00, 7.001]
+
+[[bead]]
+state = "off"
+pos = [27.00, 7.668]
+
+[[bead]]
+state = "off"
+pos = [27.00, 8.335]
+
+[[bead]]
+state = "off"
+pos = [27.00, 9.002]
+
+[[bead]]
+state = "off"
+pos = [27.00, 9.669]
+
+[[bead]]
+state = "off"
+pos = [27.00, 10.336]
+
+[[bead]]
+state = "off"
+pos = [27.00, 11.003]
+
+[[bead]]
+state = "off"
+pos = [27.00, 11.670]
+
+[[bead]]
+state = "off"
+pos = [27.00, 12.337]
+
+[[bead]]
+state = "off"
+pos = [27.00, 13.004]
+
+[[bead]]
+state = "off"
+pos = [27.00, 13.671]
+
+[[bead]]
+state = "off"
+pos = [27.00, 14.338]
+
+[[bead]]
+state = "off"
+pos = [27.00, 15.005]
+
+[[bead]]
+state = "off"
+pos = [27.00, 15.672]
+
+[[bead]]
+state = "off"
+pos = [27.00, 16.339]
+
+[[bead]]
+state = "off"
+pos = [27.00, 17.006]
+
+[[bead]]
+state = "off"
+pos = [27.00, 17.673]
+
+[[bead]]
+state = "off"
+pos = [27.00, 18.340]
+
+[[bead]]
+state = "off"
+pos = [27.00, 19.007]
+
+[[bead]]
+state = "off"
+pos = [27.00, 19.674]
+
+[[bead]]
+state = "off"
+pos = [27.00, 20.341]
+
+[[bead]]
+state = "off"
+pos = [27.00, 21.008]
+
+[[bead]]
+state = "off"
+pos = [27.00, 21.675]
+
+[[bead]]
+state = "off"
+pos = [27.00, 22.342]
+
+[[bead]]
+state = "off"
+pos = [27.00, 23.009]
+
+[[bead]]
+state = "off"
+pos = [27.00, 23.676]
+
+[[bead]]
+state = "off"
+pos = [27.00, 24.343]
+
+[[bead]]
+state = "on"
+pos = [30.00, 5.000]
+
+[[bead]]
+state = "off"
+pos = [30.00, 5.667]
+
+[[bead]]
+state = "off"
+pos = [30.00, 6.334]
+
+[[bead]]
+state = "off"
+pos = [30.00, 7.001]
+
+[[bead]]
+state = "off"
+pos = [30.00, 7.668]
+
+[[bead]]
+state = "off"
+pos = [30.00, 8.335]
+
+[[bead]]
+state = "off"
+pos = [30.00, 9.002]
+
+[[bead]]
+state = "off"
+pos = [30.00, 9.669]
+
+[[bead]]
+state = "off"
+pos = [30.00, 10.336]
+
+[[bead]]
+state = "off"
+pos = [30.00, 11.003]
+
+[[bead]]
+state = "off"
+pos = [30.00, 11.670]
+
+[[bead]]
+state = "off"
+pos = [30.00, 12.337]
+
+[[bead]]
+state = "off"
+pos = [30.00, 13.004]
+
+[[bead]]
+state = "off"
+pos = [30.00, 13.671]
+
+[[bead]]
+state = "off"
+pos = [30.00, 14.338]
+
+[[bead]]
+state = "off"
+pos = [30.00, 15.005]
+
+[[bead]]
+state = "off"
+pos = [30.00, 15.672]
+
+[[bead]]
+state = "off"
+pos = [30.00, 16.339]
+
+[[bead]]
+state = "off"
+pos = [30.00, 17.006]
+
+[[bead]]
+state = "off"
+pos = [30.00, 17.673]
+
+[[bead]]
+state = "off"
+pos = [30.00, 18.340]
+
+[[bead]]
+state = "off"
+pos = [30.00, 19.007]
+
+[[bead]]
+state = "off"
+pos = [30.00, 19.674]
+
+[[bead]]
+state = "off"
+pos = [30.00, 20.341]
+
+[[bead]]
+state = "off"
+pos = [30.00, 21.008]
+
+[[bead]]
+state = "off"
+pos = [30.00, 21.675]
+
+[[bead]]
+state = "off"
+pos = [30.00, 22.342]
+
+[[bead]]
+state = "off"
+pos = [30.00, 23.009]
+
+[[bead]]
+state = "off"
+pos = [30.00, 23.676]
+
+[[bead]]
+state = "off"
+pos = [30.00, 24.343]
+
+[[bead]]
+state = "on"
+pos = [33.00, 5.000]
+
+[[bead]]
+state = "off"
+pos = [33.00, 5.667]
+
+[[bead]]
+state = "off"
+pos = [33.00, 6.334]
+
+[[bead]]
+state = "off"
+pos = [33.00, 7.001]
+
+[[bead]]
+state = "off"
+pos = [33.00, 7.668]
+
+[[bead]]
+state = "off"
+pos = [33.00, 8.335]
+
+[[bead]]
+state = "off"
+pos = [33.00, 9.002]
+
+[[bead]]
+state = "off"
+pos = [33.00, 9.669]
+
+[[bead]]
+state = "off"
+pos = [33.00, 10.336]
+
+[[bead]]
+state = "off"
+pos = [33.00, 11.003]
+
+[[bead]]
+state = "off"
+pos = [33.00, 11.670]
+
+[[bead]]
+state = "off"
+pos = [33.00, 12.337]
+
+[[bead]]
+state = "off"
+pos = [33.00, 13.004]
+
+[[bead]]
+state = "off"
+pos = [33.00, 13.671]
+
+[[bead]]
+state = "off"
+pos = [33.00, 14.338]
+
+[[bead]]
+state = "off"
+pos = [33.00, 15.005]
+
+[[bead]]
+state = "off"
+pos = [33.00, 15.672]
+
+[[bead]]
+state = "off"
+pos = [33.00, 16.339]
+
+[[bead]]
+state = "off"
+pos = [33.00, 17.006]
+
+[[bead]]
+state = "off"
+pos = [33.00, 17.673]
+
+[[bead]]
+state = "off"
+pos = [33.00, 18.340]
+
+[[bead]]
+state = "off"
+pos = [33.00, 19.007]
+
+[[bead]]
+state = "off"
+pos = [33.00, 19.674]
+
+[[bead]]
+state = "off"
+pos = [33.00, 20.341]
+
+[[bead]]
+state = "off"
+pos = [33.00, 21.008]
+
+[[bead]]
+state = "off"
+pos = [33.00, 21.675]
+
+[[bead]]
+state = "off"
+pos = [33.00, 22.342]
+
+[[bead]]
+state = "off"
+pos = [33.00, 23.009]
+
+[[bead]]
+state = "off"
+pos = [33.00, 23.676]
+
+[[bead]]
+state = "off"
+pos = [33.00, 24.343]
+
+[[bead]]
+state = "on"
+pos = [36.00, 5.000]
+
+[[bead]]
+state = "off"
+pos = [36.00, 5.667]
+
+[[bead]]
+state = "off"
+pos = [36.00, 6.334]
+
+[[bead]]
+state = "off"
+pos = [36.00, 7.001]
+
+[[bead]]
+state = "off"
+pos = [36.00, 7.668]
+
+[[bead]]
+state = "off"
+pos = [36.00, 8.335]
+
+[[bead]]
+state = "off"
+pos = [36.00, 9.002]
+
+[[bead]]
+state = "off"
+pos = [36.00, 9.669]
+
+[[bead]]
+state = "off"
+pos = [36.00, 10.336]
+
+[[bead]]
+state = "off"
+pos = [36.00, 11.003]
+
+[[bead]]
+state = "off"
+pos = [36.00, 11.670]
+
+[[bead]]
+state = "off"
+pos = [36.00, 12.337]
+
+[[bead]]
+state = "off"
+pos = [36.00, 13.004]
+
+[[bead]]
+state = "off"
+pos = [36.00, 13.671]
+
+[[bead]]
+state = "off"
+pos = [36.00, 14.338]
+
+[[bead]]
+state = "off"
+pos = [36.00, 15.005]
+
+[[bead]]
+state = "off"
+pos = [36.00, 15.672]
+
+[[bead]]
+state = "off"
+pos = [36.00, 16.339]
+
+[[bead]]
+state = "off"
+pos = [36.00, 17.006]
+
+[[bead]]
+state = "off"
+pos = [36.00, 17.673]
+
+[[bead]]
+state = "off"
+pos = [36.00, 18.340]
+
+[[bead]]
+state = "off"
+pos = [36.00, 19.007]
+
+[[bead]]
+state = "off"
+pos = [36.00, 19.674]
+
+[[bead]]
+state = "off"
+pos = [36.00, 20.341]
+
+[[bead]]
+state = "off"
+pos = [36.00, 21.008]
+
+[[bead]]
+state = "off"
+pos = [36.00, 21.675]
+
+[[bead]]
+state = "off"
+pos = [36.00, 22.342]
+
+[[bead]]
+state = "off"
+pos = [36.00, 23.009]
+
+[[bead]]
+state = "off"
+pos = [36.00, 23.676]
+
+[[bead]]
+state = "off"
+pos = [36.00, 24.343]
+
+[[bead]]
+state = "on"
+pos = [39.00, 5.000]
+
+[[bead]]
+state = "off"
+pos = [39.00, 5.667]
+
+[[bead]]
+state = "off"
+pos = [39.00, 6.334]
+
+[[bead]]
+state = "off"
+pos = [39.00, 7.001]
+
+[[bead]]
+state = "off"
+pos = [39.00, 7.668]
+
+[[bead]]
+state = "off"
+pos = [39.00, 8.335]
+
+[[bead]]
+state = "off"
+pos = [39.00, 9.002]
+
+[[bead]]
+state = "off"
+pos = [39.00, 9.669]
+
+[[bead]]
+state = "off"
+pos = [39.00, 10.336]
+
+[[bead]]
+state = "off"
+pos = [39.00, 11.003]
+
+[[bead]]
+state = "off"
+pos = [39.00, 11.670]
+
+[[bead]]
+state = "off"
+pos = [39.00, 12.337]
+
+[[bead]]
+state = "off"
+pos = [39.00, 13.004]
+
+[[bead]]
+state = "off"
+pos = [39.00, 13.671]
+
+[[bead]]
+state = "off"
+pos = [39.00, 14.338]
+
+[[bead]]
+state = "off"
+pos = [39.00, 15.005]
+
+[[bead]]
+state = "off"
+pos = [39.00, 15.672]
+
+[[bead]]
+state = "off"
+pos = [39.00, 16.339]
+
+[[bead]]
+state = "off"
+pos = [39.00, 17.006]
+
+[[bead]]
+state = "off"
+pos = [39.00, 17.673]
+
+[[bead]]
+state = "off"
+pos = [39.00, 18.340]
+
+[[bead]]
+state = "off"
+pos = [39.00, 19.007]
+
+[[bead]]
+state = "off"
+pos = [39.00, 19.674]
+
+[[bead]]
+state = "off"
+pos = [39.00, 20.341]
+
+[[bead]]
+state = "off"
+pos = [39.00, 21.008]
+
+[[bead]]
+state = "off"
+pos = [39.00, 21.675]
+
+[[bead]]
+state = "off"
+pos = [39.00, 22.342]
+
+[[bead]]
+state = "off"
+pos = [39.00, 23.009]
+
+[[bead]]
+state = "off"
+pos = [39.00, 23.676]
+
+[[bead]]
+state = "off"
+pos = [39.00, 24.343]
+
+[[bead]]
+state = "on"
+pos = [42.00, 5.000]
+
+[[bead]]
+state = "off"
+pos = [42.00, 5.667]
+
+[[bead]]
+state = "off"
+pos = [42.00, 6.334]
+
+[[bead]]
+state = "off"
+pos = [42.00, 7.001]
+
+[[bead]]
+state = "off"
+pos = [42.00, 7.668]
+
+[[bead]]
+state = "off"
+pos = [42.00, 8.335]
+
+[[bead]]
+state = "off"
+pos = [42.00, 9.002]
+
+[[bead]]
+state = "off"
+pos = [42.00, 9.669]
+
+[[bead]]
+state = "off"
+pos = [42.00, 10.336]
+
+[[bead]]
+state = "off"
+pos = [42.00, 11.003]
+
+[[bead]]
+state = "off"
+pos = [42.00, 11.670]
+
+[[bead]]
+state = "off"
+pos = [42.00, 12.337]
+
+[[bead]]
+state = "off"
+pos = [42.00, 13.004]
+
+[[bead]]
+state = "off"
+pos = [42.00, 13.671]
+
+[[bead]]
+state = "off"
+pos = [42.00, 14.338]
+
+[[bead]]
+state = "off"
+pos = [42.00, 15.005]
+
+[[bead]]
+state = "off"
+pos = [42.00, 15.672]
+
+[[bead]]
+state = "off"
+pos = [42.00, 16.339]
+
+[[bead]]
+state = "off"
+pos = [42.00, 17.006]
+
+[[bead]]
+state = "off"
+pos = [42.00, 17.673]
+
+[[bead]]
+state = "off"
+pos = [42.00, 18.340]
+
+[[bead]]
+state = "off"
+pos = [42.00, 19.007]
+
+[[bead]]
+state = "off"
+pos = [42.00, 19.674]
+
+[[bead]]
+state = "off"
+pos = [42.00, 20.341]
+
+[[bead]]
+state = "off"
+pos = [42.00, 21.008]
+
+[[bead]]
+state = "off"
+pos = [42.00, 21.675]
+
+[[bead]]
+state = "off"
+pos = [42.00, 22.342]
+
+[[bead]]
+state = "off"
+pos = [42.00, 23.009]
+
+[[bead]]
+state = "off"
+pos = [42.00, 23.676]
+
+[[bead]]
+state = "off"
+pos = [42.00, 24.343]
+
+[[bead]]
+state = "on"
+pos = [45.00, 5.000]
+
+[[bead]]
+state = "off"
+pos = [45.00, 5.667]
+
+[[bead]]
+state = "off"
+pos = [45.00, 6.334]
+
+[[bead]]
+state = "off"
+pos = [45.00, 7.001]
+
+[[bead]]
+state = "off"
+pos = [45.00, 7.668]
+
+[[bead]]
+state = "off"
+pos = [45.00, 8.335]
+
+[[bead]]
+state = "off"
+pos = [45.00, 9.002]
+
+[[bead]]
+state = "off"
+pos = [45.00, 9.669]
+
+[[bead]]
+state = "off"
+pos = [45.00, 10.336]
+
+[[bead]]
+state = "off"
+pos = [45.00, 11.003]
+
+[[bead]]
+state = "off"
+pos = [45.00, 11.670]
+
+[[bead]]
+state = "off"
+pos = [45.00, 12.337]
+
+[[bead]]
+state = "off"
+pos = [45.00, 13.004]
+
+[[bead]]
+state = "off"
+pos = [45.00, 13.671]
+
+[[bead]]
+state = "off"
+pos = [45.00, 14.338]
+
+[[bead]]
+state = "off"
+pos = [45.00, 15.005]
+
+[[bead]]
+state = "off"
+pos = [45.00, 15.672]
+
+[[bead]]
+state = "off"
+pos = [45.00, 16.339]
+
+[[bead]]
+state = "off"
+pos = [45.00, 17.006]
+
+[[bead]]
+state = "off"
+pos = [45.00, 17.673]
+
+[[bead]]
+state = "off"
+pos = [45.00, 18.340]
+
+[[bead]]
+state = "off"
+pos = [45.00, 19.007]
+
+[[bead]]
+state = "off"
+pos = [45.00, 19.674]
+
+[[bead]]
+state = "off"
+pos = [45.00, 20.341]
+
+[[bead]]
+state = "off"
+pos = [45.00, 21.008]
+
+[[bead]]
+state = "off"
+pos = [45.00, 21.675]
+
+[[bead]]
+state = "off"
+pos = [45.00, 22.342]
+
+[[bead]]
+state = "off"
+pos = [45.00, 23.009]
+
+[[bead]]
+state = "off"
+pos = [45.00, 23.676]
+
+[[bead]]
+state = "off"
+pos = [45.00, 24.343]
+
+[[bead]]
+state = "on"
+pos = [48.00, 5.000]
+
+[[bead]]
+state = "off"
+pos = [48.00, 5.667]
+
+[[bead]]
+state = "off"
+pos = [48.00, 6.334]
+
+[[bead]]
+state = "off"
+pos = [48.00, 7.001]
+
+[[bead]]
+state = "off"
+pos = [48.00, 7.668]
+
+[[bead]]
+state = "off"
+pos = [48.00, 8.335]
+
+[[bead]]
+state = "off"
+pos = [48.00, 9.002]
+
+[[bead]]
+state = "off"
+pos = [48.00, 9.669]
+
+[[bead]]
+state = "off"
+pos = [48.00, 10.336]
+
+[[bead]]
+state = "off"
+pos = [48.00, 11.003]
+
+[[bead]]
+state = "off"
+pos = [48.00, 11.670]
+
+[[bead]]
+state = "off"
+pos = [48.00, 12.337]
+
+[[bead]]
+state = "off"
+pos = [48.00, 13.004]
+
+[[bead]]
+state = "off"
+pos = [48.00, 13.671]
+
+[[bead]]
+state = "off"
+pos = [48.00, 14.338]
+
+[[bead]]
+state = "off"
+pos = [48.00, 15.005]
+
+[[bead]]
+state = "off"
+pos = [48.00, 15.672]
+
+[[bead]]
+state = "off"
+pos = [48.00, 16.339]
+
+[[bead]]
+state = "off"
+pos = [48.00, 17.006]
+
+[[bead]]
+state = "off"
+pos = [48.00, 17.673]
+
+[[bead]]
+state = "off"
+pos = [48.00, 18.340]
+
+[[bead]]
+state = "off"
+pos = [48.00, 19.007]
+
+[[bead]]
+state = "off"
+pos = [48.00, 19.674]
+
+[[bead]]
+state = "off"
+pos = [48.00, 20.341]
+
+[[bead]]
+state = "off"
+pos = [48.00, 21.008]
+
+[[bead]]
+state = "off"
+pos = [48.00, 21.675]
+
+[[bead]]
+state = "off"
+pos = [48.00, 22.342]
+
+[[bead]]
+state = "off"
+pos = [48.00, 23.009]
+
+[[bead]]
+state = "off"
+pos = [48.00, 23.676]
+
+[[bead]]
+state = "off"
+pos = [48.00, 24.343]
+
+[[bead]]
+state = "on"
+pos = [51.00, 5.000]
+
+[[bead]]
+state = "off"
+pos = [51.00, 5.667]
+
+[[bead]]
+state = "off"
+pos = [51.00, 6.334]
+
+[[bead]]
+state = "off"
+pos = [51.00, 7.001]
+
+[[bead]]
+state = "off"
+pos = [51.00, 7.668]
+
+[[bead]]
+state = "off"
+pos = [51.00, 8.335]
+
+[[bead]]
+state = "off"
+pos = [51.00, 9.002]
+
+[[bead]]
+state = "off"
+pos = [51.00, 9.669]
+
+[[bead]]
+state = "off"
+pos = [51.00, 10.336]
+
+[[bead]]
+state = "off"
+pos = [51.00, 11.003]
+
+[[bead]]
+state = "off"
+pos = [51.00, 11.670]
+
+[[bead]]
+state = "off"
+pos = [51.00, 12.337]
+
+[[bead]]
+state = "off"
+pos = [51.00, 13.004]
+
+[[bead]]
+state = "off"
+pos = [51.00, 13.671]
+
+[[bead]]
+state = "off"
+pos = [51.00, 14.338]
+
+[[bead]]
+state = "off"
+pos = [51.00, 15.005]
+
+[[bead]]
+state = "off"
+pos = [51.00, 15.672]
+
+[[bead]]
+state = "off"
+pos = [51.00, 16.339]
+
+[[bead]]
+state = "off"
+pos = [51.00, 17.006]
+
+[[bead]]
+state = "off"
+pos = [51.00, 17.673]
+
+[[bead]]
+state = "off"
+pos = [51.00, 18.340]
+
+[[bead]]
+state = "off"
+pos = [51.00, 19.007]
+
+[[bead]]
+state = "off"
+pos = [51.00, 19.674]
+
+[[bead]]
+state = "off"
+pos = [51.00, 20.341]
+
+[[bead]]
+state = "off"
+pos = [51.00, 21.008]
+
+[[bead]]
+state = "off"
+pos = [51.00, 21.675]
+
+[[bead]]
+state = "off"
+pos = [51.00, 22.342]
+
+[[bead]]
+state = "off"
+pos = [51.00, 23.009]
+
+[[bead]]
+state = "off"
+pos = [51.00, 23.676]
+
+[[bead]]
+state = "off"
+pos = [51.00, 24.343]
+
+[[bead]]
+state = "on"
+pos = [54.00, 5.000]
+
+[[bead]]
+state = "off"
+pos = [54.00, 5.667]
+
+[[bead]]
+state = "off"
+pos = [54.00, 6.334]
+
+[[bead]]
+state = "off"
+pos = [54.00, 7.001]
+
+[[bead]]
+state = "off"
+pos = [54.00, 7.668]
+
+[[bead]]
+state = "off"
+pos = [54.00, 8.335]
+
+[[bead]]
+state = "off"
+pos = [54.00, 9.002]
+
+[[bead]]
+state = "off"
+pos = [54.00, 9.669]
+
+[[bead]]
+state = "off"
+pos = [54.00, 10.336]
+
+[[bead]]
+state = "off"
+pos = [54.00, 11.003]
+
+[[bead]]
+state = "off"
+pos = [54.00, 11.670]
+
+[[bead]]
+state = "off"
+pos = [54.00, 12.337]
+
+[[bead]]
+state = "off"
+pos = [54.00, 13.004]
+
+[[bead]]
+state = "off"
+pos = [54.00, 13.671]
+
+[[bead]]
+state = "off"
+pos = [54.00, 14.338]
+
+[[bead]]
+state = "off"
+pos = [54.00, 15.005]
+
+[[bead]]
+state = "off"
+pos = [54.00, 15.672]
+
+[[bead]]
+state = "off"
+pos = [54.00, 16.339]
+
+[[bead]]
+state = "off"
+pos = [54.00, 17.006]
+
+[[bead]]
+state = "off"
+pos = [54.00, 17.673]
+
+[[bead]]
+state = "off"
+pos = [54.00, 18.340]
+
+[[bead]]
+state = "off"
+pos = [54.00, 19.007]
+
+[[bead]]
+state = "off"
+pos = [54.00, 19.674]
+
+[[bead]]
+state = "off"
+pos = [54.00, 20.341]
+
+[[bead]]
+state = "off"
+pos = [54.00, 21.008]
+
+[[bead]]
+state = "off"
+pos = [54.00, 21.675]
+
+[[bead]]
+state = "off"
+pos = [54.00, 22.342]
+
+[[bead]]
+state = "off"
+pos = [54.00, 23.009]
+
+[[bead]]
+state = "off"
+pos = [54.00, 23.676]
+
+[[bead]]
+state = "off"
+pos = [54.00, 24.343]
+
+[[bead]]
+state = "on"
+pos = [57.00, 5.000]
+
+[[bead]]
+state = "off"
+pos = [57.00, 5.667]
+
+[[bead]]
+state = "off"
+pos = [57.00, 6.334]
+
+[[bead]]
+state = "off"
+pos = [57.00, 7.001]
+
+[[bead]]
+state = "off"
+pos = [57.00, 7.668]
+
+[[bead]]
+state = "off"
+pos = [57.00, 8.335]
+
+[[bead]]
+state = "off"
+pos = [57.00, 9.002]
+
+[[bead]]
+state = "off"
+pos = [57.00, 9.669]
+
+[[bead]]
+state = "off"
+pos = [57.00, 10.336]
+
+[[bead]]
+state = "off"
+pos = [57.00, 11.003]
+
+[[bead]]
+state = "off"
+pos = [57.00, 11.670]
+
+[[bead]]
+state = "off"
+pos = [57.00, 12.337]
+
+[[bead]]
+state = "off"
+pos = [57.00, 13.004]
+
+[[bead]]
+state = "off"
+pos = [57.00, 13.671]
+
+[[bead]]
+state = "off"
+pos = [57.00, 14.338]
+
+[[bead]]
+state = "off"
+pos = [57.00, 15.005]
+
+[[bead]]
+state = "off"
+pos = [57.00, 15.672]
+
+[[bead]]
+state = "off"
+pos = [57.00, 16.339]
+
+[[bead]]
+state = "off"
+pos = [57.00, 17.006]
+
+[[bead]]
+state = "off"
+pos = [57.00, 17.673]
+
+[[bead]]
+state = "off"
+pos = [57.00, 18.340]
+
+[[bead]]
+state = "off"
+pos = [57.00, 19.007]
+
+[[bead]]
+state = "off"
+pos = [57.00, 19.674]
+
+[[bead]]
+state = "off"
+pos = [57.00, 20.341]
+
+[[bead]]
+state = "off"
+pos = [57.00, 21.008]
+
+[[bead]]
+state = "off"
+pos = [57.00, 21.675]
+
+[[bead]]
+state = "off"
+pos = [57.00, 22.342]
+
+[[bead]]
+state = "off"
+pos = [57.00, 23.009]
+
+[[bead]]
+state = "off"
+pos = [57.00, 23.676]
+
+[[bead]]
+state = "off"
+pos = [57.00, 24.343]
+
+[[bead]]
+state = "on"
+pos = [60.00, 5.000]
+
+[[bead]]
+state = "off"
+pos = [60.00, 5.667]
+
+[[bead]]
+state = "off"
+pos = [60.00, 6.334]
+
+[[bead]]
+state = "off"
+pos = [60.00, 7.001]
+
+[[bead]]
+state = "off"
+pos = [60.00, 7.668]
+
+[[bead]]
+state = "off"
+pos = [60.00, 8.335]
+
+[[bead]]
+state = "off"
+pos = [60.00, 9.002]
+
+[[bead]]
+state = "off"
+pos = [60.00, 9.669]
+
+[[bead]]
+state = "off"
+pos = [60.00, 10.336]
+
+[[bead]]
+state = "off"
+pos = [60.00, 11.003]
+
+[[bead]]
+state = "off"
+pos = [60.00, 11.670]
+
+[[bead]]
+state = "off"
+pos = [60.00, 12.337]
+
+[[bead]]
+state = "off"
+pos = [60.00, 13.004]
+
+[[bead]]
+state = "off"
+pos = [60.00, 13.671]
+
+[[bead]]
+state = "off"
+pos = [60.00, 14.338]
+
+[[bead]]
+state = "off"
+pos = [60.00, 15.005]
+
+[[bead]]
+state = "off"
+pos = [60.00, 15.672]
+
+[[bead]]
+state = "off"
+pos = [60.00, 16.339]
+
+[[bead]]
+state = "off"
+pos = [60.00, 17.006]
+
+[[bead]]
+state = "off"
+pos = [60.00, 17.673]
+
+[[bead]]
+state = "off"
+pos = [60.00, 18.340]
+
+[[bead]]
+state = "off"
+pos = [60.00, 19.007]
+
+[[bead]]
+state = "off"
+pos = [60.00, 19.674]
+
+[[bead]]
+state = "off"
+pos = [60.00, 20.341]
+
+[[bead]]
+state = "off"
+pos = [60.00, 21.008]
+
+[[bead]]
+state = "off"
+pos = [60.00, 21.675]
+
+[[bead]]
+state = "off"
+pos = [60.00, 22.342]
+
+[[bead]]
+state = "off"
+pos = [60.00, 23.009]
+
+[[bead]]
+state = "off"
+pos = [60.00, 23.676]
+
+[[bead]]
+state = "off"
+pos = [60.00, 24.343]
+
