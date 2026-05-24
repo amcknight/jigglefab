@@ -102,6 +102,45 @@
             margin-left: 4px;
         }
         #picker a.active .beads { color: #cee; }
+        #speed-picker {
+            position: absolute;
+            bottom: 56px;
+            left: 50%;
+            transform: translateX(-50%);
+            max-width: calc(100vw - 16px);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            padding: 6px;
+            background: rgba(0, 0, 0, 0.45);
+            border-radius: 10px;
+            font: 12px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            z-index: 10;
+            justify-content: center;
+        }
+        #speed-picker .group-label {
+            color: #888;
+            padding: 4px 6px;
+            align-self: center;
+        }
+        #speed-picker a {
+            color: #cfd;
+            text-decoration: none;
+            padding: 4px 10px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid transparent;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+        #speed-picker a:hover {
+            background: rgba(255, 255, 255, 0.12);
+        }
+        #speed-picker a.active {
+            background: #2a4d3a;
+            color: #fff;
+            border-color: #4a8;
+        }
     </style>
 </head>
 <body>
@@ -119,6 +158,7 @@
             <div><span class="lbl">frame </span><span class="v" id="hud-frame">—</span><span class="lbl"> ms</span></div>
         </div>
     </div>
+    <nav id="speed-picker"></nav>
     <nav id="picker"></nav>
     <script>
         // Single source of truth for the fab list. Each entry has a `key`
@@ -137,9 +177,39 @@
         const DEFAULT_KEY = "wire-20x30";
         const FABS_BY_KEY = Object.fromEntries(FABS.map(f => [f.key, f]));
 
+        // Speed pill values. Must match ALLOWED_SPEED_STRINGS in src/speed.rs.
+        // 1× is the default and styled active when no &speed= is in the hash.
+        const SPEEDS = ["0.1", "0.3", "1", "3", "10", "30", "100", "300", "1000"];
+        const DEFAULT_SPEED = "1";
+
+        function parseHash() {
+            // Hash format: #<fab-key>[&key=value][&key=value]...
+            const raw = (location.hash || "").replace(/^#/, "");
+            const segments = raw.split("&");
+            const fab = segments[0] || "";
+            const params = {};
+            for (let i = 1; i < segments.length; i++) {
+                const eq = segments[i].indexOf("=");
+                if (eq > 0) params[segments[i].slice(0, eq)] = segments[i].slice(eq + 1);
+            }
+            return { fab, params };
+        }
+
+        function currentSpeed() {
+            const { params } = parseHash();
+            const s = params.speed;
+            return SPEEDS.includes(s) ? s : DEFAULT_SPEED;
+        }
+
+        function buildHash(fabKey, speed) {
+            // Omit &speed= when default, to keep canonical URLs clean.
+            if (speed === DEFAULT_SPEED) return "#" + fabKey;
+            return "#" + fabKey + "&speed=" + speed;
+        }
+
         function currentFab() {
-            const key = (location.hash || "").replace(/^#/, "");
-            return FABS_BY_KEY[key] || FABS_BY_KEY[DEFAULT_KEY];
+            const { fab } = parseHash();
+            return FABS_BY_KEY[fab] || FABS_BY_KEY[DEFAULT_KEY];
         }
 
         function paintFabInfo() {
@@ -169,11 +239,44 @@
             }
         }
 
+        function paintSpeedPicker() {
+            const bar = document.getElementById("speed-picker");
+            const active = currentSpeed();
+            bar.innerHTML = "";
+            const label = document.createElement("span");
+            label.className = "group-label";
+            label.textContent = "speed";
+            bar.appendChild(label);
+            for (const s of SPEEDS) {
+                const a = document.createElement("a");
+                a.href = "#";
+                a.textContent = s + "×";
+                a.className = s === active ? "active" : "";
+                a.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    selectSpeed(s);
+                });
+                bar.appendChild(a);
+            }
+        }
+
+        function selectSpeed(s) {
+            const { fab } = parseHash();
+            const fabKey = fab || DEFAULT_KEY;
+            const newHash = buildHash(fabKey, s);
+            history.replaceState(null, "", newHash);
+            paintSpeedPicker();
+            if (typeof window.__jigglefabSetSpeed === "function") {
+                window.__jigglefabSetSpeed(parseFloat(s));
+            }
+        }
+
         // Reload on hash change so the WASM picks up the new fab (it reads
         // the hash once at startup).
         window.addEventListener("hashchange", () => location.reload());
         paintFabInfo();
         paintPicker();
+        paintSpeedPicker();
 
         // Sliding-window FPS over the last ~500 ms.
         const fpsEl = document.getElementById("hud-fps");
