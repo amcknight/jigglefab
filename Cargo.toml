@@ -17,6 +17,12 @@ path = "src/bin/bench.rs"
 test = false
 bench = false
 
+[[bin]]
+name = "gen_chains"
+path = "src/bin/gen_chains.rs"
+test = false
+bench = false
+
 [dependencies]
 wgpu = "23"
 winit = "0.30"
