@@ -58,6 +58,50 @@
             float: right;
             margin-left: 8px;
         }
+        #picker {
+            position: absolute;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            max-width: calc(100vw - 16px);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            padding: 6px;
+            background: rgba(0, 0, 0, 0.45);
+            border-radius: 10px;
+            font: 12px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            z-index: 10;
+            justify-content: center;
+        }
+        #picker .group-label {
+            color: #888;
+            padding: 4px 6px;
+            align-self: center;
+        }
+        #picker a {
+            color: #cfd;
+            text-decoration: none;
+            padding: 4px 10px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid transparent;
+            white-space: nowrap;
+        }
+        #picker a:hover {
+            background: rgba(255, 255, 255, 0.12);
+        }
+        #picker a.active {
+            background: #2a4d3a;
+            color: #fff;
+            border-color: #4a8;
+        }
+        #picker a .beads {
+            color: #999;
+            font-size: 10px;
+            margin-left: 4px;
+        }
+        #picker a.active .beads { color: #cee; }
     </style>
 </head>
 <body>
@@ -75,20 +119,26 @@
             <div><span class="lbl">frame </span><span class="v" id="hud-frame">—</span><span class="lbl"> ms</span></div>
         </div>
     </div>
+    <nav id="picker"></nav>
     <script>
-        // Map fab hash → (display name, bead count). Keep in sync with
-        // pick_fab_from_url in src/app.rs.
-        const FABS = {
-            "wire-20x30":  { name: "wire 20×30", beads: 600 },
-            "wire-40x30":  { name: "wire 40×30", beads: 1200 },
-            "wire-60x30":  { name: "wire 60×30", beads: 1800 },
-            "wire-80x30":  { name: "wire 80×30", beads: 2400 },
-            "wire-100x30": { name: "wire 100×30", beads: 3000 },
-        };
+        // Single source of truth for the fab list. Each entry has a `key`
+        // (URL hash, matches pick_fab_from_url in src/app.rs), a short
+        // `label` for the picker pill, a longer `name` for the HUD, the
+        // bead count, and a `group` so we can section by chemistry as more
+        // configs are added (wire / sem / future).
+        const FABS = [
+            { key: "wire-20x30",  label: "20×30",  name: "wire 20×30",  beads: 600,  group: "wire" },
+            { key: "wire-40x30",  label: "40×30",  name: "wire 40×30",  beads: 1200, group: "wire" },
+            { key: "wire-60x30",  label: "60×30",  name: "wire 60×30",  beads: 1800, group: "wire" },
+            { key: "wire-80x30",  label: "80×30",  name: "wire 80×30",  beads: 2400, group: "wire" },
+            { key: "wire-100x30", label: "100×30", name: "wire 100×30", beads: 3000, group: "wire" },
+        ];
+        const DEFAULT_KEY = "wire-20x30";
+        const FABS_BY_KEY = Object.fromEntries(FABS.map(f => [f.key, f]));
 
         function currentFab() {
             const key = (location.hash || "").replace(/^#/, "");
-            return FABS[key] || FABS["wire-20x30"];
+            return FABS_BY_KEY[key] || FABS_BY_KEY[DEFAULT_KEY];
         }
 
         function paintFabInfo() {
@@ -97,10 +147,32 @@
             document.getElementById("hud-beads").textContent = f.beads.toLocaleString();
         }
 
+        function paintPicker() {
+            const picker = document.getElementById("picker");
+            const activeKey = currentFab().key;
+            const groups = {};
+            for (const f of FABS) (groups[f.group] = groups[f.group] || []).push(f);
+            picker.innerHTML = "";
+            for (const [group, fabs] of Object.entries(groups)) {
+                const groupLabel = document.createElement("span");
+                groupLabel.className = "group-label";
+                groupLabel.textContent = group;
+                picker.appendChild(groupLabel);
+                for (const f of fabs) {
+                    const a = document.createElement("a");
+                    a.href = "#" + f.key;
+                    a.className = f.key === activeKey ? "active" : "";
+                    a.innerHTML = f.label + ' <span class="beads">' + f.beads + '</span>';
+                    picker.appendChild(a);
+                }
+            }
+        }
+
         // Reload on hash change so the WASM picks up the new fab (it reads
         // the hash once at startup).
         window.addEventListener("hashchange", () => location.reload());
         paintFabInfo();
+        paintPicker();
 
         // Sliding-window FPS over the last ~500 ms.
         const fpsEl = document.getElementById("hud-fps");
