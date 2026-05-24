@@ -31,12 +31,37 @@ const SUBSTEPS: u32 = 10;
 // the chain. 30 beads per chain (not 100): with wire's outside=pass, long
 // chains can self-fold tightly because there's nothing pushing non-adjacent
 // beads apart, so we keep chains short and add more of them.
-// Bumped from 10×30 (300) to 20×30 (600) after CpuParallel landed — the
-// old CpuSequential couldn't sustain this at 10 substeps/frame on phones.
+// Default 20×30 (600 beads); URL hash picks larger sizes for phone perf
+// probing (#wire-40x30 .. #wire-100x30). World grows linearly with chain
+// count, so beads get visually smaller at the top end — that's fine for
+// "does motion stay smooth" testing.
 #[cfg(target_arch = "wasm32")]
-const FAB_TOML: &str = include_str!("../fabs/wire-20x30.toml");
+const FAB_20X30: &str = include_str!("../fabs/wire-20x30.toml");
+#[cfg(target_arch = "wasm32")]
+const FAB_40X30: &str = include_str!("../fabs/wire-40x30.toml");
+#[cfg(target_arch = "wasm32")]
+const FAB_60X30: &str = include_str!("../fabs/wire-60x30.toml");
+#[cfg(target_arch = "wasm32")]
+const FAB_80X30: &str = include_str!("../fabs/wire-80x30.toml");
+#[cfg(target_arch = "wasm32")]
+const FAB_100X30: &str = include_str!("../fabs/wire-100x30.toml");
 #[cfg(target_arch = "wasm32")]
 const CHEMISTRY_TOML: &str = include_str!("../chemistries/wire.toml");
+
+#[cfg(target_arch = "wasm32")]
+fn pick_fab_from_url() -> (&'static str, &'static str) {
+    let hash = web_sys::window()
+        .and_then(|w| w.location().hash().ok())
+        .unwrap_or_default();
+    let key = hash.trim_start_matches('#');
+    match key {
+        "wire-40x30" => ("wire-40x30", FAB_40X30),
+        "wire-60x30" => ("wire-60x30", FAB_60X30),
+        "wire-80x30" => ("wire-80x30", FAB_80X30),
+        "wire-100x30" => ("wire-100x30", FAB_100X30),
+        _ => ("wire-20x30", FAB_20X30),
+    }
+}
 
 pub enum UserEvent {
     RendererReady(Renderer),
@@ -112,7 +137,9 @@ impl ApplicationHandler<UserEvent> for App {
 
         #[cfg(target_arch = "wasm32")]
         let sim = {
-            let fab = parse_fab(FAB_TOML).expect("parse fab");
+            let (name, fab_toml) = pick_fab_from_url();
+            log::info!("loading fab {name}");
+            let fab = parse_fab(fab_toml).expect("parse fab");
             let chem = parse_chemistry(CHEMISTRY_TOML).expect("parse chem");
             Sim::from_fab(&fab, chem)
         };
