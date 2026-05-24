@@ -143,6 +143,16 @@ impl ApplicationHandler<UserEvent> for App {
 
         #[cfg(target_arch = "wasm32")]
         {
+            // Upgrade to CpuParallel before the async renderer spawns —
+            // it doesn't need the wgpu device, just the sim's bead state.
+            // CpuSequential at 300 beads × 10 substeps/frame was already
+            // close to budget; CpuParallel handles the same load in a
+            // fraction of the time and leaves room to grow the demo.
+            use crate::chemistry::compile_chemistry;
+            use crate::parallel::CpuParallel;
+            let compiled = compile_chemistry(sim.chemistry()).expect("compile chemistry");
+            self.scheduler = Box::new(CpuParallel::new(&sim, compiled));
+
             let proxy = self.proxy.clone().expect("proxy not set before resumed()");
             let window_clone = window.clone();
             let n = sim.positions.len();
