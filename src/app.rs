@@ -22,10 +22,6 @@ use crate::scheduler::{CpuSequential, Scheduler};
 use crate::sim::Sim;
 
 const FRAME_DT: f32 = 1.0 / 60.0;
-// Substeps per rendered frame. Wire's outside rule now passes-through, so
-// the only contacts in the sim are the ~N bonded-pair oscillations — 10×
-// is safe again at 1000 beads.
-const SUBSTEPS: u32 = 10;
 
 // Web demo: parallel bonded wire chains, each with one "on" signal walking
 // the chain. 30 beads per chain (not 100): with wire's outside=pass, long
@@ -142,6 +138,12 @@ impl ApplicationHandler<UserEvent> for App {
         let sim = {
             let (name, fab_toml) = pick_fab_from_url();
             log::info!("loading fab {name}");
+            let hash = web_sys::window()
+                .and_then(|w| w.location().hash().ok())
+                .unwrap_or_default();
+            let speed = crate::speed::parse_speed_from_hash(&hash);
+            crate::speed::set_speed(speed);
+            log::info!("initial speed = {speed}×");
             let fab = parse_fab(fab_toml).expect("parse fab");
             let chem = parse_chemistry(CHEMISTRY_TOML).expect("parse chem");
             Sim::from_fab(&fab, chem)
@@ -241,7 +243,7 @@ impl ApplicationHandler<UserEvent> for App {
                 let Some(renderer) = &mut self.renderer else { return };
                 {
                     let sim = self.sim.as_mut().unwrap();
-                    for _ in 0..SUBSTEPS {
+                    for _ in 0..crate::speed::current_substeps() {
                         self.scheduler.step(sim, FRAME_DT);
                     }
                 }
