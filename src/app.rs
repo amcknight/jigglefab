@@ -46,6 +46,8 @@ const FAB_80X30: &str = include_str!("../fabs/wire-80x30.toml");
 #[cfg(target_arch = "wasm32")]
 const FAB_100X30: &str = include_str!("../fabs/wire-100x30.toml");
 #[cfg(target_arch = "wasm32")]
+const FAB_100X30X10: &str = include_str!("../fabs/wire-100x30x10.toml");
+#[cfg(target_arch = "wasm32")]
 const CHEMISTRY_TOML: &str = include_str!("../chemistries/wire.toml");
 
 #[cfg(target_arch = "wasm32")]
@@ -59,6 +61,7 @@ fn pick_fab_from_url() -> (&'static str, &'static str) {
         "wire-60x30" => ("wire-60x30", FAB_60X30),
         "wire-80x30" => ("wire-80x30", FAB_80X30),
         "wire-100x30" => ("wire-100x30", FAB_100X30),
+        "wire-100x30x10" => ("wire-100x30x10", FAB_100X30X10),
         _ => ("wire-20x30", FAB_20X30),
     }
 }

@@ -11,7 +11,10 @@ import sys
 from playwright.async_api import async_playwright
 
 BASE = sys.argv[1] if len(sys.argv) > 1 else "http://127.0.0.1:8765/"
-SIZES = ["wire-20x30", "wire-40x30", "wire-60x30", "wire-80x30", "wire-100x30"]
+SIZES = [
+    "wire-20x30", "wire-40x30", "wire-60x30", "wire-80x30", "wire-100x30",
+    "wire-100x30x10",
+]
 
 
 async def measure_one(p, size: str) -> dict:
