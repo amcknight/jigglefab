@@ -1,0 +1,35 @@
+# Sem-basic chemistry — minimal subset of haskell/src/Chem/Sem.hs exercising
+# Apply, Die, Spawn for Phase-1 testing. Future tasks expand this.
+states = ["wire", "destroyer"]
+colors = [
+    [0.78, 0.78, 0.80],
+    [0.50, 0.10, 0.50],
+]
+
+[[sem_rule]]
+description = "Apply + Die → LeftOnly (right bead dies, left keeps reduced stack)"
+left_tag = "wire"
+left_top = "apply"
+right_tag = "wire"
+right_top = "die"
+side = "in"
+reaction = "left_only"
+new_left = "pop_top"
+new_right = "dead"
+
+[[sem_rule]]
+description = "Apply + Spawn → Birth (existing pair keeps reduced stacks, new empty wire is born and bonded to both)"
+left_tag = "wire"
+left_top = "apply"
+right_tag = "wire"
+right_top = "spawn"
+side = "in"
+reaction = "birth"
+new_left = "pop_top"
+new_right = "pop_top"
+birth_tag = "wire"
+birth_program = "empty"
+
+[[program]]
+name = "empty"
+ops = []

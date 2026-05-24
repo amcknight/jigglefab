@@ -10,7 +10,9 @@ pub use compiled::{
 };
 
 pub mod compiler;
-pub use compiler::compile_chemistry;
+pub use compiler::{compile_chemistry, parse_sem_chemistry};
+#[cfg(not(target_arch = "wasm32"))]
+pub use compiler::load_chemistry_compiled;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Action {
