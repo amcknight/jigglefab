@@ -29,7 +29,7 @@ fn print_usage() {
     eprintln!("  --max-wall-seconds <S>  Per-scenario wall cap (default: 300)");
     eprintln!("  --csv <path>            Write CSV to this path");
     eprintln!("  --verify-determinism    Re-run each scenario and check bit-equality");
-    eprintln!("  --scheduler <name>      Scheduler to use: cpu, gpu (default: cpu)");
+    eprintln!("  --scheduler <name>      Scheduler to use: cpu, cpu-parallel, gpu (default: cpu)");
     eprintln!("  --help                  Show this message");
 }
 
@@ -133,9 +133,12 @@ fn main() -> ExitCode {
 
     // Validate scheduler name before doing any work.
     match parsed.scheduler.as_str() {
-        "cpu" | "gpu" => {}
+        "cpu" | "cpu-parallel" | "gpu" => {}
         other => {
-            eprintln!("error: unknown scheduler {:?} (valid: cpu, gpu)", other);
+            eprintln!(
+                "error: unknown scheduler {:?} (valid: cpu, cpu-parallel, gpu)",
+                other
+            );
             print_usage();
             return ExitCode::from(2);
         }
@@ -156,20 +159,41 @@ fn main() -> ExitCode {
         // scenario. A fresh GpuContext (new headless device) is used per
         // scenario to avoid sharing ownership across the move into GpuEventLoop.
         #[cfg(not(target_arch = "wasm32"))]
-        let r = if parsed.scheduler == "gpu" {
-            let (sizing_sim, _) = scenario.build();
-            let ctx = match GpuContext::new_headless() {
-                Ok(c) => c,
-                Err(e) => {
-                    eprintln!("error: GPU context failed for {}: {e}", scenario.name());
-                    return ExitCode::from(1);
-                }
-            };
-            let mut gpu_sched: Box<dyn Scheduler> = Box::new(GpuEventLoop::new(ctx, &sizing_sim));
-            run_scenario(scenario.as_ref(), &parsed.bench, gpu_sched.as_mut())
-        } else {
-            let mut cpu_sched: Box<dyn Scheduler> = Box::new(CpuSequential);
-            run_scenario(scenario.as_ref(), &parsed.bench, cpu_sched.as_mut())
+        let r = match parsed.scheduler.as_str() {
+            "gpu" => {
+                let (sizing_sim, _) = scenario.build();
+                let ctx = match GpuContext::new_headless() {
+                    Ok(c) => c,
+                    Err(e) => {
+                        eprintln!("error: GPU context failed for {}: {e}", scenario.name());
+                        return ExitCode::from(1);
+                    }
+                };
+                let mut gpu_sched: Box<dyn Scheduler> =
+                    Box::new(GpuEventLoop::new(ctx, &sizing_sim));
+                run_scenario(scenario.as_ref(), &parsed.bench, gpu_sched.as_mut())
+            }
+            "cpu-parallel" => {
+                let (sizing_sim, _) = scenario.build();
+                let compiled =
+                    match jigglefab::chemistry::compile_chemistry(sizing_sim.chemistry()) {
+                        Ok(c) => c,
+                        Err(e) => {
+                            eprintln!(
+                                "error: compile_chemistry failed for {}: {e}",
+                                scenario.name()
+                            );
+                            return ExitCode::from(1);
+                        }
+                    };
+                let mut sched: Box<dyn Scheduler> =
+                    Box::new(jigglefab::parallel::CpuParallel::new(&sizing_sim, compiled));
+                run_scenario(scenario.as_ref(), &parsed.bench, sched.as_mut())
+            }
+            _ => {
+                let mut cpu_sched: Box<dyn Scheduler> = Box::new(CpuSequential);
+                run_scenario(scenario.as_ref(), &parsed.bench, cpu_sched.as_mut())
+            }
         };
 
         #[cfg(target_arch = "wasm32")]
