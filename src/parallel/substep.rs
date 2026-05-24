@@ -142,6 +142,42 @@ pub fn compute_active_contacts(pool: &BeadPool, grid: &mut Grid, dt_sub: f32) ->
     out
 }
 
+/// Rayon-parallel version of `compute_active_contacts`. Bit-identical to
+/// the sequential form: `par_iter().filter_map().collect()` preserves
+/// source order, and `next_contact` is a pure function. The grid build
+/// stays sequential — it's O(N) bin-insertion, cheap relative to the TOI
+/// loop, and the grid's mutable shape makes it the awkward piece to
+/// parallelize.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn compute_active_contacts_par(pool: &BeadPool, grid: &mut Grid, dt_sub: f32) -> Vec<Pair> {
+    use rayon::prelude::*;
+    grid.clear();
+    for slot in pool.alive_slots() {
+        if pool.get(slot).born_this_substep {
+            continue;
+        }
+        grid.insert(slot, pool.get(slot).pos);
+    }
+    let candidates = grid.candidate_pairs();
+    let mut out: Vec<Pair> = candidates
+        .par_iter()
+        .filter_map(|&(a, b)| {
+            let ba = pool.get(a);
+            let bb = pool.get(b);
+            if !ba.alive || !bb.alive {
+                return None;
+            }
+            if ba.born_this_substep || bb.born_this_substep {
+                return None;
+            }
+            let pb = ba.pos + grid.min_image(ba.pos, bb.pos);
+            next_contact(ba.pos, ba.vel, pb, bb.vel, dt_sub).map(|c| Pair { a, b, t: c.t })
+        })
+        .collect();
+    out.sort_by(|p, q| (p.t, p.a, p.b).partial_cmp(&(q.t, q.a, q.b)).unwrap());
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -303,6 +339,36 @@ mod tests {
         do_substep(&mut pool, &mut grid, &chem, &mut bonds, 1.0);
         assert!((pool.get(a).vel.x - (-1.0)).abs() < 1e-3);
         assert!((pool.get(b).vel.x - 1.0).abs() < 1e-3);
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn parallel_contacts_bit_match_sequential_chain() {
+        let mut pool = BeadPool::with_capacity(32);
+        let mut stack = [Op::nop(); STACK_CAP];
+        stack[0] = Op::sig_legacy(0);
+        for i in 0..30 {
+            pool.alloc(Bead {
+                pos: Vec2::new(15.0, 5.0 + i as f32 * 0.667),
+                vel: Vec2::new(0.0, if i % 2 == 0 { 0.5 } else { -0.5 }),
+                tag: Tag::Wire,
+                payload: 0,
+                alive: true,
+                born_this_substep: false,
+                stack_len: 1,
+                stack,
+            });
+        }
+        let mut grid_a = Grid::new(30.0);
+        let mut grid_b = Grid::new(30.0);
+        let seq = compute_active_contacts(&pool, &mut grid_a, 1.0 / 240.0);
+        let par = compute_active_contacts_par(&pool, &mut grid_b, 1.0 / 240.0);
+        assert_eq!(par.len(), seq.len());
+        for (a, b) in par.iter().zip(seq.iter()) {
+            assert_eq!(a.a, b.a);
+            assert_eq!(a.b, b.b);
+            assert_eq!(a.t.to_bits(), b.t.to_bits(), "TOI must bit-match");
+        }
     }
 
     #[test]
