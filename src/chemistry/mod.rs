@@ -9,6 +9,9 @@ pub use compiled::{
     BeadKey, BirthState, CompiledChemistry, NewState, ReactionKind, Rule, Side, Tag,
 };
 
+pub mod compiler;
+pub use compiler::compile_chemistry;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Action {
     Reflect,
