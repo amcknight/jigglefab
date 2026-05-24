@@ -10,6 +10,7 @@ pub mod app;
 pub mod bench;
 pub mod scheduler;
 pub mod gpu;
+pub mod parallel;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn run() -> anyhow::Result<()> {
