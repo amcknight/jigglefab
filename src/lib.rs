@@ -14,6 +14,7 @@ pub mod bench;
 pub mod scheduler;
 pub mod gpu;
 pub mod parallel;
+pub mod scheduler_selector;
 pub mod speed;
 
 #[cfg(not(target_arch = "wasm32"))]
