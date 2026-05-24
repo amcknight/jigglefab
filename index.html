@@ -33,6 +33,31 @@
             line-height: 1.5;
         }
         #fallback a { color: #8af; }
+        #hud {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            padding: 6px 10px;
+            background: rgba(0, 0, 0, 0.45);
+            border-radius: 6px;
+            font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            color: #d8d8e0;
+            pointer-events: auto;
+            user-select: none;
+            -webkit-user-select: none;
+            z-index: 10;
+        }
+        #hud .lbl { color: #888; }
+        #hud .v { color: #fff; }
+        #hud .warn { color: #f88; }
+        #hud .ok { color: #8f8; }
+        #hud[data-collapsed="true"] .body { display: none; }
+        #hud .toggle {
+            cursor: pointer;
+            color: #888;
+            float: right;
+            margin-left: 8px;
+        }
     </style>
 </head>
 <body>
@@ -41,5 +66,69 @@
         <p>Loading… if nothing appears within a few seconds, your browser may not support WebGPU.</p>
         <p>Tested on Chrome / Edge desktop (113+), Chrome Android (121+), Safari iOS 18+.</p>
     </div>
+    <div id="hud">
+        <span class="toggle" id="hud-toggle">[hide]</span>
+        <div class="body">
+            <div><span class="lbl">fab </span><span class="v" id="hud-fab">—</span></div>
+            <div><span class="lbl">beads </span><span class="v" id="hud-beads">—</span></div>
+            <div><span class="lbl">fps </span><span class="v" id="hud-fps">—</span></div>
+            <div><span class="lbl">frame </span><span class="v" id="hud-frame">—</span><span class="lbl"> ms</span></div>
+        </div>
+    </div>
+    <script>
+        // Map fab hash → (display name, bead count). Keep in sync with
+        // pick_fab_from_url in src/app.rs.
+        const FABS = {
+            "wire-20x30":  { name: "wire 20×30", beads: 600 },
+            "wire-40x30":  { name: "wire 40×30", beads: 1200 },
+            "wire-60x30":  { name: "wire 60×30", beads: 1800 },
+            "wire-80x30":  { name: "wire 80×30", beads: 2400 },
+            "wire-100x30": { name: "wire 100×30", beads: 3000 },
+        };
+
+        function currentFab() {
+            const key = (location.hash || "").replace(/^#/, "");
+            return FABS[key] || FABS["wire-20x30"];
+        }
+
+        function paintFabInfo() {
+            const f = currentFab();
+            document.getElementById("hud-fab").textContent = f.name;
+            document.getElementById("hud-beads").textContent = f.beads.toLocaleString();
+        }
+
+        // Reload on hash change so the WASM picks up the new fab (it reads
+        // the hash once at startup).
+        window.addEventListener("hashchange", () => location.reload());
+        paintFabInfo();
+
+        // Sliding-window FPS over the last ~500 ms.
+        const fpsEl = document.getElementById("hud-fps");
+        const frameEl = document.getElementById("hud-frame");
+        const samples = [];
+        function tick(t) {
+            samples.push(t);
+            const cutoff = t - 500;
+            while (samples.length > 1 && samples[0] < cutoff) samples.shift();
+            if (samples.length > 1) {
+                const span = samples[samples.length - 1] - samples[0];
+                const fps = (samples.length - 1) * 1000 / span;
+                const dt = span / (samples.length - 1);
+                fpsEl.textContent = fps.toFixed(1);
+                frameEl.textContent = dt.toFixed(1);
+                fpsEl.className = fps >= 55 ? "v ok" : fps >= 30 ? "v" : "v warn";
+            }
+            requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+
+        // Tap/click the [hide] label to collapse the HUD to just the toggle.
+        const hud = document.getElementById("hud");
+        document.getElementById("hud-toggle").addEventListener("click", () => {
+            const collapsed = hud.getAttribute("data-collapsed") === "true";
+            hud.setAttribute("data-collapsed", collapsed ? "false" : "true");
+            document.getElementById("hud-toggle").textContent = collapsed ? "[hide]" : "[show]";
+        });
+    </script>
 </body>
 </html>
