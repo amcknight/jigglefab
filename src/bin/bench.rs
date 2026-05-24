@@ -114,6 +114,8 @@ mod native {
     fn all_scenarios() -> Vec<Box<dyn Scenario>> {
         let mut s = default_scenarios();
         s.push(Box::new(DisconnectedChains { chain_count: 100, chain_len: 100, world_size: 256.0 }));
+        // 30 000-bead chain workload — the CpuParallelMt perf target.
+        s.push(Box::new(DisconnectedChains { chain_count: 1000, chain_len: 30, world_size: 512.0 }));
         s
     }
 
