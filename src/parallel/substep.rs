@@ -43,6 +43,58 @@ pub fn enforce_bonds(pool: &mut BeadPool, grid: &Grid, bonds: &HashSet<(u32, u32
     }
 }
 
+/// Rayon-parallel version of `do_substep`. Calls the `_par` helpers for
+/// compute_active_contacts, resolve_color, and advance_all. Sort + greedy
+/// coloring stay sequential (coloring is inherently order-dependent).
+/// enforce_bonds stays sequential — bonds can share beads, and the cost
+/// is O(bonds) which is fine.
+///
+/// Bit-identical to do_substep on grey/wire/chain workloads (no Birth) —
+/// verified across 30 substeps by do_substep_mt_bit_matches_do_substep.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn do_substep_mt(
+    pool: &mut BeadPool,
+    grid: &mut Grid,
+    chem: &CompiledChemistry,
+    bonds: &mut HashSet<(u32, u32)>,
+    dt_sub: f32,
+) {
+    let contacts = compute_active_contacts_par(pool, grid, dt_sub);
+    if contacts.is_empty() {
+        advance_all_par(pool, grid, dt_sub);
+        clear_substep_flags(pool);
+        return;
+    }
+    let colors = coloring::color_pairs(&contacts);
+    let max_color = colors.iter().copied().max().unwrap_or(0);
+    let mut pending_bonds: Vec<(u32, u32)> = Vec::new();
+    let mut pending_deaths: Vec<u32> = Vec::new();
+    for c in 0..=max_color {
+        let mut pairs_in_color: Vec<Pair> = contacts
+            .iter()
+            .enumerate()
+            .filter_map(|(i, p)| if colors[i] == c { Some(*p) } else { None })
+            .collect();
+        pairs_in_color.sort_by(|p, q| (p.t, p.a, p.b).partial_cmp(&(q.t, q.a, q.b)).unwrap());
+        resolve_color_par(
+            &pairs_in_color, pool, chem, grid, bonds,
+            &mut pending_bonds, &mut pending_deaths,
+        );
+    }
+    advance_all_par(pool, grid, dt_sub);
+    pending_bonds.sort_unstable();
+    pending_bonds.dedup();
+    for pair in pending_bonds {
+        bonds.insert(pair);
+    }
+    for slot in pending_deaths {
+        pool.free(slot);
+        bonds.retain(|&(a, b)| a != slot && b != slot);
+    }
+    enforce_bonds(pool, grid, bonds);
+    clear_substep_flags(pool);
+}
+
 pub fn do_substep(
     pool: &mut BeadPool,
     grid: &mut Grid,
@@ -563,6 +615,68 @@ mod tests {
         do_substep(&mut pool, &mut grid, &chem, &mut bonds, 1.0);
         assert!((pool.get(a).vel.x - (-1.0)).abs() < 1e-3);
         assert!((pool.get(b).vel.x - 1.0).abs() < 1e-3);
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn do_substep_mt_bit_matches_do_substep() {
+        use std::collections::HashSet;
+        fn build_chain() -> (BeadPool, HashSet<(u32, u32)>) {
+            let mut pool = BeadPool::with_capacity(64);
+            let mut stack = [Op::nop(); STACK_CAP];
+            stack[0] = Op::sig_legacy(0);
+            for i in 0..30u32 {
+                pool.alloc(Bead {
+                    pos: Vec2::new(15.0, 5.0 + i as f32 * 0.667),
+                    vel: Vec2::new(0.0, if i % 2 == 0 { 0.4 } else { -0.4 }),
+                    tag: Tag::Wire,
+                    payload: 0,
+                    alive: true,
+                    born_this_substep: false,
+                    stack_len: 1,
+                    stack,
+                });
+            }
+            let mut bonds = HashSet::new();
+            for i in 0..29u32 {
+                bonds.insert((i, i + 1));
+            }
+            (pool, bonds)
+        }
+        let (mut pool_seq, mut bonds_seq) = build_chain();
+        let (mut pool_par, mut bonds_par) = build_chain();
+        let chem = {
+            let mut c = crate::chemistry::CompiledChemistry::empty();
+            let key = crate::chemistry::BeadKey {
+                tag: Tag::Wire,
+                top_op: Op::sig_legacy(0),
+            };
+            let rule = crate::chemistry::Rule {
+                kind: crate::chemistry::ReactionKind::Exchange,
+                new_state_a: crate::chemistry::NewState::keep_with(Op::sig_legacy(0)),
+                new_state_b: crate::chemistry::NewState::keep_with(Op::sig_legacy(0)),
+                birth_state: None,
+            };
+            c.insert_rule(key, key, crate::chemistry::Side::Out, rule.clone());
+            c.insert_rule(key, key, crate::chemistry::Side::In, rule);
+            c
+        };
+        let mut grid_seq = Grid::new(30.0);
+        let mut grid_par = Grid::new(30.0);
+        let dt = 1.0 / 240.0;
+        for _ in 0..30 {
+            do_substep(&mut pool_seq, &mut grid_seq, &chem, &mut bonds_seq, dt);
+            do_substep_mt(&mut pool_par, &mut grid_par, &chem, &mut bonds_par, dt);
+        }
+        for slot in 0..30u32 {
+            let a = pool_seq.get(slot);
+            let b = pool_par.get(slot);
+            assert_eq!(a.pos.x.to_bits(), b.pos.x.to_bits(), "slot {slot} pos.x");
+            assert_eq!(a.pos.y.to_bits(), b.pos.y.to_bits(), "slot {slot} pos.y");
+            assert_eq!(a.vel.x.to_bits(), b.vel.x.to_bits(), "slot {slot} vel.x");
+            assert_eq!(a.vel.y.to_bits(), b.vel.y.to_bits(), "slot {slot} vel.y");
+        }
+        assert_eq!(bonds_seq, bonds_par);
     }
 
     #[cfg(not(target_arch = "wasm32"))]
