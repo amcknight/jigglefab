@@ -42,15 +42,15 @@ const FAB_20X30: &str = include_str!("../fabs/wire-20x30.toml");
 #[cfg(target_arch = "wasm32")]
 const FAB_40X30: &str = include_str!("../fabs/wire-40x30.toml");
 #[cfg(target_arch = "wasm32")]
-const FAB_60X30: &str = include_str!("../fabs/wire-60x30.toml");
-#[cfg(target_arch = "wasm32")]
-const FAB_80X30: &str = include_str!("../fabs/wire-80x30.toml");
-#[cfg(target_arch = "wasm32")]
 const FAB_100X30: &str = include_str!("../fabs/wire-100x30.toml");
 #[cfg(target_arch = "wasm32")]
-const FAB_100X30X10: &str = include_str!("../fabs/wire-100x30x10.toml");
+const FAB_20X20X20: &str = include_str!("../fabs/wire-20x20x20.toml");
 #[cfg(target_arch = "wasm32")]
-const FAB_1000X30: &str = include_str!("../fabs/wire-1000x30.toml");
+const FAB_30X30X10: &str = include_str!("../fabs/wire-30x30x10.toml");
+#[cfg(target_arch = "wasm32")]
+const FAB_50X50X4: &str = include_str!("../fabs/wire-50x50x4.toml");
+#[cfg(target_arch = "wasm32")]
+const FAB_100X30X10: &str = include_str!("../fabs/wire-100x30x10.toml");
 #[cfg(target_arch = "wasm32")]
 const CHEMISTRY_TOML: &str = include_str!("../chemistries/wire.toml");
 
@@ -62,11 +62,11 @@ fn pick_fab_from_url() -> (&'static str, &'static str) {
     let key = hash.trim_start_matches('#');
     match key {
         "wire-40x30" => ("wire-40x30", FAB_40X30),
-        "wire-60x30" => ("wire-60x30", FAB_60X30),
-        "wire-80x30" => ("wire-80x30", FAB_80X30),
         "wire-100x30" => ("wire-100x30", FAB_100X30),
+        "wire-20x20x20" => ("wire-20x20x20", FAB_20X20X20),
+        "wire-30x30x10" => ("wire-30x30x10", FAB_30X30X10),
+        "wire-50x50x4" => ("wire-50x50x4", FAB_50X50X4),
         "wire-100x30x10" => ("wire-100x30x10", FAB_100X30X10),
-        "wire-1000x30" => ("wire-1000x30", FAB_1000X30),
         _ => ("wire-20x30", FAB_20X30),
     }
 }

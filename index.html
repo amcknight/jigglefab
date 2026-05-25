@@ -167,13 +167,13 @@
         // bead count, and a `group` so we can section by chemistry as more
         // configs are added (wire / sem / future).
         const FABS = [
-            { key: "wire-20x30",  label: "20×30",  name: "wire 20×30",  beads: 600,  group: "wire" },
-            { key: "wire-40x30",  label: "40×30",  name: "wire 40×30",  beads: 1200, group: "wire" },
-            { key: "wire-60x30",  label: "60×30",  name: "wire 60×30",  beads: 1800, group: "wire" },
-            { key: "wire-80x30",  label: "80×30",  name: "wire 80×30",  beads: 2400, group: "wire" },
-            { key: "wire-100x30", label: "100×30", name: "wire 100×30", beads: 3000, group: "wire" },
-            { key: "wire-100x30x10", label: "100×30×10", name: "wire 100×30 × 10 rows", beads: 30000, group: "wire" },
-            { key: "wire-1000x30", label: "1000×30", name: "wire 1000×30 (one wide row)", beads: 30000, group: "wire" },
+            { key: "wire-20x30",     label: "20×30",     name: "wire 20×30",                  beads: 600,   group: "wire" },
+            { key: "wire-40x30",     label: "40×30",     name: "wire 40×30",                  beads: 1200,  group: "wire" },
+            { key: "wire-100x30",    label: "100×30",    name: "wire 100×30",                 beads: 3000,  group: "wire" },
+            { key: "wire-20x20x20",  label: "20×20×20",  name: "wire 20×20 × 20 rows",        beads: 8000,  group: "wire" },
+            { key: "wire-30x30x10",  label: "30×30×10",  name: "wire 30×30 × 10 rows",        beads: 9000,  group: "wire" },
+            { key: "wire-50x50x4",   label: "50×50×4",   name: "wire 50×50 × 4 rows",         beads: 10000, group: "wire" },
+            { key: "wire-100x30x10", label: "100×30×10", name: "wire 100×30 × 10 rows",       beads: 30000, group: "wire" },
         ];
         const DEFAULT_KEY = "wire-20x30";
         const FABS_BY_KEY = Object.fromEntries(FABS.map(f => [f.key, f]));
