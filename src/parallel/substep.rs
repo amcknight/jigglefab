@@ -156,6 +156,7 @@ pub fn do_substep(
     }
     for slot in pending_deaths {
         pool.free(slot);
+        grid.remove_bead(slot);
         bonds.retain(|&(a, b)| a != slot && b != slot);
     }
     let t = Instant::now();
@@ -201,12 +202,16 @@ pub(crate) fn clear_substep_flags(pool: &mut BeadPool) {
 
 pub fn compute_active_contacts(pool: &BeadPool, grid: &mut Grid, dt_sub: f32) -> Vec<Pair> {
     let t = Instant::now();
-    grid.clear();
+    // Incremental binning: most beads stay in their cell across a substep
+    // (at dt_sub=1/240 with unit speed, a bead moves 0.004 units in a cell
+    // 2 units wide). update_position short-circuits when the cell hasn't
+    // changed, so this loop is dominated by the alive_slots iteration
+    // itself rather than per-bead insert work.
     for slot in pool.alive_slots() {
         if pool.get(slot).born_this_substep {
             continue;
         }
-        grid.insert(slot, pool.get(slot).pos);
+        grid.update_position(slot, pool.get(slot).pos);
     }
     profile::CT_BIN_NS.fetch_add(t.elapsed().as_nanos() as u64, Ordering::Relaxed);
     let t = Instant::now();
