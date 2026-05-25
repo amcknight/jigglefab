@@ -16,6 +16,7 @@ pub mod gpu;
 pub mod parallel;
 pub mod scheduler_selector;
 pub mod speed;
+pub mod telemetry;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn run() -> anyhow::Result<()> {

@@ -110,6 +110,29 @@ fn install_window_frame_counter() {
     cb.forget();
 }
 
+#[cfg(target_arch = "wasm32")]
+fn install_window_speed_stats() {
+    use wasm_bindgen::closure::Closure;
+    use wasm_bindgen::JsCast;
+
+    let cb = Closure::wrap(Box::new(|| -> js_sys::Array {
+        let arr = js_sys::Array::new();
+        arr.push(&wasm_bindgen::JsValue::from_f64(crate::telemetry::min() as f64));
+        arr.push(&wasm_bindgen::JsValue::from_f64(crate::telemetry::mean() as f64));
+        arr.push(&wasm_bindgen::JsValue::from_f64(crate::telemetry::max() as f64));
+        arr
+    }) as Box<dyn Fn() -> js_sys::Array>);
+
+    if let Some(window) = web_sys::window() {
+        let _ = js_sys::Reflect::set(
+            &window,
+            &wasm_bindgen::JsValue::from_str("__jigglefabSpeedStats"),
+            cb.as_ref().unchecked_ref(),
+        );
+    }
+    cb.forget();
+}
+
 pub enum UserEvent {
     RendererReady(Renderer),
 }
@@ -234,6 +257,7 @@ impl ApplicationHandler<UserEvent> for App {
             self.scheduler = Box::new(CpuParallel::new(&sim, compiled));
             install_window_speed_setter();
             install_window_frame_counter();
+            install_window_speed_stats();
 
             let proxy = self.proxy.clone().expect("proxy not set before resumed()");
             let window_clone = window.clone();
@@ -298,6 +322,7 @@ impl ApplicationHandler<UserEvent> for App {
                     }
                 }
                 let sim = self.sim.as_mut().unwrap();
+                crate::telemetry::update_from_velocities(&sim.velocities);
                 renderer.update_beads(&sim.positions, &sim.states);
                 if let Err(e) = renderer.render(sim.positions.len()) {
                     log::warn!("render error: {e:?}");

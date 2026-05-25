@@ -156,6 +156,7 @@
             <div><span class="lbl">beads </span><span class="v" id="hud-beads">—</span></div>
             <div><span class="lbl">fps </span><span class="v" id="hud-fps">—</span></div>
             <div><span class="lbl">frame </span><span class="v" id="hud-frame">—</span><span class="lbl"> ms</span></div>
+            <div><span class="lbl">|v| </span><span class="v" id="hud-vmin">—</span><span class="lbl"> / </span><span class="v" id="hud-vmean">—</span><span class="lbl"> / </span><span class="v" id="hud-vmax">—</span><span class="lbl"> (min/mean/max)</span></div>
         </div>
     </div>
     <nav id="speed-picker"></nav>
@@ -284,10 +285,19 @@
         // of how slow the wasm work is).
         const fpsEl = document.getElementById("hud-fps");
         const frameEl = document.getElementById("hud-frame");
+        const vminEl = document.getElementById("hud-vmin");
+        const vmeanEl = document.getElementById("hud-vmean");
+        const vmaxEl = document.getElementById("hud-vmax");
         const samples = [];
         function tick(t) {
             const fc = window.__jigglefabFrameCount ? window.__jigglefabFrameCount() : 0;
             samples.push({ t, fc });
+            if (window.__jigglefabSpeedStats) {
+                const [smin, smean, smax] = window.__jigglefabSpeedStats();
+                vminEl.textContent = smin.toFixed(3);
+                vmeanEl.textContent = smean.toFixed(3);
+                vmaxEl.textContent = smax.toFixed(3);
+            }
             const cutoff = t - 1000;
             while (samples.length > 1 && samples[0].t < cutoff) samples.shift();
             if (samples.length > 1) {
