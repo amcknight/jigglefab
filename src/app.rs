@@ -4,8 +4,14 @@ use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 #[cfg(target_arch = "wasm32")]
 use winit::event_loop::EventLoopProxy;
 use winit::window::{Window, WindowId};
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
 use web_time::Instant;
+
+/// Monotonic count of completed `RedrawRequested` handlers. Read by the web
+/// HUD (via `window.__jigglefabFrameCount`) to measure the real sim+render
+/// frame rate, independent of the browser's vsync rAF tick rate.
+pub static FRAME_COUNT: AtomicU32 = AtomicU32::new(0);
 
 #[cfg(not(target_arch = "wasm32"))]
 use crate::bench::chains::DisconnectedChains;
@@ -79,6 +85,25 @@ fn install_window_speed_setter() {
         let _ = js_sys::Reflect::set(
             &window,
             &wasm_bindgen::JsValue::from_str("__jigglefabSetSpeed"),
+            cb.as_ref().unchecked_ref(),
+        );
+    }
+    cb.forget();
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_window_frame_counter() {
+    use wasm_bindgen::closure::Closure;
+    use wasm_bindgen::JsCast;
+
+    let cb = Closure::wrap(Box::new(|| -> u32 {
+        FRAME_COUNT.load(Ordering::Relaxed)
+    }) as Box<dyn Fn() -> u32>);
+
+    if let Some(window) = web_sys::window() {
+        let _ = js_sys::Reflect::set(
+            &window,
+            &wasm_bindgen::JsValue::from_str("__jigglefabFrameCount"),
             cb.as_ref().unchecked_ref(),
         );
     }
@@ -208,6 +233,7 @@ impl ApplicationHandler<UserEvent> for App {
             let compiled = compile_chemistry(sim.chemistry()).expect("compile chemistry");
             self.scheduler = Box::new(CpuParallel::new(&sim, compiled));
             install_window_speed_setter();
+            install_window_frame_counter();
 
             let proxy = self.proxy.clone().expect("proxy not set before resumed()");
             let window_clone = window.clone();
@@ -276,6 +302,7 @@ impl ApplicationHandler<UserEvent> for App {
                 if let Err(e) = renderer.render(sim.positions.len()) {
                     log::warn!("render error: {e:?}");
                 }
+                FRAME_COUNT.fetch_add(1, Ordering::Relaxed);
                 window.request_redraw();
                 self.last_frame = Instant::now();
             }

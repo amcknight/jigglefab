@@ -278,21 +278,37 @@
         paintPicker();
         paintSpeedPicker();
 
-        // Sliding-window FPS over the last ~500 ms.
+        // Sliding-window FPS over the last ~1000 ms. Reads the wasm-side
+        // frame counter so the rate reflects real sim+render frames, not
+        // the browser's vsync rAF tick rate (which is ~60 Hz regardless
+        // of how slow the wasm work is).
         const fpsEl = document.getElementById("hud-fps");
         const frameEl = document.getElementById("hud-frame");
         const samples = [];
         function tick(t) {
-            samples.push(t);
-            const cutoff = t - 500;
-            while (samples.length > 1 && samples[0] < cutoff) samples.shift();
+            const fc = window.__jigglefabFrameCount ? window.__jigglefabFrameCount() : 0;
+            samples.push({ t, fc });
+            const cutoff = t - 1000;
+            while (samples.length > 1 && samples[0].t < cutoff) samples.shift();
             if (samples.length > 1) {
-                const span = samples[samples.length - 1] - samples[0];
-                const fps = (samples.length - 1) * 1000 / span;
-                const dt = span / (samples.length - 1);
-                fpsEl.textContent = fps.toFixed(1);
-                frameEl.textContent = dt.toFixed(1);
-                fpsEl.className = fps >= 55 ? "v ok" : fps >= 30 ? "v" : "v warn";
+                const first = samples[0];
+                const last = samples[samples.length - 1];
+                const span = last.t - first.t;
+                const frames = last.fc - first.fc;
+                if (frames > 0 && span > 0) {
+                    const fps = frames * 1000 / span;
+                    const dt = span / frames;
+                    fpsEl.textContent = fps.toFixed(1);
+                    frameEl.textContent = dt.toFixed(1);
+                    fpsEl.className = fps >= 55 ? "v ok" : fps >= 30 ? "v" : "v warn";
+                } else {
+                    // No wasm frames advanced in the window — render is
+                    // stuck or below 1 fps. Show a lower bound so it's
+                    // visibly different from "60 fps".
+                    fpsEl.textContent = "<1";
+                    frameEl.textContent = ">" + span.toFixed(0);
+                    fpsEl.className = "v warn";
+                }
             }
             requestAnimationFrame(tick);
         }
