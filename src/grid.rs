@@ -82,6 +82,20 @@ impl Grid {
         self.cell_in_set_at[cell_idx] = -1;
     }
 
+    /// Remove `bead_id` from `cells[cell_idx]` and mark the cell empty if
+    /// it ends up so. Precondition: `bead_id` MUST be in `cells[cell_idx]`
+    /// — callers must check `cell_of_bead` before calling.
+    fn remove_bead_from_cell(&mut self, bead_id: u32, cell_idx: usize) {
+        let pos = self.cells[cell_idx]
+            .iter()
+            .position(|&id| id == bead_id)
+            .expect("bead_id missing from cell it claims to be in");
+        self.cells[cell_idx].swap_remove(pos);
+        if self.cells[cell_idx].is_empty() {
+            self.mark_cell_empty(cell_idx);
+        }
+    }
+
     /// Insert a bead into the grid. Must only be called after `clear()` or
     /// for a `bead_id` that's never been inserted — use `update_position` to
     /// move an existing bead.
@@ -107,15 +121,7 @@ impl Grid {
             return;
         }
         if old_cell >= 0 {
-            let old = old_cell as usize;
-            let pos_in_cell = self.cells[old]
-                .iter()
-                .position(|&id| id == bead_id)
-                .expect("bead_id missing from cell it claims to be in");
-            self.cells[old].swap_remove(pos_in_cell);
-            if self.cells[old].is_empty() {
-                self.mark_cell_empty(old);
-            }
+            self.remove_bead_from_cell(bead_id, old_cell as usize);
         }
         let new = new_cell as usize;
         self.cells[new].push(bead_id);
@@ -134,13 +140,7 @@ impl Grid {
         if cell < 0 {
             return;
         }
-        let c = cell as usize;
-        if let Some(p) = self.cells[c].iter().position(|&id| id == bead_id) {
-            self.cells[c].swap_remove(p);
-        }
-        if self.cells[c].is_empty() {
-            self.mark_cell_empty(c);
-        }
+        self.remove_bead_from_cell(bead_id, cell as usize);
         self.cell_of_bead[bead_id as usize] = -1;
     }
 

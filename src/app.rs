@@ -71,50 +71,47 @@ fn pick_fab_from_url() -> (&'static str, &'static str) {
     }
 }
 
+/// Stash a `Closure` on `window` under `name` and leak it for the page's
+/// lifetime. The closure must be `'static` (the macro doesn't check, but
+/// `forget()` would otherwise complain). Used by `install_window_*` below
+/// to keep each bridge to ~5 lines.
+#[cfg(target_arch = "wasm32")]
+macro_rules! expose_to_window {
+    ($name:expr, $cb:expr) => {{
+        use wasm_bindgen::JsCast;
+        let cb = $cb;
+        if let Some(window) = web_sys::window() {
+            let _ = js_sys::Reflect::set(
+                &window,
+                &wasm_bindgen::JsValue::from_str($name),
+                cb.as_ref().unchecked_ref(),
+            );
+        }
+        cb.forget();
+    }};
+}
+
 #[cfg(target_arch = "wasm32")]
 fn install_window_speed_setter() {
     use wasm_bindgen::closure::Closure;
-    use wasm_bindgen::JsCast;
-
-    // Closure is leaked intentionally — it lives for the lifetime of the page.
     let cb = Closure::wrap(Box::new(|m: f32| {
         crate::speed::set_speed(m);
     }) as Box<dyn Fn(f32)>);
-
-    if let Some(window) = web_sys::window() {
-        let _ = js_sys::Reflect::set(
-            &window,
-            &wasm_bindgen::JsValue::from_str("__jigglefabSetSpeed"),
-            cb.as_ref().unchecked_ref(),
-        );
-    }
-    cb.forget();
+    expose_to_window!("__jigglefabSetSpeed", cb);
 }
 
 #[cfg(target_arch = "wasm32")]
 fn install_window_frame_counter() {
     use wasm_bindgen::closure::Closure;
-    use wasm_bindgen::JsCast;
-
     let cb = Closure::wrap(Box::new(|| -> u32 {
         FRAME_COUNT.load(Ordering::Relaxed)
     }) as Box<dyn Fn() -> u32>);
-
-    if let Some(window) = web_sys::window() {
-        let _ = js_sys::Reflect::set(
-            &window,
-            &wasm_bindgen::JsValue::from_str("__jigglefabFrameCount"),
-            cb.as_ref().unchecked_ref(),
-        );
-    }
-    cb.forget();
+    expose_to_window!("__jigglefabFrameCount", cb);
 }
 
 #[cfg(target_arch = "wasm32")]
 fn install_window_speed_stats() {
     use wasm_bindgen::closure::Closure;
-    use wasm_bindgen::JsCast;
-
     let cb = Closure::wrap(Box::new(|| -> js_sys::Array {
         let arr = js_sys::Array::new();
         arr.push(&wasm_bindgen::JsValue::from_f64(crate::telemetry::min() as f64));
@@ -122,15 +119,7 @@ fn install_window_speed_stats() {
         arr.push(&wasm_bindgen::JsValue::from_f64(crate::telemetry::max() as f64));
         arr
     }) as Box<dyn Fn() -> js_sys::Array>);
-
-    if let Some(window) = web_sys::window() {
-        let _ = js_sys::Reflect::set(
-            &window,
-            &wasm_bindgen::JsValue::from_str("__jigglefabSpeedStats"),
-            cb.as_ref().unchecked_ref(),
-        );
-    }
-    cb.forget();
+    expose_to_window!("__jigglefabSpeedStats", cb);
 }
 
 pub enum UserEvent {

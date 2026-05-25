@@ -8,6 +8,26 @@
 
 use std::sync::atomic::{AtomicU64, Ordering};
 
+/// Time the evaluation of `$body` and accumulate the elapsed nanoseconds
+/// into the `AtomicU64` named by `$counter`. The expression's value is
+/// returned, so `let x = time_phase!(COUNTER, expr)` works.
+///
+/// Used in [`crate::parallel::substep`] to keep instrumented phases tight
+/// and to make the inner (sub-)counters vs outer counter relationship
+/// inside `compute_active_contacts` visually explicit.
+#[macro_export]
+macro_rules! time_phase {
+    ($counter:path, $body:expr) => {{
+        let __t = ::web_time::Instant::now();
+        let __r = $body;
+        $counter.fetch_add(
+            __t.elapsed().as_nanos() as u64,
+            ::std::sync::atomic::Ordering::Relaxed,
+        );
+        __r
+    }};
+}
+
 pub static CONTACTS_NS: AtomicU64 = AtomicU64::new(0);
 // Sub-phases inside compute_active_contacts:
 pub static CT_BIN_NS: AtomicU64 = AtomicU64::new(0);

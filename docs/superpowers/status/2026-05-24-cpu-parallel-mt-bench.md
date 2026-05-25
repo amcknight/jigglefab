@@ -43,12 +43,26 @@
   is ~8.8 ms; 88 ms is 10× that. Each substep internally does 4 sub-iters
   (DEFAULT_DT_SUB = 1/240), so 10 × 4 = 40 sub-iters per app-frame at the
   default speed multiplier.
-- Profiling target #1: the `coloring::color_pairs` HashMap allocation, run
-  once per sub-iter. At ~9 k contacts × 40 sub-iters = 360 k allocations per
-  app-frame, this is plausibly hot.
-- Profiling target #2: `enforce_bonds` over the full bond set every sub-iter
-  (sequential, O(bonds)). 29 k bonds × 40 = 1.16 M per app-frame, probably
-  cache-misses dominated.
+
+**Measured 2026-05-25 via `src/parallel/profile.rs` (cpu-parallel, native single-thread, 30 000 beads):**
+
+| phase                          | µs / substep | % of substep |
+|--------------------------------|--------------|--------------|
+| compute_active_contacts        |       3 035 |   **86.9 %** |
+|   └── ccd (next_contact loop)  |       1 744 |   57.6 % of contacts |
+|   └── candidate_pairs          |         895 |   29.6 % of contacts |
+|   └── bin (grid update)        |         384 |   12.7 % of contacts |
+|   └── sort                     |           5 |    0.2 % of contacts |
+| advance_all                    |         297 |    8.5 % |
+| enforce_bonds                  |         119 |    3.4 % |
+| coloring::color_pairs          |          29 |    0.8 % |
+| resolve (per-pair work)        |          20 |    0.6 % |
+
+The pre-measurement targets (`color_pairs` HashMap allocs, `enforce_bonds`
+cache misses) are **not** the bottleneck — combined they're under 5 %.
+The dominant cost is the CCD inner loop in `compute_active_contacts`; the
+right targets are inside that function (distance-based early-out, incremental
+grid binning, skipping bonded pairs).
 
 ## Conclusions
 1. **MT target met** (>7 fps at 30k beads). The user's `wire-100x30x10`
@@ -68,8 +82,11 @@
 - Wire `SCHEDULER=cpu-parallel-mt cargo run --release` on native and
   `#sched=cpu-parallel-mt` on web (no-op since wasm is single-threaded;
   log + fall back to cpu-parallel).
-- Profile MT at chains_1000x30 — flame graph to confirm coloring + enforce_bonds
-  are the next bottlenecks.
+- ~~Profile MT at chains_1000x30 — flame graph to confirm coloring +
+  enforce_bonds are the next bottlenecks.~~ **Done 2026-05-25.** Profile
+  instrumentation landed in `src/parallel/profile.rs`. Conclusion was the
+  opposite: `compute_active_contacts` dominates (87 %), coloring and
+  enforce_bonds are <5 %. See updated "What's still slow" table above.
 - Allocation reuse: stash `bead_to_pairs` HashMap, `pairs_in_color` Vec on
   the scheduler struct, clear-but-reuse across substeps.
 - ReactionKind::Birth in resolve_pair_disjoint: wrap pool allocation in a

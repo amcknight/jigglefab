@@ -80,6 +80,9 @@
 - **Substep loop is at `src/parallel/substep.rs::do_substep`** —
   Phase 2 ports this to WGSL. The pieces map cleanly:
   - `compute_active_contacts` → grid binning + pair list compute pass.
+    **This pass is ~87 % of substep cost at 30 k beads** (measured
+    2026-05-25 via `src/parallel/profile.rs`); GPU parallelism of the
+    CCD inner loop is where the Phase 2 payoff lands.
   - `color_pairs` → graph-colouring compute pass (or CPU pass with
     upload, depending on size).
   - per-color resolve loop → one dispatch per color with a workgroup
