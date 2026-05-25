@@ -24,8 +24,25 @@ pub struct Contact {
 /// noise and let the chain disintegrate.
 pub fn next_contact(p1: Vec2, v1: Vec2, p2: Vec2, v2: Vec2, dt: f32) -> Option<Contact> {
     let d = p2 - p1;
-    let dv = v2 - v1;
     let r = RADIUS;
+
+    // Cheap distance-based early-out. A pair travelling toward each other
+    // at relative speed ≤ MAX_REL_SPEED_FOR_EARLY_OUT moves at most
+    // MAX·dt units closer in the window. If |d| is already larger than
+    // R + MAX·dt, the pair literally cannot reach contact within dt.
+    //
+    // The constant is the *assumed* relative-speed cap, picked with a
+    // generous margin over what we've observed via the speed-stats HUD
+    // (typical max individual ≤ 3.5, so max relative ≤ 7; we use 100 to
+    // stay safe for ~25× headroom). Verify max via the HUD before
+    // lowering. dt-aware so dt=1/240 production and dt~1 tests both work.
+    const MAX_REL_SPEED_FOR_EARLY_OUT: f32 = 100.0;
+    let reach = r + MAX_REL_SPEED_FOR_EARLY_OUT * dt;
+    if d.dot(d) > reach * reach {
+        return None;
+    }
+
+    let dv = v2 - v1;
 
     // Solve |d + dv * t|^2 = r^2
     //   => (dv·dv) t^2 + 2 (d·dv) t + (d·d - r^2) = 0
