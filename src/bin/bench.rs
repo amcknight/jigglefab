@@ -160,6 +160,7 @@ mod native {
         for scenario in &scenarios {
             eprintln!("running {}...", scenario.name());
 
+            jigglefab::parallel::profile::reset();
             let kind = jigglefab::scheduler_selector::SchedulerKind::parse(&parsed.scheduler)
                 .expect("scheduler kind already validated above");
             let (sizing_sim, _) = scenario.build();
@@ -193,6 +194,30 @@ mod native {
                 r.name, r.bead_count, r.frame_time_ms.mean, r.frame_time_ms.p99,
                 r.effective_fps, r.bonds_preserved, r.truncated,
             );
+            let p = jigglefab::parallel::profile::snapshot();
+            if p.substeps > 0 {
+                let total = p.total_ns().max(1) as f64;
+                let pct = |ns: u64| (ns as f64) * 100.0 / total;
+                let mean_us = |ns: u64| (ns as f64) / 1000.0 / (p.substeps as f64);
+                eprintln!(
+                    "  phase % (mean µs/substep over {} substeps):  contacts {:.1}% ({:.1}µs)  color {:.1}% ({:.1}µs)  resolve {:.1}% ({:.1}µs)  advance {:.1}% ({:.1}µs)  bonds {:.1}% ({:.1}µs)",
+                    p.substeps,
+                    pct(p.contacts_ns), mean_us(p.contacts_ns),
+                    pct(p.color_ns), mean_us(p.color_ns),
+                    pct(p.resolve_ns), mean_us(p.resolve_ns),
+                    pct(p.advance_ns), mean_us(p.advance_ns),
+                    pct(p.bonds_ns), mean_us(p.bonds_ns),
+                );
+                let ct_total = (p.ct_bin_ns + p.ct_candidates_ns + p.ct_ccd_ns + p.ct_sort_ns).max(1) as f64;
+                let ct_pct = |ns: u64| (ns as f64) * 100.0 / ct_total;
+                eprintln!(
+                    "    contacts breakdown: bin {:.1}% ({:.1}µs)  candidates {:.1}% ({:.1}µs)  ccd {:.1}% ({:.1}µs)  sort {:.1}% ({:.1}µs)",
+                    ct_pct(p.ct_bin_ns), mean_us(p.ct_bin_ns),
+                    ct_pct(p.ct_candidates_ns), mean_us(p.ct_candidates_ns),
+                    ct_pct(p.ct_ccd_ns), mean_us(p.ct_ccd_ns),
+                    ct_pct(p.ct_sort_ns), mean_us(p.ct_sort_ns),
+                );
+            }
             results.push(r);
         }
 

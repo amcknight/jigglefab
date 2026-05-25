@@ -1,9 +1,13 @@
 use std::collections::HashSet;
+use std::sync::atomic::Ordering;
+
+use web_time::Instant;
 
 use crate::ccd::{next_contact, RADIUS};
 use crate::chemistry::CompiledChemistry;
 use crate::collide::reflect;
 use crate::grid::Grid;
+use crate::parallel::profile;
 use crate::parallel::{coloring, resolve, BeadPool, Pair};
 
 const BOND_EPS: f32 = 1e-5;
@@ -102,16 +106,24 @@ pub fn do_substep(
     bonds: &mut HashSet<(u32, u32)>,
     dt_sub: f32,
 ) {
+    let t = Instant::now();
     let contacts = compute_active_contacts(pool, grid, dt_sub);
+    profile::CONTACTS_NS.fetch_add(t.elapsed().as_nanos() as u64, Ordering::Relaxed);
     if contacts.is_empty() {
+        let t = Instant::now();
         advance_all(pool, grid, dt_sub);
+        profile::ADVANCE_NS.fetch_add(t.elapsed().as_nanos() as u64, Ordering::Relaxed);
         clear_substep_flags(pool);
+        profile::SUBSTEPS.fetch_add(1, Ordering::Relaxed);
         return;
     }
+    let t = Instant::now();
     let colors = coloring::color_pairs(&contacts);
+    profile::COLOR_NS.fetch_add(t.elapsed().as_nanos() as u64, Ordering::Relaxed);
     let max_color = colors.iter().copied().max().unwrap_or(0);
     let mut pending_bonds: Vec<(u32, u32)> = Vec::new();
     let mut pending_deaths: Vec<u32> = Vec::new();
+    let t = Instant::now();
     for c in 0..=max_color {
         let mut pairs_in_color: Vec<&Pair> = contacts
             .iter()
@@ -133,7 +145,10 @@ pub fn do_substep(
             resolve::resolve_pair(pair, &mut ctx);
         }
     }
+    profile::RESOLVE_NS.fetch_add(t.elapsed().as_nanos() as u64, Ordering::Relaxed);
+    let t = Instant::now();
     advance_all(pool, grid, dt_sub);
+    profile::ADVANCE_NS.fetch_add(t.elapsed().as_nanos() as u64, Ordering::Relaxed);
     pending_bonds.sort_unstable();
     pending_bonds.dedup();
     for pair in pending_bonds {
@@ -143,8 +158,11 @@ pub fn do_substep(
         pool.free(slot);
         bonds.retain(|&(a, b)| a != slot && b != slot);
     }
+    let t = Instant::now();
     enforce_bonds(pool, grid, bonds);
+    profile::BONDS_NS.fetch_add(t.elapsed().as_nanos() as u64, Ordering::Relaxed);
     clear_substep_flags(pool);
+    profile::SUBSTEPS.fetch_add(1, Ordering::Relaxed);
 }
 
 pub(crate) fn advance_all(pool: &mut BeadPool, grid: &Grid, dt_sub: f32) {
@@ -182,6 +200,7 @@ pub(crate) fn clear_substep_flags(pool: &mut BeadPool) {
 }
 
 pub fn compute_active_contacts(pool: &BeadPool, grid: &mut Grid, dt_sub: f32) -> Vec<Pair> {
+    let t = Instant::now();
     grid.clear();
     for slot in pool.alive_slots() {
         if pool.get(slot).born_this_substep {
@@ -189,7 +208,11 @@ pub fn compute_active_contacts(pool: &BeadPool, grid: &mut Grid, dt_sub: f32) ->
         }
         grid.insert(slot, pool.get(slot).pos);
     }
+    profile::CT_BIN_NS.fetch_add(t.elapsed().as_nanos() as u64, Ordering::Relaxed);
+    let t = Instant::now();
     let candidates = grid.candidate_pairs();
+    profile::CT_CANDIDATES_NS.fetch_add(t.elapsed().as_nanos() as u64, Ordering::Relaxed);
+    let t = Instant::now();
     let mut out = Vec::with_capacity(candidates.len());
     for (a, b) in candidates {
         let ba = pool.get(a);
@@ -205,8 +228,11 @@ pub fn compute_active_contacts(pool: &BeadPool, grid: &mut Grid, dt_sub: f32) ->
             out.push(Pair { a, b, t: c.t });
         }
     }
+    profile::CT_CCD_NS.fetch_add(t.elapsed().as_nanos() as u64, Ordering::Relaxed);
+    let t = Instant::now();
     // Stable ordering by (t, a, b) so coloring + resolve are deterministic.
     out.sort_by(|p, q| (p.t, p.a, p.b).partial_cmp(&(q.t, q.a, q.b)).unwrap());
+    profile::CT_SORT_NS.fetch_add(t.elapsed().as_nanos() as u64, Ordering::Relaxed);
     out
 }
 
