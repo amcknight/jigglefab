@@ -13,6 +13,35 @@ use web_time::Instant;
 /// frame rate, independent of the browser's vsync rAF tick rate.
 pub static FRAME_COUNT: AtomicU32 = AtomicU32::new(0);
 
+#[cfg(target_arch = "wasm32")]
+mod web_bridge {
+    use std::cell::RefCell;
+
+    /// Pending commands from the JS toolbar, drained by the App each frame.
+    #[derive(Default)]
+    pub struct PendingCommands {
+        pub set_mode: Option<crate::editor::Mode>,
+        pub set_edit_state: Option<u32>,
+        pub set_chemistry: Option<String>,
+    }
+
+    thread_local! {
+        pub static COMMANDS: RefCell<PendingCommands> = RefCell::new(PendingCommands::default());
+        /// Latest snapshot the App writes after each frame. The toolbar
+        /// reads these via the getter closures.
+        pub static SNAPSHOT: RefCell<Snapshot> = RefCell::new(Snapshot::default());
+    }
+
+    #[derive(Default, Clone)]
+    pub struct Snapshot {
+        pub mode: &'static str,        // "edit" or "run"
+        pub bead_count: u32,
+        pub chemistry_name: String,
+        // (state_name, [r,g,b]) for each state in current chemistry.
+        pub palette: Vec<(String, [f32; 3])>,
+    }
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 use crate::bench::chains::DisconnectedChains;
 #[cfg(not(target_arch = "wasm32"))]
@@ -118,6 +147,73 @@ fn install_window_speed_stats() {
     expose_to_window!("__jigglefabSpeedStats", cb);
 }
 
+#[cfg(target_arch = "wasm32")]
+fn install_window_get_mode() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|| -> String {
+        web_bridge::SNAPSHOT.with(|s| s.borrow().mode.to_string())
+    }) as Box<dyn Fn() -> String>);
+    expose_to_window!("__jigglefabGetMode", cb);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_window_set_mode() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|m: String| {
+        let mode = match m.as_str() {
+            "edit" => crate::editor::Mode::Edit,
+            "run" => crate::editor::Mode::Run,
+            _ => return,
+        };
+        web_bridge::COMMANDS.with(|c| c.borrow_mut().set_mode = Some(mode));
+    }) as Box<dyn Fn(String)>);
+    expose_to_window!("__jigglefabSetMode", cb);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_window_get_palette() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|| -> js_sys::Array {
+        let outer = js_sys::Array::new();
+        web_bridge::SNAPSHOT.with(|s| {
+            for (name, color) in &s.borrow().palette {
+                let entry = js_sys::Object::new();
+                let _ = js_sys::Reflect::set(
+                    &entry,
+                    &"name".into(),
+                    &wasm_bindgen::JsValue::from_str(name),
+                );
+                let color_arr = js_sys::Array::new();
+                color_arr.push(&wasm_bindgen::JsValue::from_f64(color[0] as f64));
+                color_arr.push(&wasm_bindgen::JsValue::from_f64(color[1] as f64));
+                color_arr.push(&wasm_bindgen::JsValue::from_f64(color[2] as f64));
+                let _ = js_sys::Reflect::set(&entry, &"color".into(), &color_arr);
+                outer.push(&entry);
+            }
+        });
+        outer
+    }) as Box<dyn Fn() -> js_sys::Array>);
+    expose_to_window!("__jigglefabGetPalette", cb);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_window_set_edit_state() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|idx: u32| {
+        web_bridge::COMMANDS.with(|c| c.borrow_mut().set_edit_state = Some(idx));
+    }) as Box<dyn Fn(u32)>);
+    expose_to_window!("__jigglefabSetEditState", cb);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_window_bead_count() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|| -> u32 {
+        web_bridge::SNAPSHOT.with(|s| s.borrow().bead_count)
+    }) as Box<dyn Fn() -> u32>);
+    expose_to_window!("__jigglefabBeadCount", cb);
+}
+
 pub enum UserEvent {
     RendererReady(Renderer),
 }
@@ -192,6 +288,40 @@ impl App {
                     self.scheduler = Box::new(CpuSequential);
                 }
                 self.sim = Some(new_sim);
+            }
+        }
+    }
+
+    fn transition_mode(&mut self, new_mode: crate::editor::Mode) {
+        if self.mode == new_mode { return; }
+        match new_mode {
+            crate::editor::Mode::Edit => {
+                // Stop: snapshot current sim back into scene, drop sim.
+                if let (Some(scene), Some(sim)) = (self.scene.as_mut(), self.sim.as_ref()) {
+                    scene.snapshot_from_sim(sim);
+                }
+                self.sim = None;
+                self.mode = crate::editor::Mode::Edit;
+            }
+            crate::editor::Mode::Run => {
+                // Run: build sim from scene, rebuild scheduler.
+                if let Some(scene) = &self.scene {
+                    let new_sim = scene.to_sim();
+                    #[cfg(target_arch = "wasm32")]
+                    {
+                        use crate::chemistry::compile_chemistry;
+                        use crate::parallel::CpuParallel;
+                        let compiled = compile_chemistry(new_sim.chemistry())
+                            .expect("compile chemistry");
+                        self.scheduler = Box::new(CpuParallel::new(&new_sim, compiled));
+                    }
+                    #[cfg(not(target_arch = "wasm32"))]
+                    {
+                        self.scheduler = Box::new(CpuSequential);
+                    }
+                    self.sim = Some(new_sim);
+                    self.mode = crate::editor::Mode::Run;
+                }
             }
         }
     }
@@ -294,6 +424,11 @@ impl ApplicationHandler<UserEvent> for App {
             install_window_speed_setter();
             install_window_frame_counter();
             install_window_speed_stats();
+            install_window_get_mode();
+            install_window_set_mode();
+            install_window_get_palette();
+            install_window_set_edit_state();
+            install_window_bead_count();
 
             let proxy = self.proxy.clone().expect("proxy not set before resumed()");
             let window_clone = window.clone();
@@ -340,7 +475,7 @@ impl ApplicationHandler<UserEvent> for App {
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
-        let Some(window) = &self.window else { return };
+        let Some(_window) = &self.window else { return };
         match event {
             WindowEvent::CloseRequested => event_loop.exit(),
             WindowEvent::Resized(size) => {
@@ -350,6 +485,24 @@ impl ApplicationHandler<UserEvent> for App {
                 renderer.update_camera(sim.world_size(), &sim.palette());
             }
             WindowEvent::RedrawRequested => {
+                // Clone the Arc so we can call request_redraw() at the end
+                // without holding a borrow of self.window across the whole arm.
+                let Some(window_arc) = self.window.clone() else { return };
+                #[cfg(target_arch = "wasm32")]
+                {
+                    let (new_mode, edit_state) = web_bridge::COMMANDS.with(|c| {
+                        let mut cmds = c.borrow_mut();
+                        (cmds.set_mode.take(), cmds.set_edit_state.take())
+                    });
+                    if let Some(new_mode) = new_mode { self.transition_mode(new_mode); }
+                    if let Some(idx) = edit_state {
+                        if let Some(scene) = self.scene.as_mut() {
+                            if (idx as usize) < scene.chemistry.states.len() {
+                                scene.next_state_idx = idx;
+                            }
+                        }
+                    }
+                }
                 let Some(renderer) = &mut self.renderer else { return };
                 match self.mode {
                     crate::editor::Mode::Run => {
@@ -381,8 +534,35 @@ impl ApplicationHandler<UserEvent> for App {
                         }
                     }
                 }
+                #[cfg(target_arch = "wasm32")]
+                {
+                    let mode_str = match self.mode {
+                        crate::editor::Mode::Edit => "edit",
+                        crate::editor::Mode::Run => "run",
+                    };
+                    let bead_count = match self.mode {
+                        crate::editor::Mode::Edit => self.scene.as_ref().map(|s| s.beads.len() as u32).unwrap_or(0),
+                        crate::editor::Mode::Run => self.sim.as_ref().map(|s| s.positions.len() as u32).unwrap_or(0),
+                    };
+                    let (chem_name, palette) = match &self.scene {
+                        Some(s) => (
+                            s.chemistry_name.clone(),
+                            s.chemistry.states.iter().zip(s.chemistry.colors.iter())
+                                .map(|(n, c)| (n.clone(), *c)).collect::<Vec<_>>(),
+                        ),
+                        None => (String::new(), Vec::new()),
+                    };
+                    web_bridge::SNAPSHOT.with(|s| {
+                        *s.borrow_mut() = web_bridge::Snapshot {
+                            mode: mode_str,
+                            bead_count,
+                            chemistry_name: chem_name,
+                            palette,
+                        };
+                    });
+                }
                 FRAME_COUNT.fetch_add(1, Ordering::Relaxed);
-                window.request_redraw();
+                window_arc.request_redraw();
                 self.last_frame = Instant::now();
             }
             WindowEvent::CursorMoved { position, .. } => {
