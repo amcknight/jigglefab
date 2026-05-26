@@ -53,7 +53,7 @@ struct RuleSpec {
     action: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Chemistry {
     pub states: Vec<String>,
     pub colors: Vec<[f32; 3]>,
