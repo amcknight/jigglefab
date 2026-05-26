@@ -19,8 +19,6 @@ use crate::bench::chains::DisconnectedChains;
 use crate::bench::scenario::Scenario;
 
 #[cfg(target_arch = "wasm32")]
-use crate::chemistry::parse_chemistry;
-#[cfg(target_arch = "wasm32")]
 use crate::fab::parse_fab;
 
 use crate::render::Renderer;
@@ -51,8 +49,6 @@ const FAB_30X30X10: &str = include_str!("../fabs/wire-30x30x10.toml");
 const FAB_50X50X4: &str = include_str!("../fabs/wire-50x50x4.toml");
 #[cfg(target_arch = "wasm32")]
 const FAB_100X30X10: &str = include_str!("../fabs/wire-100x30x10.toml");
-#[cfg(target_arch = "wasm32")]
-const CHEMISTRY_TOML: &str = include_str!("../chemistries/wire.toml");
 
 #[cfg(target_arch = "wasm32")]
 fn pick_fab_from_url() -> (&'static str, &'static str) {
@@ -132,6 +128,9 @@ pub struct App {
     sim: Option<Sim>,
     scheduler: Box<dyn Scheduler>,
     last_frame: Instant,
+    mode: crate::editor::Mode,
+    scene: Option<crate::editor::Scene>,
+    cursor: winit::dpi::PhysicalPosition<f64>,
     #[cfg(target_arch = "wasm32")]
     proxy: Option<EventLoopProxy<UserEvent>>,
 }
@@ -144,6 +143,9 @@ impl App {
             sim: None,
             scheduler: Box::new(CpuSequential),
             last_frame: Instant::now(),
+            mode: crate::editor::Mode::Run,
+            scene: None,
+            cursor: winit::dpi::PhysicalPosition::new(0.0, 0.0),
             #[cfg(target_arch = "wasm32")]
             proxy: None,
         }
@@ -205,8 +207,13 @@ impl ApplicationHandler<UserEvent> for App {
             crate::speed::set_speed(speed);
             log::info!("initial speed = {speed}×");
             let fab = parse_fab(fab_toml).expect("parse fab");
-            let chem = parse_chemistry(CHEMISTRY_TOML).expect("parse chem");
-            Sim::from_fab(&fab, chem)
+            let chemistry_name = fab.meta.chemistry.clone();
+            let chem = crate::editor::load_chemistry_by_name(&chemistry_name)
+                .expect("chemistry from fab not in registry");
+            let scene = crate::editor::Scene::from_fab(&fab, chem, chemistry_name);
+            let sim = scene.to_sim();
+            self.scene = Some(scene);
+            sim
         };
         let world_size = sim.world_size();
         let palette = sim.palette();
