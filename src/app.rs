@@ -214,6 +214,28 @@ fn install_window_bead_count() {
     expose_to_window!("__jigglefabBeadCount", cb);
 }
 
+#[cfg(target_arch = "wasm32")]
+fn install_window_get_chemistries() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|| -> js_sys::Array {
+        let arr = js_sys::Array::new();
+        for name in crate::editor::chemistry_names() {
+            arr.push(&wasm_bindgen::JsValue::from_str(name));
+        }
+        arr
+    }) as Box<dyn Fn() -> js_sys::Array>);
+    expose_to_window!("__jigglefabGetChemistries", cb);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_window_set_chemistry() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|name: String| {
+        web_bridge::COMMANDS.with(|c| c.borrow_mut().set_chemistry = Some(name));
+    }) as Box<dyn Fn(String)>);
+    expose_to_window!("__jigglefabSetChemistry", cb);
+}
+
 pub enum UserEvent {
     RendererReady(Renderer),
 }
@@ -429,6 +451,8 @@ impl ApplicationHandler<UserEvent> for App {
             install_window_get_palette();
             install_window_set_edit_state();
             install_window_bead_count();
+            install_window_get_chemistries();
+            install_window_set_chemistry();
 
             let proxy = self.proxy.clone().expect("proxy not set before resumed()");
             let window_clone = window.clone();
@@ -490,9 +514,9 @@ impl ApplicationHandler<UserEvent> for App {
                 let Some(window_arc) = self.window.clone() else { return };
                 #[cfg(target_arch = "wasm32")]
                 {
-                    let (new_mode, edit_state) = web_bridge::COMMANDS.with(|c| {
+                    let (new_mode, edit_state, new_chemistry) = web_bridge::COMMANDS.with(|c| {
                         let mut cmds = c.borrow_mut();
-                        (cmds.set_mode.take(), cmds.set_edit_state.take())
+                        (cmds.set_mode.take(), cmds.set_edit_state.take(), cmds.set_chemistry.take())
                     });
                     if let Some(new_mode) = new_mode { self.transition_mode(new_mode); }
                     if let Some(idx) = edit_state {
@@ -500,6 +524,25 @@ impl ApplicationHandler<UserEvent> for App {
                             if (idx as usize) < scene.chemistry.states.len() {
                                 scene.next_state_idx = idx;
                             }
+                        }
+                    }
+                    if let Some(name) = new_chemistry {
+                        if let Ok(new_chem) = crate::editor::load_chemistry_by_name(&name) {
+                            // Switching chemistry forces Edit mode (no live sim makes sense
+                            // against an emptied scene) and rebuilds nothing — Scene clears
+                            // beads, next Run rebuilds Sim.
+                            if let Some(scene) = self.scene.as_mut() {
+                                scene.switch_chemistry(new_chem, name);
+                            }
+                            self.sim = None;
+                            self.mode = crate::editor::Mode::Edit;
+                            if let (Some(renderer), Some(scene)) = (self.renderer.as_mut(), self.scene.as_ref()) {
+                                // Camera palette needs to refresh since state colors changed.
+                                let palette: Vec<[f32; 3]> = scene.chemistry.colors.clone();
+                                renderer.update_camera(scene.world_size, &palette);
+                            }
+                        } else {
+                            log::warn!("set_chemistry: unknown chemistry {:?}", name);
                         }
                     }
                 }
