@@ -141,6 +141,36 @@
             color: #fff;
             border-color: #4a8;
         }
+        #editor-toolbar {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 6px;
+            background: rgba(0, 0, 0, 0.45);
+            border-radius: 10px;
+            font: 12px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            z-index: 10;
+        }
+        #editor-toolbar .row { display: flex; gap: 4px; align-items: center; }
+        #editor-toolbar .group-label { color: #888; padding: 4px 6px; width: 70px; }
+        #editor-toolbar a {
+            color: #cfd;
+            text-decoration: none;
+            padding: 4px 10px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid transparent;
+            cursor: pointer;
+        }
+        #editor-toolbar a:hover { background: rgba(255, 255, 255, 0.12); }
+        #editor-toolbar a.active { background: #2a4d3a; color: #fff; border-color: #4a8; }
+        #editor-toolbar a.state-pill .dot {
+            display: inline-block; width: 10px; height: 10px;
+            border-radius: 50%; margin-right: 6px; vertical-align: middle;
+        }
     </style>
 </head>
 <body>
@@ -159,6 +189,21 @@
             <div><span class="lbl">|v| </span><span class="v" id="hud-vmin">—</span><span class="lbl"> / </span><span class="v" id="hud-vmean">—</span><span class="lbl"> / </span><span class="v" id="hud-vmax">—</span><span class="lbl"> (min/mean/max)</span></div>
         </div>
     </div>
+    <nav id="editor-toolbar">
+        <div class="row">
+            <span class="group-label">mode</span>
+            <a id="btn-edit" class="mode">Edit</a>
+            <a id="btn-run" class="mode">Run</a>
+        </div>
+        <div class="row">
+            <span class="group-label">chemistry</span>
+            <span id="chemistry-pills"></span>
+        </div>
+        <div class="row">
+            <span class="group-label">state</span>
+            <span id="state-pills"></span>
+        </div>
+    </nav>
     <nav id="speed-picker"></nav>
     <nav id="picker"></nav>
     <script>
@@ -330,6 +375,104 @@
             const collapsed = hud.getAttribute("data-collapsed") === "true";
             hud.setAttribute("data-collapsed", collapsed ? "false" : "true");
             document.getElementById("hud-toggle").textContent = collapsed ? "[hide]" : "[show]";
+        });
+
+        // Editor toolbar wiring. Reads/writes the wasm-side state via the
+        // __jigglefab* bridge installed in src/app.rs.
+        const btnEdit = document.getElementById("btn-edit");
+        const btnRun = document.getElementById("btn-run");
+        const chemPills = document.getElementById("chemistry-pills");
+        const statePills = document.getElementById("state-pills");
+
+        let editStateIdx = 0;
+
+        function setModeBtnActive(mode) {
+            btnEdit.classList.toggle("active", mode === "edit");
+            btnRun.classList.toggle("active", mode === "run");
+        }
+
+        function paintChemistryPills() {
+            if (typeof window.__jigglefabGetChemistries !== "function") return;
+            chemPills.innerHTML = "";
+            for (const name of window.__jigglefabGetChemistries()) {
+                const a = document.createElement("a");
+                a.textContent = name;
+                a.dataset.name = name;
+                a.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    const beads = (window.__jigglefabBeadCount && window.__jigglefabBeadCount()) || 0;
+                    if (beads > 0 && !window.confirm(
+                        `Switch chemistry to "${name}"? This empties ${beads} placed bead${beads === 1 ? "" : "s"}.`
+                    )) return;
+                    window.__jigglefabSetChemistry(name);
+                    editStateIdx = 0;
+                    // Repaint will happen on next refreshToolbar tick.
+                });
+                chemPills.appendChild(a);
+            }
+        }
+
+        function paintStatePills() {
+            if (typeof window.__jigglefabGetPalette !== "function") return;
+            const palette = window.__jigglefabGetPalette();
+            statePills.innerHTML = "";
+            palette.forEach((entry, idx) => {
+                const a = document.createElement("a");
+                a.className = "state-pill" + (idx === editStateIdx ? " active" : "");
+                const dot = document.createElement("span");
+                dot.className = "dot";
+                dot.style.background = `rgb(${Math.round(entry.color[0]*255)},${Math.round(entry.color[1]*255)},${Math.round(entry.color[2]*255)})`;
+                a.appendChild(dot);
+                a.appendChild(document.createTextNode(entry.name));
+                a.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    editStateIdx = idx;
+                    window.__jigglefabSetEditState(idx);
+                    paintStatePills();
+                });
+                statePills.appendChild(a);
+            });
+        }
+
+        btnEdit.addEventListener("click", (e) => {
+            e.preventDefault();
+            window.__jigglefabSetMode && window.__jigglefabSetMode("edit");
+        });
+        btnRun.addEventListener("click", (e) => {
+            e.preventDefault();
+            window.__jigglefabSetMode && window.__jigglefabSetMode("run");
+        });
+
+        // Poll the wasm side once a tick to reflect mode, repaint state pills
+        // when the palette changes (i.e. after chemistry switch), and keep the
+        // HUD bead count in sync with edits. Cheap.
+        let lastChemName = "";
+        const hudBeadsEl = document.getElementById("hud-beads");
+        function refreshToolbar() {
+            if (typeof window.__jigglefabGetMode === "function") {
+                setModeBtnActive(window.__jigglefabGetMode());
+            }
+            if (typeof window.__jigglefabGetPalette === "function") {
+                const palette = window.__jigglefabGetPalette();
+                // Cheap signature: comma-joined names. Reflows pills only when changed.
+                const sig = palette.map(e => e.name).join(",");
+                if (sig !== lastChemName) {
+                    lastChemName = sig;
+                    paintStatePills();
+                }
+            }
+            if (typeof window.__jigglefabBeadCount === "function" && hudBeadsEl) {
+                // Overrides the static count set by paintFabInfo() so edits show up.
+                hudBeadsEl.textContent = window.__jigglefabBeadCount().toLocaleString();
+            }
+            requestAnimationFrame(refreshToolbar);
+        }
+        // Bridge installers fire inside `resumed`, after window creation. Wait
+        // one frame so they exist before our first read.
+        requestAnimationFrame(() => {
+            paintChemistryPills();
+            paintStatePills();
+            refreshToolbar();
         });
     </script>
 </body>
