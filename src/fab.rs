@@ -8,7 +8,7 @@ pub struct Fab {
     pub beads: Vec<BeadSpec>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Meta {
     pub name: String,
     pub chemistry: String,
@@ -17,7 +17,7 @@ pub struct Meta {
     pub world_size: Option<f32>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct BeadSpec {
     pub state: String,
     pub pos: [f32; 2],
