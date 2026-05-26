@@ -311,21 +311,42 @@ impl ApplicationHandler<UserEvent> for App {
             }
             WindowEvent::RedrawRequested => {
                 let Some(renderer) = &mut self.renderer else { return };
-                {
-                    let sim = self.sim.as_mut().unwrap();
-                    for _ in 0..crate::speed::current_substeps() {
-                        self.scheduler.step(sim, FRAME_DT);
+                match self.mode {
+                    crate::editor::Mode::Run => {
+                        {
+                            let sim = self.sim.as_mut().unwrap();
+                            for _ in 0..crate::speed::current_substeps() {
+                                self.scheduler.step(sim, FRAME_DT);
+                            }
+                        }
+                        let sim = self.sim.as_mut().unwrap();
+                        crate::telemetry::update_from_velocities(&sim.velocities);
+                        renderer.update_beads(&sim.positions, &sim.states);
+                        if let Err(e) = renderer.render(sim.positions.len()) {
+                            log::warn!("render error: {e:?}");
+                        }
                     }
-                }
-                let sim = self.sim.as_mut().unwrap();
-                crate::telemetry::update_from_velocities(&sim.velocities);
-                renderer.update_beads(&sim.positions, &sim.states);
-                if let Err(e) = renderer.render(sim.positions.len()) {
-                    log::warn!("render error: {e:?}");
+                    crate::editor::Mode::Edit => {
+                        let scene = self.scene.as_ref().expect("scene missing in Edit mode");
+                        // Convert scene beads to (positions, states) slices for the renderer.
+                        let positions: Vec<glam::Vec2> = scene.beads.iter()
+                            .map(|b| glam::Vec2::new(b.pos[0], b.pos[1]))
+                            .collect();
+                        let states: Vec<u32> = scene.beads.iter()
+                            .map(|b| scene.chemistry.state_index(&b.state).unwrap_or(0) as u32)
+                            .collect();
+                        renderer.update_beads(&positions, &states);
+                        if let Err(e) = renderer.render(positions.len()) {
+                            log::warn!("render error: {e:?}");
+                        }
+                    }
                 }
                 FRAME_COUNT.fetch_add(1, Ordering::Relaxed);
                 window.request_redraw();
                 self.last_frame = Instant::now();
+            }
+            WindowEvent::CursorMoved { position, .. } => {
+                self.cursor = position;
             }
             _ => {}
         }

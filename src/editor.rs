@@ -121,6 +121,36 @@ pub fn load_chemistry_by_name(name: &str) -> anyhow::Result<Chemistry> {
     parse_chemistry(toml)
 }
 
+/// Convert a viewport pixel to world coordinates using the same camera
+/// math as `Renderer::update_camera`. Inverse of:
+///   ortho(0, w, 0, h) where (w, h) is the aspect-corrected world rect,
+///   then translate by (offset_x, offset_y) to center the world inside.
+/// Screen y is top-down; world y is bottom-up.
+pub fn screen_to_world(
+    cursor: (f64, f64),
+    viewport: (u32, u32),
+    world_size: f32,
+) -> Vec2 {
+    let (sx, sy) = cursor;
+    let (vw, vh) = (viewport.0.max(1) as f32, viewport.1.max(1) as f32);
+    let aspect = vw / vh;
+    let (w, h) = if aspect >= 1.0 {
+        (world_size * aspect, world_size)
+    } else {
+        (world_size, world_size / aspect)
+    };
+    let offset_x = (w - world_size) * 0.5;
+    let offset_y = (h - world_size) * 0.5;
+    let world_x = (sx as f32 / vw) * w - offset_x;
+    let world_y = (1.0 - sy as f32 / vh) * h - offset_y;
+    // Clamp to world bounds so a click outside the rendered square
+    // still produces a placeable position (snapped to the edge).
+    Vec2::new(
+        world_x.clamp(0.0, world_size),
+        world_y.clamp(0.0, world_size),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -199,5 +229,31 @@ mod tests {
         assert!(chemistry_toml("grey").is_some());
         assert!(chemistry_toml("sem_basic").is_some());
         assert!(chemistry_toml("nonexistent").is_none());
+    }
+
+    #[test]
+    fn screen_to_world_square_viewport_center() {
+        // 100×100 viewport, 30-unit world, cursor at exact center.
+        let p = screen_to_world((50.0, 50.0), (100, 100), 30.0);
+        assert!((p.x - 15.0).abs() < 1e-4);
+        assert!((p.y - 15.0).abs() < 1e-4);
+    }
+
+    #[test]
+    fn screen_to_world_top_left_maps_to_world_top_left() {
+        // Screen (0,0) is top-left; world (0, world_size) is top-left.
+        let p = screen_to_world((0.0, 0.0), (100, 100), 30.0);
+        assert!((p.x - 0.0).abs() < 1e-4);
+        assert!((p.y - 30.0).abs() < 1e-4);
+    }
+
+    #[test]
+    fn screen_to_world_wide_viewport_clamps_outside_x() {
+        // 200×100 viewport, world 30. Aspect=2 → camera-rect width=60, world
+        // centered with 15 units of empty space on each side. Cursor at
+        // far-left screen edge is at world_x = -15, which clamps to 0.
+        let p = screen_to_world((0.0, 50.0), (200, 100), 30.0);
+        assert!((p.x - 0.0).abs() < 1e-4);
+        assert!((p.y - 15.0).abs() < 1e-4);
     }
 }
