@@ -85,6 +85,29 @@ async def main() -> int:
                 snapshots[t] = f"FAILED: {e}"
                 break
 
+        if "--editor" in sys.argv:
+            # Editor smoke test: Stop → place → Run → place during run → switch chem.
+            await page.wait_for_function("typeof window.__jigglefabSetMode === 'function'", timeout=10000)
+            await page.evaluate("window.__jigglefabSetMode('edit')")
+            await page.wait_for_function("window.__jigglefabGetMode() === 'edit'")
+            before = await page.evaluate("window.__jigglefabBeadCount()")
+            # Click canvas center.
+            box = await page.evaluate("(() => { const c = document.querySelector('canvas'); const r = c.getBoundingClientRect(); return {x: r.left + r.width/2, y: r.top + r.height/2}; })()")
+            await page.mouse.click(box["x"], box["y"])
+            # Mouse events are async-ish; poll briefly.
+            await page.wait_for_function(f"window.__jigglefabBeadCount() === {before + 1}", timeout=2000)
+            await page.evaluate("window.__jigglefabSetMode('run')")
+            await page.wait_for_function("window.__jigglefabGetMode() === 'run'")
+            # Place one more during Run.
+            after_edit = await page.evaluate("window.__jigglefabBeadCount()")
+            await page.mouse.click(box["x"] + 20, box["y"] + 20)
+            await page.wait_for_function(f"window.__jigglefabBeadCount() === {after_edit + 1}", timeout=2000)
+            # Switch chemistry — auto-dismiss confirm with handler.
+            page.once("dialog", lambda d: asyncio.create_task(d.accept()))
+            await page.evaluate("window.__jigglefabSetChemistry('grey')")
+            await page.wait_for_function("window.__jigglefabBeadCount() === 0", timeout=2000)
+            console_lines.append("[editor] smoke test passed")
+
         # Inspect the canvas: did winit append one? What's its drawing-buffer
         # size and CSS size?
         canvas_info = await page.evaluate(
