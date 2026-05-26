@@ -155,6 +155,46 @@ impl App {
     pub fn set_proxy(&mut self, proxy: EventLoopProxy<UserEvent>) {
         self.proxy = Some(proxy);
     }
+
+    fn place_at_cursor(&mut self) {
+        let Some(window) = &self.window else { return };
+        let Some(scene) = self.scene.as_mut() else { return };
+        let viewport = window.inner_size();
+        let world_pos = crate::editor::screen_to_world(
+            (self.cursor.x, self.cursor.y),
+            (viewport.width, viewport.height),
+            scene.world_size,
+        );
+        match self.mode {
+            crate::editor::Mode::Edit => {
+                scene.place(world_pos);
+            }
+            crate::editor::Mode::Run => {
+                // Snapshot current sim into scene, append, rebuild sim + scheduler.
+                if let Some(sim) = &self.sim {
+                    scene.snapshot_from_sim(sim);
+                }
+                scene.place(world_pos);
+                let new_sim = scene.to_sim();
+                #[cfg(target_arch = "wasm32")]
+                {
+                    use crate::chemistry::compile_chemistry;
+                    use crate::parallel::CpuParallel;
+                    let compiled = compile_chemistry(new_sim.chemistry())
+                        .expect("compile chemistry");
+                    self.scheduler = Box::new(CpuParallel::new(&new_sim, compiled));
+                }
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    // Native build keeps its existing scheduler; live edits there
+                    // are not in MVP scope and the GPU scheduler doesn't have a
+                    // public reseat path. Fall back to CpuSequential.
+                    self.scheduler = Box::new(CpuSequential);
+                }
+                self.sim = Some(new_sim);
+            }
+        }
+    }
 }
 
 impl Default for App {
@@ -347,6 +387,12 @@ impl ApplicationHandler<UserEvent> for App {
             }
             WindowEvent::CursorMoved { position, .. } => {
                 self.cursor = position;
+            }
+            WindowEvent::MouseInput { state, button, .. } => {
+                use winit::event::{ElementState, MouseButton};
+                if state == ElementState::Pressed && button == MouseButton::Left {
+                    self.place_at_cursor();
+                }
             }
             _ => {}
         }
