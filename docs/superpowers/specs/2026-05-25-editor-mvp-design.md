@@ -145,20 +145,14 @@ default; the user can ignore it by hitting Stop first.
 The scheduler also rebuilds on every live edit, since `CpuParallel::new`
 takes `&sim`. Same cost profile.
 
-## Renderer change
+## Renderer
 
-`Renderer::new(window, n)` currently pre-sizes the bead vertex/instance
-buffer to exactly `n`. The editor grows the count, so:
-
-- Allocate the bead buffer at `max(n, 64_000)` capacity at startup.
-- Add `Renderer::set_count(n: usize)` for the draw-call instance count.
-- On each frame, the App passes the current count (Scene or Sim length).
-
-64k is well over any preset (`wire-100x30x10` = 30k) and gives headroom
-for editor scenes without growing again. If a future feature needs more,
-we add a true grow-and-recreate-buffer path then.
-
-One file touched: `src/render.rs`.
+No changes needed. `update_beads` in `src/render.rs:204-228` already
+grows the storage buffer on demand (next power of two) when the bead
+count exceeds capacity. `render(bead_count)` in `src/render.rs:267`
+takes the per-frame count as a parameter. The editor just calls these
+the same way today's code does, passing the current count from either
+the Scene (Edit mode) or the Sim (Run mode).
 
 ## Files
 
@@ -166,7 +160,8 @@ One file touched: `src/render.rs`.
 - **Modified**:
   - `src/app.rs` — mode state, click handler, transition handlers, new
     bridge globals, render-loop branch on mode.
-  - `src/render.rs` — capacity + `set_count`.
+  - `src/chemistry/mod.rs` — `#[derive(Clone)]` on `Chemistry` so a
+    `Scene` can hold one and clone-pass to `Sim::from_fab` per Run.
   - `src/lib.rs` — `pub mod editor;`.
   - `index.html` — editor toolbar + JS for pills, mode buttons, palette
     rendering, chemistry switch confirmation.
