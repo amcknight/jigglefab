@@ -7,6 +7,7 @@ pub mod grid;
 pub mod sim;
 pub mod render;
 pub mod app;
+pub mod editor;
 // bench pulls in load_chemistry (fs-backed, non-wasm) via chains.rs and ships
 // its own bin — neither builds for the web target.
 #[cfg(not(target_arch = "wasm32"))]
