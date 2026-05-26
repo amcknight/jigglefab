@@ -36,7 +36,6 @@ mod web_bridge {
     pub struct Snapshot {
         pub mode: &'static str,        // "edit" or "run"
         pub bead_count: u32,
-        pub chemistry_name: String,
         // (state_name, [r,g,b]) for each state in current chemistry.
         pub palette: Vec<(String, [f32; 3])>,
     }
@@ -587,19 +586,15 @@ impl ApplicationHandler<UserEvent> for App {
                         crate::editor::Mode::Edit => self.scene.as_ref().map(|s| s.beads.len() as u32).unwrap_or(0),
                         crate::editor::Mode::Run => self.sim.as_ref().map(|s| s.positions.len() as u32).unwrap_or(0),
                     };
-                    let (chem_name, palette) = match &self.scene {
-                        Some(s) => (
-                            s.chemistry_name.clone(),
-                            s.chemistry.states.iter().zip(s.chemistry.colors.iter())
-                                .map(|(n, c)| (n.clone(), *c)).collect::<Vec<_>>(),
-                        ),
-                        None => (String::new(), Vec::new()),
+                    let palette: Vec<(String, [f32; 3])> = match &self.scene {
+                        Some(s) => s.chemistry.states.iter().zip(s.chemistry.colors.iter())
+                            .map(|(n, c)| (n.clone(), *c)).collect(),
+                        None => Vec::new(),
                     };
                     web_bridge::SNAPSHOT.with(|s| {
                         *s.borrow_mut() = web_bridge::Snapshot {
                             mode: mode_str,
                             bead_count,
-                            chemistry_name: chem_name,
                             palette,
                         };
                     });
