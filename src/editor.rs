@@ -120,3 +120,84 @@ pub fn load_chemistry_by_name(name: &str) -> anyhow::Result<Chemistry> {
         .ok_or_else(|| anyhow::anyhow!("unknown chemistry: {name}"))?;
     parse_chemistry(toml)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::fab::load_fab;
+
+    fn small_wire_fab() -> Fab {
+        // 30-bead wire chain, smallest preset we ship.
+        load_fab("fabs/wire-30.toml").unwrap()
+    }
+
+    #[test]
+    fn from_fab_preserves_bead_count() {
+        let fab = small_wire_fab();
+        let chem = load_chemistry_by_name("wire").unwrap();
+        let scene = Scene::from_fab(&fab, chem, "wire".into());
+        assert_eq!(scene.beads.len(), fab.beads.len());
+    }
+
+    #[test]
+    fn to_sim_preserves_count_and_positions() {
+        let fab = small_wire_fab();
+        let chem = load_chemistry_by_name("wire").unwrap();
+        let scene = Scene::from_fab(&fab, chem, "wire".into());
+        let sim = scene.to_sim();
+        assert_eq!(sim.positions.len(), fab.beads.len());
+        for (i, b) in fab.beads.iter().enumerate() {
+            assert!((sim.positions[i].x - b.pos[0]).abs() < 1e-5);
+            assert!((sim.positions[i].y - b.pos[1]).abs() < 1e-5);
+        }
+    }
+
+    #[test]
+    fn snapshot_round_trip_preserves_positions_states_velocities() {
+        let fab = small_wire_fab();
+        let chem = load_chemistry_by_name("wire").unwrap();
+        let mut scene = Scene::from_fab(&fab, chem, "wire".into());
+        let sim_a = scene.to_sim();
+        scene.snapshot_from_sim(&sim_a);
+        let sim_b = scene.to_sim();
+        assert_eq!(sim_a.positions.len(), sim_b.positions.len());
+        for i in 0..sim_a.positions.len() {
+            assert!((sim_a.positions[i] - sim_b.positions[i]).length() < 1e-5);
+            assert!((sim_a.velocities[i] - sim_b.velocities[i]).length() < 1e-5);
+            assert_eq!(sim_a.states[i], sim_b.states[i]);
+        }
+    }
+
+    #[test]
+    fn place_appends_with_chosen_state() {
+        let fab = small_wire_fab();
+        let chem = load_chemistry_by_name("wire").unwrap();
+        let mut scene = Scene::from_fab(&fab, chem, "wire".into());
+        let before = scene.beads.len();
+        scene.next_state_idx = 1; // "on" for wire
+        scene.place(Vec2::new(10.0, 10.0));
+        assert_eq!(scene.beads.len(), before + 1);
+        assert_eq!(scene.beads.last().unwrap().state, "on");
+        assert_eq!(scene.beads.last().unwrap().pos, [10.0, 10.0]);
+    }
+
+    #[test]
+    fn switch_chemistry_empties_beads() {
+        let fab = small_wire_fab();
+        let chem = load_chemistry_by_name("wire").unwrap();
+        let mut scene = Scene::from_fab(&fab, chem, "wire".into());
+        assert!(!scene.beads.is_empty());
+        let grey = load_chemistry_by_name("grey").unwrap();
+        scene.switch_chemistry(grey, "grey".into());
+        assert!(scene.beads.is_empty());
+        assert_eq!(scene.chemistry_name, "grey");
+    }
+
+    #[test]
+    fn chemistry_registry_has_known_entries() {
+        assert!(chemistry_toml("wire").is_some());
+        assert!(chemistry_toml("grey").is_some());
+        assert!(chemistry_toml("sem_basic").is_some());
+        assert!(chemistry_toml("nonexistent").is_none());
+    }
+}
