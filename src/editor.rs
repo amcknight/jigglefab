@@ -115,6 +115,20 @@ pub struct Scene {
     pub tool: Tool,
 }
 
+/// Snapshot of the parts of a Scene that round-trip through Revert.
+/// Excludes `chemistry`, `selection`, and `tool` — chemistry is held
+/// invariant by snapshot invalidation rules (see App), selection is
+/// ephemeral, tool is UI state.
+#[derive(Debug, Clone)]
+pub struct ScenePayload {
+    pub chemistry_name: String,
+    pub world_size: f32,
+    pub seed: u64,
+    pub next_state_idx: u32,
+    pub beads: Vec<BeadSpec>,
+    pub bonds: HashSet<(u32, u32)>,
+}
+
 impl Scene {
     /// Build a scene from a parsed fab (existing preset) + parsed chemistry.
     pub fn from_fab(fab: &Fab, chemistry: Chemistry, chemistry_name: String) -> Self {
@@ -314,6 +328,31 @@ impl Scene {
         self.selection.clear();
     }
 
+    /// Take a snapshot of the round-trippable fields.
+    pub fn capture_payload(&self) -> ScenePayload {
+        ScenePayload {
+            chemistry_name: self.chemistry_name.clone(),
+            world_size: self.world_size,
+            seed: self.seed,
+            next_state_idx: self.next_state_idx,
+            beads: self.beads.clone(),
+            bonds: self.bonds.clone(),
+        }
+    }
+
+    /// Overwrite the round-trippable fields from a snapshot and clear
+    /// the selection. Leaves `chemistry` and `tool` untouched — see
+    /// ScenePayload docs.
+    pub fn restore_payload(&mut self, payload: &ScenePayload) {
+        self.chemistry_name = payload.chemistry_name.clone();
+        self.world_size = payload.world_size;
+        self.seed = payload.seed;
+        self.next_state_idx = payload.next_state_idx;
+        self.beads = payload.beads.clone();
+        self.bonds = payload.bonds.clone();
+        self.selection.clear();
+    }
+
     /// Switch chemistry. Empties beads because state names from the old
     /// chemistry may not exist in the new one.
     pub fn switch_chemistry(&mut self, chemistry: Chemistry, name: String) {
@@ -488,6 +527,46 @@ mod tests {
         scene.switch_chemistry(grey, "grey".into());
         assert!(scene.beads.is_empty());
         assert_eq!(scene.chemistry_name, "grey");
+    }
+
+    #[test]
+    fn capture_payload_round_trips_through_restore() {
+        let fab = small_wire_fab();
+        let chem = load_chemistry_by_name("wire").unwrap();
+        let mut scene = Scene::from_fab(&fab, chem, "wire".into());
+        // Tweak fields that should round-trip.
+        scene.next_state_idx = 1;
+        let payload = scene.capture_payload();
+
+        // Mutate the scene to confirm restore actually overwrites.
+        scene.beads.clear();
+        scene.bonds.clear();
+        scene.next_state_idx = 0;
+
+        scene.restore_payload(&payload);
+
+        assert_eq!(scene.beads.len(), payload.beads.len());
+        for (a, b) in scene.beads.iter().zip(payload.beads.iter()) {
+            assert_eq!(a.state, b.state);
+            assert!((a.pos[0] - b.pos[0]).abs() < 1e-6);
+            assert!((a.pos[1] - b.pos[1]).abs() < 1e-6);
+        }
+        assert_eq!(scene.bonds, payload.bonds);
+        assert!((scene.world_size - payload.world_size).abs() < 1e-6);
+        assert_eq!(scene.seed, payload.seed);
+        assert_eq!(scene.next_state_idx, payload.next_state_idx);
+    }
+
+    #[test]
+    fn restore_payload_clears_selection() {
+        let fab = small_wire_fab();
+        let chem = load_chemistry_by_name("wire").unwrap();
+        let mut scene = Scene::from_fab(&fab, chem, "wire".into());
+        let payload = scene.capture_payload();
+        scene.selection.insert(0);
+        scene.selection.insert(1);
+        scene.restore_payload(&payload);
+        assert!(scene.selection.is_empty());
     }
 
     #[test]
