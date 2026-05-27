@@ -202,6 +202,7 @@
             <span class="group-label">mode</span>
             <a id="btn-edit" class="mode">Edit</a>
             <a id="btn-run" class="mode">Run</a>
+            <a id="btn-clear">Clear</a>
         </div>
         <div class="row">
             <span class="group-label">chemistry</span>
@@ -449,6 +450,16 @@
         btnRun.addEventListener("click", (e) => {
             e.preventDefault();
             window.__jigglefabSetMode && window.__jigglefabSetMode("run");
+        });
+
+        // Clear button. Confirms before wiping a non-empty scene. Drops sim,
+        // forces Edit mode, keeps chemistry.
+        document.getElementById("btn-clear").addEventListener("click", (e) => {
+            e.preventDefault();
+            if (!window.__jigglefabClear) return;
+            const beads = (window.__jigglefabBeadCount && window.__jigglefabBeadCount()) || 0;
+            if (beads > 0 && !window.confirm(`Clear scene? This removes ${beads} bead${beads === 1 ? "" : "s"}.`)) return;
+            window.__jigglefabClear();
         });
 
         // Tool pills. Active class follows __jigglefabGetTool(); each click

@@ -321,6 +321,14 @@ impl Scene {
         self.selection.clear();
         self.next_state_idx = 0;
     }
+
+    /// Empty the scene — drop all beads, bonds, and selection. Chemistry,
+    /// world size, seed, and the next-state pointer are preserved.
+    pub fn clear(&mut self) {
+        self.beads.clear();
+        self.bonds.clear();
+        self.selection.clear();
+    }
 }
 
 /// Parse a chemistry from the registry by name. Convenience wrapper.
