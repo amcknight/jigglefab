@@ -23,6 +23,7 @@ mod web_bridge {
         pub set_mode: Option<crate::editor::Mode>,
         pub set_edit_state: Option<u32>,
         pub set_chemistry: Option<String>,
+        pub set_tool: Option<crate::editor::Tool>,
     }
 
     thread_local! {
@@ -38,6 +39,8 @@ mod web_bridge {
         pub bead_count: u32,
         // (state_name, [r,g,b]) for each state in current chemistry.
         pub palette: Vec<(String, [f32; 3])>,
+        pub tool: &'static str,
+        pub selection_count: u32,
     }
 }
 
@@ -233,6 +236,35 @@ fn install_window_set_chemistry() {
         web_bridge::COMMANDS.with(|c| c.borrow_mut().set_chemistry = Some(name));
     }) as Box<dyn Fn(String)>);
     expose_to_window!("__jigglefabSetChemistry", cb);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_window_get_tool() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|| -> String {
+        web_bridge::SNAPSHOT.with(|s| s.borrow().tool.to_string())
+    }) as Box<dyn Fn() -> String>);
+    expose_to_window!("__jigglefabGetTool", cb);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_window_set_tool() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|s: String| {
+        if let Some(t) = crate::editor::Tool::from_str(&s) {
+            web_bridge::COMMANDS.with(|c| c.borrow_mut().set_tool = Some(t));
+        }
+    }) as Box<dyn Fn(String)>);
+    expose_to_window!("__jigglefabSetTool", cb);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_window_selection_count() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|| -> u32 {
+        web_bridge::SNAPSHOT.with(|s| s.borrow().selection_count)
+    }) as Box<dyn Fn() -> u32>);
+    expose_to_window!("__jigglefabSelectionCount", cb);
 }
 
 pub enum UserEvent {
@@ -571,6 +603,9 @@ impl ApplicationHandler<UserEvent> for App {
             install_window_bead_count();
             install_window_get_chemistries();
             install_window_set_chemistry();
+            install_window_get_tool();
+            install_window_set_tool();
+            install_window_selection_count();
 
             let proxy = self.proxy.clone().expect("proxy not set before resumed()");
             let window_clone = window.clone();
@@ -632,9 +667,9 @@ impl ApplicationHandler<UserEvent> for App {
                 let Some(window_arc) = self.window.clone() else { return };
                 #[cfg(target_arch = "wasm32")]
                 {
-                    let (new_mode, edit_state, new_chemistry) = web_bridge::COMMANDS.with(|c| {
+                    let (new_mode, edit_state, new_chemistry, new_tool) = web_bridge::COMMANDS.with(|c| {
                         let mut cmds = c.borrow_mut();
-                        (cmds.set_mode.take(), cmds.set_edit_state.take(), cmds.set_chemistry.take())
+                        (cmds.set_mode.take(), cmds.set_edit_state.take(), cmds.set_chemistry.take(), cmds.set_tool.take())
                     });
                     if let Some(new_mode) = new_mode { self.transition_mode(new_mode); }
                     if let Some(idx) = edit_state {
@@ -659,6 +694,11 @@ impl ApplicationHandler<UserEvent> for App {
                             }
                         } else {
                             log::warn!("set_chemistry: unknown chemistry {:?}", name);
+                        }
+                    }
+                    if let Some(tool) = new_tool {
+                        if let Some(scene) = self.scene.as_mut() {
+                            scene.tool = tool;
                         }
                     }
                 }
@@ -718,11 +758,15 @@ impl ApplicationHandler<UserEvent> for App {
                             .map(|(n, c)| (n.clone(), *c)).collect(),
                         None => Vec::new(),
                     };
+                    let tool_str = self.scene.as_ref().map(|s| s.tool.as_str()).unwrap_or("place");
+                    let selection_count = self.scene.as_ref().map(|s| s.selection.len() as u32).unwrap_or(0);
                     web_bridge::SNAPSHOT.with(|s| {
                         *s.borrow_mut() = web_bridge::Snapshot {
                             mode: mode_str,
                             bead_count,
                             palette,
+                            tool: tool_str,
+                            selection_count,
                         };
                     });
                 }
