@@ -48,6 +48,11 @@ impl Tool {
     }
 }
 
+/// Distance between consecutive beads when the Chain tool drops them. Tuned
+/// to match the wire-30 preset (0.667) — comfortably under RADIUS=1.0 so the
+/// pair starts bonded and `enforce_bonds` never has to repair it.
+pub const CHAIN_STEP: f32 = 0.667;
+
 /// Chemistries the editor can switch between. Tied to the files in
 /// `chemistries/`, baked in at compile time on web (same pattern as fab
 /// presets in `app.rs`).
@@ -187,6 +192,25 @@ impl Scene {
         let key = if prev_idx < new_idx { (prev_idx, new_idx) } else { (new_idx, prev_idx) };
         self.bonds.insert(key);
         new_idx
+    }
+
+    /// Extend an in-progress chain toward `cursor`, dropping beads at CHAIN_STEP
+    /// spacing along the segment from the previous bead to the cursor. Returns
+    /// the new "last bead" index (== input `last_idx` if no bead was placed).
+    pub fn chain_extend(&mut self, last_idx: u32, cursor: Vec2) -> u32 {
+        let mut last = last_idx;
+        loop {
+            let last_pos = Vec2::from(self.beads[last as usize].pos);
+            let to_cursor = cursor - last_pos;
+            let dist = to_cursor.length();
+            if dist < CHAIN_STEP {
+                break;
+            }
+            let dir = to_cursor / dist;
+            let new_pos = last_pos + dir * CHAIN_STEP;
+            last = self.append_chain_bead(new_pos, last);
+        }
+        last
     }
 
     /// Switch chemistry. Empties beads because state names from the old
@@ -425,5 +449,61 @@ mod tests {
         assert!(scene.bonds.contains(&(b, c)));
         assert!(!scene.bonds.contains(&(a, c)), "chain must not form corner triangle");
         assert_eq!(scene.bonds.len(), 2);
+    }
+
+    #[test]
+    fn chain_extend_single_segment() {
+        let fab = small_wire_fab();
+        let chem = load_chemistry_by_name("wire").unwrap();
+        let mut scene = Scene::from_fab(&fab, chem, "wire".into());
+        scene.beads.clear();
+        scene.bonds.clear();
+        let start = scene.place(Vec2::new(0.0, 0.0));
+        // Cursor jumps ~2.005 units in one event → expect 3 new beads at 0.667, 1.334, 2.001.
+        // (2.005 > 3*CHAIN_STEP; f32 accumulation means exact 2.0 lands just under threshold.)
+        let last = scene.chain_extend(start, Vec2::new(2.005, 0.0));
+        assert_eq!(scene.beads.len(), 4);  // start + 3 new
+        assert_eq!(last, 3);
+        let expected_xs = [0.667, 1.334, 2.001];  // 0.667 * (1, 2, 3)
+        for (i, x) in expected_xs.iter().enumerate() {
+            let p = scene.beads[i + 1].pos;
+            assert!((p[0] - x).abs() < 1e-3, "bead {} x = {} expected {}", i + 1, p[0], x);
+            assert!(p[1].abs() < 1e-3);
+        }
+        // Consecutive bonds.
+        assert!(scene.bonds.contains(&(0, 1)));
+        assert!(scene.bonds.contains(&(1, 2)));
+        assert!(scene.bonds.contains(&(2, 3)));
+        assert_eq!(scene.bonds.len(), 3);
+    }
+
+    #[test]
+    fn chain_extend_below_threshold_is_noop() {
+        let fab = small_wire_fab();
+        let chem = load_chemistry_by_name("wire").unwrap();
+        let mut scene = Scene::from_fab(&fab, chem, "wire".into());
+        scene.beads.clear();
+        scene.bonds.clear();
+        let start = scene.place(Vec2::new(0.0, 0.0));
+        let last = scene.chain_extend(start, Vec2::new(0.1, 0.0));
+        assert_eq!(last, start, "no new bead under 0.667");
+        assert_eq!(scene.beads.len(), 1);
+        assert_eq!(scene.bonds.len(), 0);
+    }
+
+    #[test]
+    fn chain_extend_pairs_spaced_at_step() {
+        let fab = small_wire_fab();
+        let chem = load_chemistry_by_name("wire").unwrap();
+        let mut scene = Scene::from_fab(&fab, chem, "wire".into());
+        scene.beads.clear();
+        scene.bonds.clear();
+        let start = scene.place(Vec2::new(0.0, 0.0));
+        scene.chain_extend(start, Vec2::new(3.0, 0.0));
+        // Every consecutive pair must be 0.667 apart within float epsilon.
+        for w in scene.beads.windows(2) {
+            let d = (Vec2::from(w[0].pos) - Vec2::from(w[1].pos)).length();
+            assert!((d - 0.667).abs() < 1e-3, "consecutive spacing {} != 0.667", d);
+        }
     }
 }
