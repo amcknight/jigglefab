@@ -508,4 +508,24 @@ pos = [5.90, 5.0]
         assert!(m.candidate_pairs >= 1, "at least one candidate pair scanned");
         assert!(!m.iter_cap_hit, "iter cap should not be near for two beads");
     }
+
+    #[test]
+    #[cfg(not(target_arch = "wasm32"))]
+    fn from_fab_with_explicit_bonds_30k_under_5ms() {
+        use std::time::Instant;
+        let chem = load_chemistry("chemistries/wire.toml").unwrap();
+        // Cold path: derive once so we have a bond list to seed the explicit path with.
+        let mut fab = load_fab("fabs/wire-100x30x10.toml").unwrap();
+        let sim_warm = Sim::from_fab(&fab, chem.clone());
+        let bonds_vec: Vec<[u32; 2]> = sim_warm.bonds().iter().map(|&(a, b)| [a, b]).collect();
+        fab.meta.bonds = Some(bonds_vec);
+        // Warm-up build (don't measure first iteration — allocator hot path).
+        let _ = Sim::from_fab(&fab, chem.clone());
+        // Measured build.
+        let start = Instant::now();
+        let _ = Sim::from_fab(&fab, chem);
+        let elapsed = start.elapsed();
+        assert!(elapsed.as_millis() < 5,
+                "explicit-bonds build on 30k beads took {} ms (budget 5)", elapsed.as_millis());
+    }
 }
