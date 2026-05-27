@@ -248,6 +248,10 @@ pub struct App {
     mode: crate::editor::Mode,
     scene: Option<crate::editor::Scene>,
     cursor: winit::dpi::PhysicalPosition<f64>,
+    drag: crate::editor::DragState,
+    /// True only while the left mouse button is held. mousemove uses this to
+    /// know whether to extend the current `drag`.
+    mouse_down: bool,
     #[cfg(target_arch = "wasm32")]
     proxy: Option<EventLoopProxy<UserEvent>>,
 }
@@ -263,6 +267,8 @@ impl App {
             mode: crate::editor::Mode::Run,
             scene: None,
             cursor: winit::dpi::PhysicalPosition::new(0.0, 0.0),
+            drag: crate::editor::DragState::None,
+            mouse_down: false,
             #[cfg(target_arch = "wasm32")]
             proxy: None,
         }
@@ -273,43 +279,152 @@ impl App {
         self.proxy = Some(proxy);
     }
 
-    fn place_at_cursor(&mut self) {
-        let Some(window) = &self.window else { return };
-        let Some(scene) = self.scene.as_mut() else { return };
+    fn cursor_world(&self) -> Option<glam::Vec2> {
+        let window = self.window.as_ref()?;
+        let scene = self.scene.as_ref()?;
         let viewport = window.inner_size();
-        let world_pos = crate::editor::screen_to_world(
+        Some(crate::editor::screen_to_world(
             (self.cursor.x, self.cursor.y),
             (viewport.width, viewport.height),
             scene.world_size,
-        );
-        match self.mode {
-            crate::editor::Mode::Edit => {
+        ))
+    }
+
+    /// True if `world_pos` lies within RADIUS of any currently-selected bead.
+    fn hit_selected(scene: &crate::editor::Scene, world_pos: glam::Vec2) -> bool {
+        scene.selection.iter().any(|&idx| {
+            let p = glam::Vec2::from(scene.beads[idx as usize].pos);
+            (p - world_pos).length() <= crate::ccd::RADIUS
+        })
+    }
+
+    fn rebuild_sim_from_scene(&mut self) {
+        let scene = self.scene.as_ref().expect("scene present");
+        let new_sim = scene.to_sim();
+        #[cfg(target_arch = "wasm32")]
+        {
+            use crate::chemistry::compile_chemistry;
+            use crate::parallel::CpuParallel;
+            let compiled = compile_chemistry(new_sim.chemistry()).expect("compile chemistry");
+            self.scheduler = Box::new(CpuParallel::new(&new_sim, compiled));
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.scheduler = Box::new(CpuSequential);
+        }
+        self.sim = Some(new_sim);
+    }
+
+    fn on_mouse_down(&mut self) {
+        self.mouse_down = true;
+        let Some(world_pos) = self.cursor_world() else { return };
+        let Some(scene) = self.scene.as_mut() else { return };
+        if Self::hit_selected(scene, world_pos) {
+            self.drag = crate::editor::DragState::Move { last_cursor: world_pos };
+            return;
+        }
+        match (self.mode, scene.tool) {
+            (crate::editor::Mode::Run, _) => {
+                if let Some(sim) = &self.sim { scene.snapshot_from_sim(sim); }
                 scene.place(world_pos);
+                self.rebuild_sim_from_scene();
+                self.drag = crate::editor::DragState::None;
             }
-            crate::editor::Mode::Run => {
-                // Snapshot current sim into scene, append, rebuild sim + scheduler.
-                if let Some(sim) = &self.sim {
-                    scene.snapshot_from_sim(sim);
-                }
+            (crate::editor::Mode::Edit, crate::editor::Tool::Place) => {
                 scene.place(world_pos);
-                let new_sim = scene.to_sim();
-                #[cfg(target_arch = "wasm32")]
-                {
-                    use crate::chemistry::compile_chemistry;
-                    use crate::parallel::CpuParallel;
-                    let compiled = compile_chemistry(new_sim.chemistry())
-                        .expect("compile chemistry");
-                    self.scheduler = Box::new(CpuParallel::new(&new_sim, compiled));
-                }
-                #[cfg(not(target_arch = "wasm32"))]
-                {
-                    // Native build keeps its existing scheduler; live edits there
-                    // are not in MVP scope and the GPU scheduler doesn't have a
-                    // public reseat path. Fall back to CpuSequential.
-                    self.scheduler = Box::new(CpuSequential);
-                }
-                self.sim = Some(new_sim);
+                self.drag = crate::editor::DragState::None;
             }
+            (crate::editor::Mode::Edit, crate::editor::Tool::Chain) => {
+                let idx = scene.place(world_pos);
+                self.drag = crate::editor::DragState::Chain { last_idx: idx };
+            }
+            (crate::editor::Mode::Edit, crate::editor::Tool::Rect) => {
+                self.drag = crate::editor::DragState::Rect { anchor: world_pos, current: world_pos, moved: false };
+            }
+            (crate::editor::Mode::Edit, crate::editor::Tool::Lasso) => {
+                self.drag = crate::editor::DragState::Lasso { points: vec![world_pos] };
+            }
+        }
+    }
+
+    fn on_mouse_move(&mut self) {
+        if !self.mouse_down { return; }
+        let Some(world_pos) = self.cursor_world() else { return };
+        let Some(scene) = self.scene.as_mut() else { return };
+        match &mut self.drag {
+            crate::editor::DragState::Chain { last_idx } => {
+                *last_idx = scene.chain_extend(*last_idx, world_pos);
+            }
+            crate::editor::DragState::Rect { current, moved, .. } => {
+                *current = world_pos;
+                *moved = true;
+            }
+            crate::editor::DragState::Lasso { points } => {
+                if let Some(last) = points.last() {
+                    if (*last - world_pos).length() >= 0.05 {
+                        points.push(world_pos);
+                    }
+                }
+            }
+            crate::editor::DragState::Move { last_cursor } => {
+                let delta = world_pos - *last_cursor;
+                scene.translate_selection(delta);
+                *last_cursor = world_pos;
+            }
+            crate::editor::DragState::None => {}
+        }
+    }
+
+    fn on_mouse_up(&mut self) {
+        self.mouse_down = false;
+        let drag = std::mem::take(&mut self.drag);
+        let Some(scene) = self.scene.as_mut() else { return };
+        match drag {
+            crate::editor::DragState::Rect { anchor, current, moved } => {
+                if moved {
+                    scene.select_rect(anchor, current);
+                } else {
+                    scene.selection.clear();
+                }
+            }
+            crate::editor::DragState::Lasso { points } => {
+                if points.len() >= 3 {
+                    scene.select_lasso(&points);
+                } else {
+                    scene.selection.clear();
+                }
+            }
+            crate::editor::DragState::Move { .. } => {}
+            crate::editor::DragState::Chain { .. } | crate::editor::DragState::None => {}
+        }
+    }
+
+    /// World-space line segments to draw as the rect/lasso overlay this frame.
+    /// Returns an empty vec when no overlay is active. LineList topology: each
+    /// pair of consecutive entries defines one segment.
+    fn overlay_segments(&self) -> Vec<[f32; 2]> {
+        match &self.drag {
+            crate::editor::DragState::Rect { anchor, current, .. } => {
+                let (a, b) = (*anchor, *current);
+                let (xmin, xmax) = if a.x <= b.x { (a.x, b.x) } else { (b.x, a.x) };
+                let (ymin, ymax) = if a.y <= b.y { (a.y, b.y) } else { (b.y, a.y) };
+                vec![
+                    [xmin, ymin], [xmax, ymin],
+                    [xmax, ymin], [xmax, ymax],
+                    [xmax, ymax], [xmin, ymax],
+                    [xmin, ymax], [xmin, ymin],
+                ]
+            }
+            crate::editor::DragState::Lasso { points } => {
+                if points.len() < 2 { return Vec::new(); }
+                let mut segs = Vec::with_capacity(points.len() * 2);
+                for w in points.windows(2) {
+                    segs.push([w[0].x, w[0].y]);
+                    segs.push([w[1].x, w[1].y]);
+                }
+                segs
+            }
+            _ => Vec::new(),
         }
     }
 
@@ -545,6 +660,7 @@ impl ApplicationHandler<UserEvent> for App {
                         }
                     }
                 }
+                let overlay = self.overlay_segments();
                 let Some(renderer) = &mut self.renderer else { return };
                 match self.mode {
                     crate::editor::Mode::Run => {
@@ -561,6 +677,7 @@ impl ApplicationHandler<UserEvent> for App {
                             None => vec![0; sim.positions.len()],
                         };
                         renderer.update_beads(&sim.positions, &sim.states, &selected);
+                        renderer.update_overlay(&overlay);
                         if let Err(e) = renderer.render(sim.positions.len()) {
                             log::warn!("render error: {e:?}");
                         }
@@ -578,6 +695,7 @@ impl ApplicationHandler<UserEvent> for App {
                             .map(|i| if scene.selection.contains(&(i as u32)) { 1 } else { 0 })
                             .collect();
                         renderer.update_beads(&positions, &states, &selected);
+                        renderer.update_overlay(&overlay);
                         if let Err(e) = renderer.render(positions.len()) {
                             log::warn!("render error: {e:?}");
                         }
@@ -612,11 +730,15 @@ impl ApplicationHandler<UserEvent> for App {
             }
             WindowEvent::CursorMoved { position, .. } => {
                 self.cursor = position;
+                self.on_mouse_move();
             }
             WindowEvent::MouseInput { state, button, .. } => {
                 use winit::event::{ElementState, MouseButton};
-                if state == ElementState::Pressed && button == MouseButton::Left {
-                    self.place_at_cursor();
+                if button == MouseButton::Left {
+                    match state {
+                        ElementState::Pressed => self.on_mouse_down(),
+                        ElementState::Released => self.on_mouse_up(),
+                    }
                 }
             }
             _ => {}
