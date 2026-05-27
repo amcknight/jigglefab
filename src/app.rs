@@ -477,21 +477,8 @@ impl App {
                 }
                 self.drag = crate::editor::DragState::None;
                 self.mouse_down = false;
-                if let Some(scene) = &self.scene {
-                    let new_sim = scene.to_sim();
-                    #[cfg(target_arch = "wasm32")]
-                    {
-                        use crate::chemistry::compile_chemistry;
-                        use crate::parallel::CpuParallel;
-                        let compiled = compile_chemistry(new_sim.chemistry())
-                            .expect("compile chemistry");
-                        self.scheduler = Box::new(CpuParallel::new(&new_sim, compiled));
-                    }
-                    #[cfg(not(target_arch = "wasm32"))]
-                    {
-                        self.scheduler = Box::new(CpuSequential);
-                    }
-                    self.sim = Some(new_sim);
+                if self.scene.is_some() {
+                    self.rebuild_sim_from_scene();
                     self.mode = crate::editor::Mode::Run;
                 }
             }
