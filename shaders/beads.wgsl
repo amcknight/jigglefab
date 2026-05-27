@@ -1,7 +1,7 @@
 struct Bead {
     pos: vec2<f32>,
     state: u32,
-    _pad: u32,  // forces 16-byte stride to match Rust-side BeadGpu
+    selected: u32,
 };
 
 struct Camera {
@@ -17,7 +17,7 @@ struct Camera {
 @group(0) @binding(1) var<storage, read> beads: array<Bead>;
 
 struct VsIn {
-    @location(0) quad_uv: vec2<f32>, // unit-quad corner in [-1, 1]
+    @location(0) quad_uv: vec2<f32>,
     @builtin(instance_index) inst: u32,
 };
 
@@ -25,14 +25,11 @@ struct VsOut {
     @builtin(position) clip: vec4<f32>,
     @location(0) local: vec2<f32>,
     @location(1) @interpolate(flat) state: u32,
+    @location(2) @interpolate(flat) selected: u32,
 };
 
 @vertex
 fn vs_main(in: VsIn) -> VsOut {
-    // Per-instance encoding: 9 copies of each bead — one at the bead's actual
-    // position and 8 wrap-ghosts at ±world_size offsets in each axis. The
-    // rasterizer discards offscreen ghosts for free; the on-screen ones make
-    // bonds across the torus seam visible.
     let bead_idx = in.inst / 9u;
     let ghost = in.inst % 9u;
     let gx = f32(i32(ghost % 3u) - 1);
@@ -44,6 +41,7 @@ fn vs_main(in: VsIn) -> VsOut {
     out.clip = camera.view_proj * vec4<f32>(world, 0.0, 1.0);
     out.local = in.quad_uv;
     out.state = bead.state;
+    out.selected = bead.selected;
     return out;
 }
 
@@ -53,8 +51,14 @@ fn fs_main(in: VsOut) -> @location(0) vec4<f32> {
     if (d > 1.0) {
         discard;
     }
-    // Soft edge so the disc looks like a disc, not a polygon.
-    let a = smoothstep(1.0, 0.95, d);
+    let body = smoothstep(1.0, 0.95, d);
     let c = camera.state_colors[in.state].rgb;
-    return vec4<f32>(c, a);
+    var color = c;
+    var alpha = body;
+    if (in.selected != 0u) {
+        let ring = smoothstep(0.83, 0.88, d) * (1.0 - smoothstep(0.95, 1.0, d));
+        color = mix(color, vec3<f32>(1.0, 1.0, 1.0), ring);
+        alpha = max(alpha, ring);
+    }
+    return vec4<f32>(color, alpha);
 }

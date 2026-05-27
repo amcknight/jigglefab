@@ -556,7 +556,11 @@ impl ApplicationHandler<UserEvent> for App {
                         }
                         let sim = self.sim.as_mut().unwrap();
                         crate::telemetry::update_from_velocities(&sim.velocities);
-                        renderer.update_beads(&sim.positions, &sim.states);
+                        let selected: Vec<u32> = match &self.scene {
+                            Some(s) => (0..sim.positions.len()).map(|i| if s.selection.contains(&(i as u32)) { 1 } else { 0 }).collect(),
+                            None => vec![0; sim.positions.len()],
+                        };
+                        renderer.update_beads(&sim.positions, &sim.states, &selected);
                         if let Err(e) = renderer.render(sim.positions.len()) {
                             log::warn!("render error: {e:?}");
                         }
@@ -570,7 +574,10 @@ impl ApplicationHandler<UserEvent> for App {
                         let states: Vec<u32> = scene.beads.iter()
                             .map(|b| scene.chemistry.state_index(&b.state).unwrap_or(0) as u32)
                             .collect();
-                        renderer.update_beads(&positions, &states);
+                        let selected: Vec<u32> = (0..positions.len())
+                            .map(|i| if scene.selection.contains(&(i as u32)) { 1 } else { 0 })
+                            .collect();
+                        renderer.update_beads(&positions, &states, &selected);
                         if let Err(e) = renderer.render(positions.len()) {
                             log::warn!("render error: {e:?}");
                         }

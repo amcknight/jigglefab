@@ -10,7 +10,7 @@ use wgpu::util::DeviceExt;
 struct BeadGpu {
     pos: [f32; 2],
     state: u32,
-    _pad: u32,
+    selected: u32,
 }
 
 // Maximum number of chemistry states the renderer can colour. Today's
@@ -201,9 +201,9 @@ impl Renderer {
         }
     }
 
-    pub fn update_beads(&mut self, positions: &[Vec2], states: &[u32]) {
+    pub fn update_beads(&mut self, positions: &[Vec2], states: &[u32], selected: &[u32]) {
         debug_assert_eq!(positions.len(), states.len());
-        // Re-allocate the storage buffer if it's too small.
+        debug_assert_eq!(positions.len(), selected.len());
         if positions.len() > self.bead_capacity {
             self.bead_capacity = positions.len().next_power_of_two();
             self.bead_buf = self.device.create_buffer(&wgpu::BufferDescriptor {
@@ -221,8 +221,8 @@ impl Renderer {
                 ],
             });
         }
-        let gpu_beads: Vec<BeadGpu> = positions.iter().zip(states.iter())
-            .map(|(p, &s)| BeadGpu { pos: [p.x, p.y], state: s, _pad: 0 })
+        let gpu_beads: Vec<BeadGpu> = positions.iter().zip(states.iter()).zip(selected.iter())
+            .map(|((p, &s), &sel)| BeadGpu { pos: [p.x, p.y], state: s, selected: sel })
             .collect();
         self.queue.write_buffer(&self.bead_buf, 0, bytemuck::cast_slice(&gpu_beads));
     }
