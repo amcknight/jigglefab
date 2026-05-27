@@ -235,6 +235,20 @@ impl Scene {
         }
     }
 
+    /// Translate every selected bead by `delta`, then clamp each component to
+    /// `[0, world_size]`. Bonds and velocities are untouched (bond indices stay
+    /// valid; velocities will be re-derived from positions only if the user
+    /// presses Run, and snapshot has already stored them).
+    pub fn translate_selection(&mut self, delta: Vec2) {
+        let w = self.world_size;
+        for &idx in &self.selection {
+            let b = &mut self.beads[idx as usize];
+            let new_x = (b.pos[0] + delta.x).clamp(0.0, w);
+            let new_y = (b.pos[1] + delta.y).clamp(0.0, w);
+            b.pos = [new_x, new_y];
+        }
+    }
+
     /// Switch chemistry. Empties beads because state names from the old
     /// chemistry may not exist in the new one.
     pub fn switch_chemistry(&mut self, chemistry: Chemistry, name: String) {
@@ -670,5 +684,46 @@ mod tests {
         assert!(scene.selection.contains(&0));
         assert!(scene.selection.contains(&1));
         assert!(!scene.selection.contains(&2));
+    }
+
+    #[test]
+    fn translate_selection_shifts_only_selected_beads() {
+        let fab = small_wire_fab();
+        let chem = load_chemistry_by_name("wire").unwrap();
+        let mut scene = Scene::from_fab(&fab, chem, "wire".into());
+        scene.beads.clear();
+        scene.bonds.clear();
+        scene.place(Vec2::new(5.0, 5.0));
+        scene.place(Vec2::new(10.0, 5.0));
+        scene.selection.insert(0);
+        scene.translate_selection(Vec2::new(2.0, 0.0));
+        assert_eq!(scene.beads[0].pos, [7.0, 5.0]);
+        assert_eq!(scene.beads[1].pos, [10.0, 5.0], "unselected bead unchanged");
+    }
+
+    #[test]
+    fn translate_selection_clamps_to_world() {
+        let fab = small_wire_fab();
+        let chem = load_chemistry_by_name("wire").unwrap();
+        let mut scene = Scene::from_fab(&fab, chem, "wire".into());
+        scene.beads.clear();
+        scene.bonds.clear();
+        let world = scene.world_size;
+        scene.place(Vec2::new(world - 1.0, 5.0));
+        scene.selection.insert(0);
+        scene.translate_selection(Vec2::new(10.0, 0.0));  // would push past world edge
+        assert!(scene.beads[0].pos[0] <= world);
+        assert_eq!(scene.beads[0].pos[0], world);
+    }
+
+    #[test]
+    fn translate_selection_preserves_bonds() {
+        let fab = small_wire_fab();
+        let chem = load_chemistry_by_name("wire").unwrap();
+        let mut scene = Scene::from_fab(&fab, chem, "wire".into());
+        let bonds_before = scene.bonds.clone();
+        for i in 0..scene.beads.len() as u32 { scene.selection.insert(i); }
+        scene.translate_selection(Vec2::new(1.0, 1.0));
+        assert_eq!(scene.bonds, bonds_before);
     }
 }
