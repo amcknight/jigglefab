@@ -363,10 +363,12 @@ impl App {
                 self.drag = crate::editor::DragState::None;
             }
             (crate::editor::Mode::Edit, crate::editor::Tool::Place) => {
+                scene.selection.clear();
                 scene.place(world_pos);
                 self.drag = crate::editor::DragState::None;
             }
             (crate::editor::Mode::Edit, crate::editor::Tool::Chain) => {
+                scene.selection.clear();
                 let idx = scene.place(world_pos);
                 self.drag = crate::editor::DragState::Chain { last_idx: idx };
             }
