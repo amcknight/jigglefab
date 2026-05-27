@@ -52,6 +52,24 @@ pub struct Sim {
     tick: u32,
 }
 
+/// Distance-derive bonds for legacy presets (no explicit `bonds` field). A
+/// pair bonds when their min-image separation is < RADIUS at preset time.
+/// Mirrors the Haskell `bbSides` build at `haskell/src/Motion/Point.hs:40-41`.
+pub(crate) fn derive_bonds_by_distance(positions: &[Vec2], grid: &Grid) -> HashSet<(u32, u32)> {
+    let n = positions.len();
+    let mut bonds = HashSet::new();
+    for i in 0..n {
+        for j in (i + 1)..n {
+            let pa = positions[i];
+            let pb = pa + grid.min_image(pa, positions[j]);
+            if (pb - pa).length() < RADIUS {
+                bonds.insert((i as u32, j as u32));
+            }
+        }
+    }
+    bonds
+}
+
 impl Sim {
     pub fn world_size(&self) -> f32 { self.grid.world_size() }
 
@@ -84,16 +102,10 @@ impl Sim {
         }
         let world_size = fab.meta.world_size.unwrap_or(WORLD_SIZE);
         let grid = Grid::new(world_size);
-        let mut bonds = HashSet::new();
-        for i in 0..n {
-            for j in (i + 1)..n {
-                let pa = positions[i];
-                let pb = pa + grid.min_image(pa, positions[j]);
-                if (pb - pa).length() < RADIUS {
-                    bonds.insert((i as u32, j as u32));
-                }
-            }
-        }
+        let bonds = match fab.bonds() {
+            Some(explicit) => explicit.iter().map(|p| (p[0].min(p[1]), p[0].max(p[1]))).collect(),
+            None => derive_bonds_by_distance(&positions, &grid),
+        };
         Self { positions, velocities, states, chemistry, grid, bonds, last_metrics: StepMetrics::default(), tick: 0 }
     }
 
@@ -427,6 +439,51 @@ mod tests {
         // Velocities reflected — chains have physical extent.
         assert!((sim.velocities[0] - Vec2::new(-1.0, 0.0)).length() < 1e-3);
         assert!((sim.velocities[1] - Vec2::new( 1.0, 0.0)).length() < 1e-3);
+    }
+
+    #[test]
+    fn from_fab_uses_explicit_bonds_when_present() {
+        // Three beads in a row at 0.5 spacing — distance derivation would bond
+        // (0,1), (1,2), AND (0,2) (|0-2|=1.0 = RADIUS, borderline; flip to 0.9
+        // to keep it strictly inside).
+        let chem = load_chemistry("chemistries/grey.toml").unwrap();
+        let toml_text = r#"
+[meta]
+name = "explicit"
+chemistry = "grey"
+seed = 1
+bonds = [[0, 1], [1, 2]]
+
+[[bead]]
+state = "grey"
+pos = [5.0, 5.0]
+
+[[bead]]
+state = "grey"
+pos = [5.45, 5.0]
+
+[[bead]]
+state = "grey"
+pos = [5.90, 5.0]
+"#;
+        let fab = crate::fab::parse_fab(toml_text).unwrap();
+        let sim = Sim::from_fab(&fab, chem);
+        assert_eq!(sim.bonds().len(), 2);
+        assert!(sim.bonds().contains(&(0, 1)));
+        assert!(sim.bonds().contains(&(1, 2)));
+        assert!(!sim.bonds().contains(&(0, 2)), "explicit bonds must not be widened");
+    }
+
+    #[test]
+    fn from_fab_without_bonds_matches_distance_derivation() {
+        // Regression guard: the no-bonds path must produce the same set as the
+        // pre-promotion code on a known preset.
+        let chem = load_chemistry("chemistries/wire.toml").unwrap();
+        let fab = load_fab("fabs/wire-20x30.toml").unwrap();
+        assert!(fab.bonds().is_none());
+        let sim = Sim::from_fab(&fab, chem);
+        // wire-20x30 = 20 chains of 30, each chain bonds 29 pairs = 580 bonds.
+        assert_eq!(sim.bonds().len(), 580);
     }
 
     #[test]
