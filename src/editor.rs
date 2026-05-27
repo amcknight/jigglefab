@@ -48,6 +48,28 @@ impl Tool {
     }
 }
 
+/// In-progress gesture state. `App` holds one of these between mouse-down
+/// and mouse-up, picking which to enter based on the active `Tool` and on
+/// whether the mouse-down hit a currently-selected bead.
+#[derive(Debug, Clone)]
+pub enum DragState {
+    None,
+    /// Chain tool: `last_idx` is the last placed bead (the chain extends
+    /// from here on each mousemove).
+    Chain { last_idx: u32 },
+    /// Rect tool: `anchor` is the world position where the drag started.
+    /// `current` updates each mousemove; mouseup commits select_rect.
+    Rect { anchor: Vec2, current: Vec2, moved: bool },
+    /// Lasso tool: polyline of cursor samples. mouseup closes & commits.
+    Lasso { points: Vec<Vec2> },
+    /// Move drag: cursor world-pos at the previous mousemove.
+    Move { last_cursor: Vec2 },
+}
+
+impl Default for DragState {
+    fn default() -> Self { DragState::None }
+}
+
 /// Distance between consecutive beads when the Chain tool drops them. Tuned
 /// to match the wire-30 preset (0.667) — comfortably under RADIUS=1.0 so the
 /// pair starts bonded and `enforce_bonds` never has to repair it.
