@@ -304,6 +304,9 @@ pub struct App {
     /// True only while the left mouse button is held. mousemove uses this to
     /// know whether to extend the current `drag`.
     mouse_down: bool,
+    /// Scene payload captured at the most recent Edit→Run transition.
+    /// `Some` means Revert is available. Cleared on chemistry switch or Clear.
+    pre_run_snapshot: Option<crate::editor::ScenePayload>,
     #[cfg(target_arch = "wasm32")]
     proxy: Option<EventLoopProxy<UserEvent>>,
 }
@@ -321,6 +324,7 @@ impl App {
             cursor: winit::dpi::PhysicalPosition::new(0.0, 0.0),
             drag: crate::editor::DragState::None,
             mouse_down: false,
+            pre_run_snapshot: None,
             #[cfg(target_arch = "wasm32")]
             proxy: None,
         }
@@ -505,6 +509,9 @@ impl App {
                 }
                 self.drag = crate::editor::DragState::None;
                 self.mouse_down = false;
+                if let Some(scene) = self.scene.as_ref() {
+                    self.pre_run_snapshot = Some(scene.capture_payload());
+                }
                 if self.scene.is_some() {
                     self.rebuild_sim_from_scene();
                     self.mode = crate::editor::Mode::Run;
@@ -703,6 +710,7 @@ impl ApplicationHandler<UserEvent> for App {
                                 scene.switch_chemistry(new_chem, name);
                             }
                             self.sim = None;
+                            self.pre_run_snapshot = None;
                             self.mode = crate::editor::Mode::Edit;
                             self.drag = crate::editor::DragState::None;
                             self.mouse_down = false;
@@ -724,6 +732,7 @@ impl ApplicationHandler<UserEvent> for App {
                             scene.clear();
                         }
                         self.sim = None;
+                        self.pre_run_snapshot = None;
                         self.mode = crate::editor::Mode::Edit;
                         self.drag = crate::editor::DragState::None;
                         self.mouse_down = false;
