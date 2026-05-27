@@ -15,6 +15,14 @@ pub struct Meta {
     pub seed: u64,
     #[serde(default)]
     pub world_size: Option<f32>,
+    #[serde(default)]
+    pub bonds: Option<Vec<[u32; 2]>>,
+}
+
+impl Fab {
+    pub fn bonds(&self) -> Option<&Vec<[u32; 2]>> {
+        self.meta.bonds.as_ref()
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -59,5 +67,32 @@ mod tests {
         for b in &fab.beads {
             assert_eq!(b.pos().x, 15.0);
         }
+    }
+
+    #[test]
+    fn fab_round_trips_without_bonds() {
+        let fab = load_fab("fabs/grey-30.toml").unwrap();
+        assert!(fab.bonds().is_none(), "legacy fab should have no explicit bonds");
+    }
+
+    #[test]
+    fn fab_parses_explicit_bonds() {
+        let toml_text = r#"
+[meta]
+name = "two"
+chemistry = "grey"
+seed = 1
+bonds = [[0, 1]]
+
+[[bead]]
+state = "grey"
+pos = [5.0, 5.0]
+
+[[bead]]
+state = "grey"
+pos = [5.5, 5.0]
+"#;
+        let fab = parse_fab(toml_text).unwrap();
+        assert_eq!(fab.bonds(), Some(&vec![[0u32, 1u32]]));
     }
 }

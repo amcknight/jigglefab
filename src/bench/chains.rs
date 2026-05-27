@@ -77,6 +77,7 @@ impl Scenario for DisconnectedChains {
                 chemistry: "wire".to_string(),
                 seed: SEED,
                 world_size: Some(self.world_size),
+                bonds: None,
             },
             beads,
         };

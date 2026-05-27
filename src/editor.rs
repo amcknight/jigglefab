@@ -67,6 +67,7 @@ impl Scene {
                 chemistry: self.chemistry_name.clone(),
                 seed: self.seed,
                 world_size: Some(self.world_size),
+                bonds: None,
             },
             beads: self.beads.clone(),
         };
