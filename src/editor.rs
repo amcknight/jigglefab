@@ -232,6 +232,41 @@ pub fn load_chemistry_by_name(name: &str) -> anyhow::Result<Chemistry> {
     parse_chemistry(toml)
 }
 
+/// Inclusive point-in-rect using axis-aligned bounds. Accepts either corner
+/// ordering — anchor and current can be in any spatial order.
+pub fn point_in_rect(p: Vec2, a: Vec2, b: Vec2) -> bool {
+    let (xmin, xmax) = if a.x <= b.x { (a.x, b.x) } else { (b.x, a.x) };
+    let (ymin, ymax) = if a.y <= b.y { (a.y, b.y) } else { (b.y, a.y) };
+    p.x >= xmin && p.x <= xmax && p.y >= ymin && p.y <= ymax
+}
+
+/// Classic ray-cast point-in-polygon. Casts a horizontal ray to +x and
+/// counts edge crossings; odd → inside. Returns false for polygons with
+/// fewer than 3 vertices.
+pub fn point_in_polygon(p: Vec2, poly: &[Vec2]) -> bool {
+    if poly.len() < 3 {
+        return false;
+    }
+    let mut inside = false;
+    let n = poly.len();
+    let mut j = n - 1;
+    for i in 0..n {
+        let pi = poly[i];
+        let pj = poly[j];
+        // Edge from pj → pi straddles the horizontal line y = p.y?
+        let straddles = (pi.y > p.y) != (pj.y > p.y);
+        if straddles {
+            // x-coordinate of the intersection of that edge with y = p.y.
+            let x_cross = pj.x + (p.y - pj.y) * (pi.x - pj.x) / (pi.y - pj.y);
+            if p.x < x_cross {
+                inside = !inside;
+            }
+        }
+        j = i;
+    }
+    inside
+}
+
 /// Convert a viewport pixel to world coordinates using the same camera
 /// math as `Renderer::update_camera`. Inverse of:
 ///   ortho(0, w, 0, h) where (w, h) is the aspect-corrected world rect,
@@ -505,5 +540,68 @@ mod tests {
             let d = (Vec2::from(w[0].pos) - Vec2::from(w[1].pos)).length();
             assert!((d - 0.667).abs() < 1e-3, "consecutive spacing {} != 0.667", d);
         }
+    }
+
+    #[test]
+    fn point_in_rect_inside_and_outside() {
+        let a = Vec2::new(1.0, 1.0);
+        let b = Vec2::new(5.0, 4.0);
+        assert!(point_in_rect(Vec2::new(3.0, 2.0), a, b));
+        assert!(point_in_rect(Vec2::new(5.0, 4.0), a, b), "boundary counts as in");
+        assert!(!point_in_rect(Vec2::new(0.5, 2.0), a, b));
+        assert!(!point_in_rect(Vec2::new(3.0, 5.0), a, b));
+    }
+
+    #[test]
+    fn point_in_rect_handles_inverted_corners() {
+        // Drag from bottom-right to top-left: anchor > current. Still works.
+        let a = Vec2::new(5.0, 4.0);
+        let b = Vec2::new(1.0, 1.0);
+        assert!(point_in_rect(Vec2::new(3.0, 2.0), a, b));
+    }
+
+    #[test]
+    fn point_in_polygon_convex_square() {
+        let poly = vec![
+            Vec2::new(0.0, 0.0),
+            Vec2::new(4.0, 0.0),
+            Vec2::new(4.0, 4.0),
+            Vec2::new(0.0, 4.0),
+        ];
+        assert!(point_in_polygon(Vec2::new(2.0, 2.0), &poly));
+        assert!(!point_in_polygon(Vec2::new(5.0, 2.0), &poly));
+        assert!(!point_in_polygon(Vec2::new(-1.0, 2.0), &poly));
+    }
+
+    #[test]
+    fn point_in_polygon_concave_u_shape() {
+        // "U" shape: outer rectangle minus a notch in the middle top.
+        //   (0,0)─────(6,0)
+        //     │  ┌───┐  │
+        //     │  │   │  │     ← notch from (2,4) to (4,4) descending into (2,2)..(4,2)
+        //     │  │   │  │
+        //   (0,6)─────(6,6)
+        let poly = vec![
+            Vec2::new(0.0, 0.0),
+            Vec2::new(6.0, 0.0),
+            Vec2::new(6.0, 6.0),
+            Vec2::new(4.0, 6.0),
+            Vec2::new(4.0, 2.0),
+            Vec2::new(2.0, 2.0),
+            Vec2::new(2.0, 6.0),
+            Vec2::new(0.0, 6.0),
+        ];
+        assert!(point_in_polygon(Vec2::new(1.0, 5.0), &poly), "left arm of U");
+        assert!(point_in_polygon(Vec2::new(5.0, 5.0), &poly), "right arm of U");
+        assert!(!point_in_polygon(Vec2::new(3.0, 4.0), &poly), "inside notch is outside U");
+        assert!(point_in_polygon(Vec2::new(3.0, 1.0), &poly), "base of U");
+    }
+
+    #[test]
+    fn point_in_polygon_degenerate_returns_false() {
+        let empty: Vec<Vec2> = vec![];
+        assert!(!point_in_polygon(Vec2::new(0.0, 0.0), &empty));
+        let two = vec![Vec2::new(0.0, 0.0), Vec2::new(1.0, 1.0)];
+        assert!(!point_in_polygon(Vec2::new(0.5, 0.5), &two));
     }
 }
