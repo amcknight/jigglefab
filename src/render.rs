@@ -42,6 +42,11 @@ pub struct Renderer {
     camera_buf: wgpu::Buffer,
     bind_group: wgpu::BindGroup,
     bind_layout: wgpu::BindGroupLayout,
+    overlay_pipeline: wgpu::RenderPipeline,
+    overlay_buf: wgpu::Buffer,
+    overlay_capacity: usize,
+    overlay_vertex_count: u32,
+    overlay_bind_group: wgpu::BindGroup,
 }
 
 impl Renderer {
@@ -186,9 +191,90 @@ impl Renderer {
             cache: None,
         });
 
+        let overlay_capacity: usize = 256;
+        let overlay_buf = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("overlay verts"),
+            size: (overlay_capacity * std::mem::size_of::<[f32; 2]>()) as u64,
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let overlay_bind_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("overlay bind"),
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+            ],
+        });
+        let overlay_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("overlay bg"),
+            layout: &overlay_bind_layout,
+            entries: &[
+                wgpu::BindGroupEntry { binding: 0, resource: camera_buf.as_entire_binding() },
+            ],
+        });
+        let overlay_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("overlay"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/overlay.wgsl").into()),
+        });
+        let overlay_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("overlay layout"),
+            bind_group_layouts: &[&overlay_bind_layout],
+            push_constant_ranges: &[],
+        });
+        let overlay_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("overlay pipeline"),
+            layout: Some(&overlay_pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &overlay_shader,
+                entry_point: Some("vs_main"),
+                buffers: &[wgpu::VertexBufferLayout {
+                    array_stride: 8,
+                    step_mode: wgpu::VertexStepMode::Vertex,
+                    attributes: &[wgpu::VertexAttribute {
+                        offset: 0,
+                        shader_location: 0,
+                        format: wgpu::VertexFormat::Float32x2,
+                    }],
+                }],
+                compilation_options: Default::default(),
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &overlay_shader,
+                entry_point: Some("fs_main"),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format,
+                    blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+                compilation_options: Default::default(),
+            }),
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::LineList,
+                ..Default::default()
+            },
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState::default(),
+            multiview: None,
+            cache: None,
+        });
+
         Ok(Self {
             surface, device, queue, config, size,
             pipeline, quad_vbuf, bead_buf, bead_capacity, camera_buf, bind_group, bind_layout,
+            overlay_pipeline,
+            overlay_buf,
+            overlay_capacity,
+            overlay_vertex_count: 0,
+            overlay_bind_group,
         })
     }
 
@@ -264,6 +350,21 @@ impl Renderer {
         (self.device.clone(), self.queue.clone())
     }
 
+    /// Upload a polyline of world-space vertex pairs. Each consecutive pair of
+    /// vertices defines one line segment (LineList topology). Pass an empty
+    /// slice to hide the overlay this frame.
+    pub fn update_overlay(&mut self, segments: &[[f32; 2]]) {
+        debug_assert!(segments.len() % 2 == 0, "LineList needs an even vertex count");
+        let count = segments.len().min(self.overlay_capacity) as u32;
+        self.overlay_vertex_count = count;
+        if count == 0 { return; }
+        self.queue.write_buffer(
+            &self.overlay_buf,
+            0,
+            bytemuck::cast_slice(&segments[..count as usize]),
+        );
+    }
+
     pub fn render(&self, bead_count: usize) -> Result<()> {
         let frame = self.surface.get_current_texture()?;
         let view = frame.texture.create_view(&Default::default());
@@ -293,6 +394,26 @@ impl Renderer {
             // the rasterizer for free. This makes bonds across the torus seam
             // visible — without it, a chain straddling x=0 looks broken.
             pass.draw(0..6, 0..(bead_count * 9) as u32);
+        }
+        if self.overlay_vertex_count > 0 {
+            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("overlay pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Load,
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+            });
+            pass.set_pipeline(&self.overlay_pipeline);
+            pass.set_bind_group(0, &self.overlay_bind_group, &[]);
+            pass.set_vertex_buffer(0, self.overlay_buf.slice(..));
+            pass.draw(0..self.overlay_vertex_count, 0..1);
         }
         self.queue.submit(std::iter::once(encoder.finish()));
         frame.present();
