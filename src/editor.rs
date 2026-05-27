@@ -249,6 +249,46 @@ impl Scene {
         }
     }
 
+    /// Remove every selected bead. Bonds touching a removed index are dropped;
+    /// surviving bonds are rewritten under the new dense numbering. The
+    /// selection set is cleared (its indices are stale anyway).
+    pub fn delete_selection(&mut self) {
+        if self.selection.is_empty() {
+            return;
+        }
+        // Build old → new index map. Removed indices map to None.
+        let n = self.beads.len();
+        let mut remap: Vec<Option<u32>> = Vec::with_capacity(n);
+        let mut next = 0u32;
+        for i in 0..n as u32 {
+            if self.selection.contains(&i) {
+                remap.push(None);
+            } else {
+                remap.push(Some(next));
+                next += 1;
+            }
+        }
+        // Rewrite the bead vec in place (retain-and-iterate is cleaner).
+        let mut kept_beads = Vec::with_capacity(next as usize);
+        for (i, bead) in self.beads.drain(..).enumerate() {
+            if !self.selection.contains(&(i as u32)) {
+                kept_beads.push(bead);
+            }
+        }
+        self.beads = kept_beads;
+        // Rewrite the bond set: keep bonds whose endpoints both survived, remap them.
+        let new_bonds: HashSet<(u32, u32)> = self.bonds.iter().filter_map(|&(a, b)| {
+            match (remap[a as usize], remap[b as usize]) {
+                (Some(na), Some(nb)) => {
+                    Some(if na < nb { (na, nb) } else { (nb, na) })
+                }
+                _ => None,
+            }
+        }).collect();
+        self.bonds = new_bonds;
+        self.selection.clear();
+    }
+
     /// Switch chemistry. Empties beads because state names from the old
     /// chemistry may not exist in the new one.
     pub fn switch_chemistry(&mut self, chemistry: Chemistry, name: String) {
@@ -725,5 +765,56 @@ mod tests {
         for i in 0..scene.beads.len() as u32 { scene.selection.insert(i); }
         scene.translate_selection(Vec2::new(1.0, 1.0));
         assert_eq!(scene.bonds, bonds_before);
+    }
+
+    #[test]
+    fn delete_drops_touching_bonds_and_remaps_survivors() {
+        let fab = small_wire_fab();
+        let chem = load_chemistry_by_name("wire").unwrap();
+        let mut scene = Scene::from_fab(&fab, chem, "wire".into());
+        scene.beads.clear();
+        scene.bonds.clear();
+        // Chain: 0—1—2—3—4
+        let a = scene.place(Vec2::new(0.0, 0.0));
+        let b = scene.append_chain_bead(Vec2::new(0.7, 0.0), a);
+        let c = scene.append_chain_bead(Vec2::new(1.4, 0.0), b);
+        let d = scene.append_chain_bead(Vec2::new(2.1, 0.0), c);
+        let _e = scene.append_chain_bead(Vec2::new(2.8, 0.0), d);
+        assert_eq!(scene.bonds.len(), 4);
+
+        // Delete the middle bead (index 2). Bonds (1,2) and (2,3) drop.
+        // Survivors: old 0,1,3,4 → new 0,1,2,3. Surviving bonds: (0,1), (3,4) → (0,1), (2,3).
+        scene.selection.clear();
+        scene.selection.insert(c);
+        scene.delete_selection();
+        assert_eq!(scene.beads.len(), 4);
+        assert_eq!(scene.bonds.len(), 2);
+        assert!(scene.bonds.contains(&(0, 1)));
+        assert!(scene.bonds.contains(&(2, 3)));
+        assert!(scene.selection.is_empty(), "selection clears after delete");
+    }
+
+    #[test]
+    fn delete_all_clears_scene() {
+        let fab = small_wire_fab();
+        let chem = load_chemistry_by_name("wire").unwrap();
+        let mut scene = Scene::from_fab(&fab, chem, "wire".into());
+        for i in 0..scene.beads.len() as u32 { scene.selection.insert(i); }
+        scene.delete_selection();
+        assert!(scene.beads.is_empty());
+        assert!(scene.bonds.is_empty());
+        assert!(scene.selection.is_empty());
+    }
+
+    #[test]
+    fn delete_with_empty_selection_is_noop() {
+        let fab = small_wire_fab();
+        let chem = load_chemistry_by_name("wire").unwrap();
+        let mut scene = Scene::from_fab(&fab, chem, "wire".into());
+        let before_beads = scene.beads.len();
+        let before_bonds = scene.bonds.len();
+        scene.delete_selection();
+        assert_eq!(scene.beads.len(), before_beads);
+        assert_eq!(scene.bonds.len(), before_bonds);
     }
 }
