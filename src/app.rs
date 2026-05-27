@@ -451,11 +451,17 @@ impl App {
             }
             crate::editor::DragState::Lasso { points } => {
                 if points.len() < 2 { return Vec::new(); }
-                let mut segs = Vec::with_capacity(points.len() * 2);
+                let mut segs = Vec::with_capacity((points.len() + 1) * 2);
                 for w in points.windows(2) {
                     segs.push([w[0].x, w[0].y]);
                     segs.push([w[1].x, w[1].y]);
                 }
+                // Close back to the first point so the lasso visual matches the
+                // closed-polygon semantics of select_lasso.
+                let last = points[points.len() - 1];
+                let first = points[0];
+                segs.push([last.x, last.y]);
+                segs.push([first.x, first.y]);
                 segs
             }
             _ => Vec::new(),
