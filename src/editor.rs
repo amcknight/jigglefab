@@ -213,6 +213,28 @@ impl Scene {
         last
     }
 
+    /// Replace the selection with every bead whose center lies inside the
+    /// axis-aligned rectangle defined by `a` and `b` (corners in any order).
+    pub fn select_rect(&mut self, a: Vec2, b: Vec2) {
+        self.selection.clear();
+        for (i, bead) in self.beads.iter().enumerate() {
+            if point_in_rect(Vec2::from(bead.pos), a, b) {
+                self.selection.insert(i as u32);
+            }
+        }
+    }
+
+    /// Replace the selection with every bead whose center lies inside the
+    /// closed polygon. Polygons with fewer than 3 vertices select nothing.
+    pub fn select_lasso(&mut self, poly: &[Vec2]) {
+        self.selection.clear();
+        for (i, bead) in self.beads.iter().enumerate() {
+            if point_in_polygon(Vec2::from(bead.pos), poly) {
+                self.selection.insert(i as u32);
+            }
+        }
+    }
+
     /// Switch chemistry. Empties beads because state names from the old
     /// chemistry may not exist in the new one.
     pub fn switch_chemistry(&mut self, chemistry: Chemistry, name: String) {
@@ -603,5 +625,50 @@ mod tests {
         assert!(!point_in_polygon(Vec2::new(0.0, 0.0), &empty));
         let two = vec![Vec2::new(0.0, 0.0), Vec2::new(1.0, 1.0)];
         assert!(!point_in_polygon(Vec2::new(0.5, 0.5), &two));
+    }
+
+    #[test]
+    fn select_rect_replaces_selection() {
+        let fab = small_wire_fab();
+        let chem = load_chemistry_by_name("wire").unwrap();
+        let mut scene = Scene::from_fab(&fab, chem, "wire".into());
+        scene.beads.clear();
+        scene.bonds.clear();
+        scene.place(Vec2::new(2.0, 2.0));  // 0
+        scene.place(Vec2::new(8.0, 2.0));  // 1  (far enough not to bond)
+        scene.place(Vec2::new(20.0, 20.0)); // 2
+        scene.selection.insert(99);  // stale entry — must be overwritten.
+        scene.select_rect(Vec2::new(0.0, 0.0), Vec2::new(10.0, 10.0));
+        assert_eq!(scene.selection.len(), 2);
+        assert!(scene.selection.contains(&0));
+        assert!(scene.selection.contains(&1));
+        assert!(!scene.selection.contains(&2));
+        assert!(!scene.selection.contains(&99));
+    }
+
+    #[test]
+    fn select_lasso_concave_polygon() {
+        let fab = small_wire_fab();
+        let chem = load_chemistry_by_name("wire").unwrap();
+        let mut scene = Scene::from_fab(&fab, chem, "wire".into());
+        scene.beads.clear();
+        scene.bonds.clear();
+        scene.place(Vec2::new(1.0, 5.0));   // 0 — in left arm of U
+        scene.place(Vec2::new(5.0, 5.0));   // 1 — in right arm of U
+        scene.place(Vec2::new(3.0, 4.0));   // 2 — in notch (outside)
+        let poly = vec![
+            Vec2::new(0.0, 0.0),
+            Vec2::new(6.0, 0.0),
+            Vec2::new(6.0, 6.0),
+            Vec2::new(4.0, 6.0),
+            Vec2::new(4.0, 2.0),
+            Vec2::new(2.0, 2.0),
+            Vec2::new(2.0, 6.0),
+            Vec2::new(0.0, 6.0),
+        ];
+        scene.select_lasso(&poly);
+        assert!(scene.selection.contains(&0));
+        assert!(scene.selection.contains(&1));
+        assert!(!scene.selection.contains(&2));
     }
 }
