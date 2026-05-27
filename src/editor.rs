@@ -2,6 +2,8 @@
 //! and produces a fresh `Sim` on Run. See
 //! docs/superpowers/specs/2026-05-25-editor-mvp-design.md.
 
+use std::collections::HashSet;
+
 use glam::Vec2;
 
 use crate::chemistry::{parse_chemistry, Chemistry};
@@ -12,6 +14,38 @@ use crate::sim::Sim;
 pub enum Mode {
     Edit,
     Run,
+}
+
+/// The currently-active editor tool. Mutually exclusive: exactly one tool is
+/// active at a time. Place is the default and is the only tool that operates
+/// during Run mode (matches MVP behaviour).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Tool {
+    Place,
+    Chain,
+    Rect,
+    Lasso,
+}
+
+impl Tool {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Tool::Place => "place",
+            Tool::Chain => "chain",
+            Tool::Rect => "rect",
+            Tool::Lasso => "lasso",
+        }
+    }
+
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s {
+            "place" => Some(Tool::Place),
+            "chain" => Some(Tool::Chain),
+            "rect" => Some(Tool::Rect),
+            "lasso" => Some(Tool::Lasso),
+            _ => None,
+        }
+    }
 }
 
 /// Chemistries the editor can switch between. Tied to the files in
@@ -40,15 +74,31 @@ pub struct Scene {
     pub beads: Vec<BeadSpec>,
     pub seed: u64,
     pub next_state_idx: u32,
+    /// Canonical (low, high) bond keys. Authoritative; carried through
+    /// snapshot/to_sim round-trips so Sim never re-derives from positions
+    /// once a Scene has been edited.
+    pub bonds: HashSet<(u32, u32)>,
+    /// Bead indices in the current selection. Replaced on each Rect/Lasso
+    /// gesture; cleared on Run, on switch_chemistry, and on delete.
+    pub selection: HashSet<u32>,
+    /// Currently-active tool.
+    pub tool: Tool,
 }
 
 impl Scene {
     /// Build a scene from a parsed fab (existing preset) + parsed chemistry.
     pub fn from_fab(fab: &Fab, chemistry: Chemistry, chemistry_name: String) -> Self {
+        let world_size = fab.meta.world_size.unwrap_or(crate::sim::WORLD_SIZE);
+        let positions: Vec<glam::Vec2> = fab.beads.iter().map(|b| b.pos()).collect();
+        let grid = crate::grid::Grid::new(world_size);
+        let bonds = match fab.bonds() {
+            Some(explicit) => explicit.iter().map(|p| (p[0].min(p[1]), p[0].max(p[1]))).collect(),
+            None => crate::sim::derive_bonds_by_distance(&positions, &grid),
+        };
         Self {
             chemistry,
             chemistry_name,
-            world_size: fab.meta.world_size.unwrap_or(crate::sim::WORLD_SIZE),
+            world_size,
             beads: fab.beads.iter().map(|b| BeadSpec {
                 state: b.state.clone(),
                 pos: b.pos,
@@ -56,18 +106,24 @@ impl Scene {
             }).collect(),
             seed: fab.meta.seed,
             next_state_idx: 0,
+            bonds,
+            selection: HashSet::new(),
+            tool: Tool::Place,
         }
     }
 
     /// Construct a fresh `Sim` from the current scene state.
     pub fn to_sim(&self) -> Sim {
+        let mut bonds_vec: Vec<[u32; 2]> = self.bonds.iter().map(|&(a, b)| [a, b]).collect();
+        // Stable order so debug prints / fixture snapshots are deterministic.
+        bonds_vec.sort_unstable();
         let fab = Fab {
             meta: crate::fab::Meta {
                 name: format!("editor-{}", self.chemistry_name),
                 chemistry: self.chemistry_name.clone(),
                 seed: self.seed,
                 world_size: Some(self.world_size),
-                bonds: None,
+                bonds: Some(bonds_vec),
             },
             beads: self.beads.clone(),
         };
@@ -91,6 +147,7 @@ impl Scene {
                 vel: Some([v.x, v.y]),
             });
         }
+        self.bonds = sim.bonds().clone();
     }
 
     /// Append a new bead at `pos` with `self.next_state_idx`. Velocity is
@@ -111,6 +168,8 @@ impl Scene {
         self.chemistry = chemistry;
         self.chemistry_name = name;
         self.beads.clear();
+        self.bonds.clear();
+        self.selection.clear();
         self.next_state_idx = 0;
     }
 }
@@ -256,5 +315,47 @@ mod tests {
         let p = screen_to_world((0.0, 50.0), (200, 100), 30.0);
         assert!((p.x - 0.0).abs() < 1e-4);
         assert!((p.y - 15.0).abs() < 1e-4);
+    }
+
+    #[test]
+    fn scene_from_fab_derives_bonds_for_legacy_preset() {
+        let fab = small_wire_fab();
+        let chem = load_chemistry_by_name("wire").unwrap();
+        let scene = Scene::from_fab(&fab, chem, "wire".into());
+        // wire-30 is a single chain of 30 → 29 consecutive bonds.
+        assert_eq!(scene.bonds.len(), 29);
+        assert!(scene.selection.is_empty());
+    }
+
+    #[test]
+    fn scene_to_sim_passes_bonds_verbatim() {
+        let fab = small_wire_fab();
+        let chem = load_chemistry_by_name("wire").unwrap();
+        let mut scene = Scene::from_fab(&fab, chem, "wire".into());
+        // Hand-edit the bond set so to_sim has something distinctive to pass.
+        scene.bonds.clear();
+        scene.bonds.insert((0, 1));
+        let sim = scene.to_sim();
+        assert_eq!(sim.bonds().len(), 1);
+        assert!(sim.bonds().contains(&(0, 1)));
+    }
+
+    #[test]
+    fn scene_snapshot_round_trip_preserves_bonds() {
+        let fab = small_wire_fab();
+        let chem = load_chemistry_by_name("wire").unwrap();
+        let mut scene = Scene::from_fab(&fab, chem, "wire".into());
+        let original_bonds = scene.bonds.clone();
+        let sim = scene.to_sim();
+        scene.snapshot_from_sim(&sim);
+        assert_eq!(scene.bonds, original_bonds);
+    }
+
+    #[test]
+    fn scene_tool_default_is_place() {
+        let fab = small_wire_fab();
+        let chem = load_chemistry_by_name("wire").unwrap();
+        let scene = Scene::from_fab(&fab, chem, "wire".into());
+        assert_eq!(scene.tool, Tool::Place);
     }
 }
