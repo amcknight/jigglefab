@@ -440,7 +440,11 @@ impl App {
                 self.mode = crate::editor::Mode::Edit;
             }
             crate::editor::Mode::Run => {
-                // Run: build sim from scene, rebuild scheduler.
+                if let Some(scene) = self.scene.as_mut() {
+                    scene.selection.clear();
+                }
+                self.drag = crate::editor::DragState::None;
+                self.mouse_down = false;
                 if let Some(scene) = &self.scene {
                     let new_sim = scene.to_sim();
                     #[cfg(target_arch = "wasm32")]
@@ -642,16 +646,14 @@ impl ApplicationHandler<UserEvent> for App {
                     }
                     if let Some(name) = new_chemistry {
                         if let Ok(new_chem) = crate::editor::load_chemistry_by_name(&name) {
-                            // Switching chemistry forces Edit mode (no live sim makes sense
-                            // against an emptied scene) and rebuilds nothing — Scene clears
-                            // beads, next Run rebuilds Sim.
                             if let Some(scene) = self.scene.as_mut() {
                                 scene.switch_chemistry(new_chem, name);
                             }
                             self.sim = None;
                             self.mode = crate::editor::Mode::Edit;
+                            self.drag = crate::editor::DragState::None;
+                            self.mouse_down = false;
                             if let (Some(renderer), Some(scene)) = (self.renderer.as_mut(), self.scene.as_ref()) {
-                                // Camera palette needs to refresh since state colors changed.
                                 let palette: Vec<[f32; 3]> = scene.chemistry.colors.clone();
                                 renderer.update_camera(scene.world_size, &palette);
                             }
@@ -738,6 +740,23 @@ impl ApplicationHandler<UserEvent> for App {
                     match state {
                         ElementState::Pressed => self.on_mouse_down(),
                         ElementState::Released => self.on_mouse_up(),
+                    }
+                }
+            }
+            WindowEvent::KeyboardInput { event: key_event, .. } => {
+                use winit::event::ElementState;
+                use winit::keyboard::{Key, NamedKey};
+                if key_event.state == ElementState::Pressed {
+                    let is_delete = matches!(
+                        key_event.logical_key,
+                        Key::Named(NamedKey::Delete) | Key::Named(NamedKey::Backspace)
+                    );
+                    if is_delete {
+                        if self.mode == crate::editor::Mode::Edit {
+                            if let Some(scene) = self.scene.as_mut() {
+                                scene.delete_selection();
+                            }
+                        }
                     }
                 }
             }
