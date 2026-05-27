@@ -173,6 +173,22 @@ impl Scene {
         new_idx
     }
 
+    /// Append a bead at `pos` chain-bonded only to `prev_idx`. Used by the
+    /// Chain tool. Unlike `place`, this skips distance-derivation entirely —
+    /// nearby non-predecessor beads do NOT form bonds. Returns the new index.
+    pub fn append_chain_bead(&mut self, pos: Vec2, prev_idx: u32) -> u32 {
+        let state_name = self.chemistry.states[self.next_state_idx as usize].clone();
+        let new_idx = self.beads.len() as u32;
+        self.beads.push(BeadSpec {
+            state: state_name,
+            pos: [pos.x, pos.y],
+            vel: None,
+        });
+        let key = if prev_idx < new_idx { (prev_idx, new_idx) } else { (new_idx, prev_idx) };
+        self.bonds.insert(key);
+        new_idx
+    }
+
     /// Switch chemistry. Empties beads because state names from the old
     /// chemistry may not exist in the new one.
     pub fn switch_chemistry(&mut self, chemistry: Chemistry, name: String) {
@@ -392,5 +408,22 @@ mod tests {
         scene.place(Vec2::new(5.0, 5.0));
         scene.place(Vec2::new(10.0, 10.0));
         assert!(scene.bonds.is_empty(), "Place should not bond far pairs");
+    }
+
+    #[test]
+    fn append_chain_bead_only_bonds_to_predecessor() {
+        let fab = small_wire_fab();
+        let chem = load_chemistry_by_name("wire").unwrap();
+        let mut scene = Scene::from_fab(&fab, chem, "wire".into());
+        scene.beads.clear();
+        scene.bonds.clear();
+        let a = scene.place(Vec2::new(0.0, 0.0));
+        let b = scene.append_chain_bead(Vec2::new(0.7, 0.0), a);
+        let c = scene.append_chain_bead(Vec2::new(0.7, -0.7), b);
+        // |a-c| = sqrt(0.49 + 0.49) ≈ 0.99 < RADIUS — but chain MUST NOT bond a-c.
+        assert!(scene.bonds.contains(&(a, b)));
+        assert!(scene.bonds.contains(&(b, c)));
+        assert!(!scene.bonds.contains(&(a, c)), "chain must not form corner triangle");
+        assert_eq!(scene.bonds.len(), 2);
     }
 }
