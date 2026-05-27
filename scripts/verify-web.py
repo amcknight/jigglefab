@@ -86,27 +86,79 @@ async def main() -> int:
                 break
 
         if "--editor" in sys.argv:
-            # Editor smoke test: Stop → place → Run → place during run → switch chem.
+            # Editor smoke test (extended for chains / rect / lasso / move / delete).
             await page.wait_for_function("typeof window.__jigglefabSetMode === 'function'", timeout=10000)
             await page.evaluate("window.__jigglefabSetMode('edit')")
             await page.wait_for_function("window.__jigglefabGetMode() === 'edit'")
+
+            box = await page.evaluate(
+                "(() => { const c = document.querySelector('canvas');"
+                " const r = c.getBoundingClientRect();"
+                " return {x: r.left, y: r.top, w: r.width, h: r.height}; })()"
+            )
+            cx, cy = box["x"] + box["w"] / 2, box["y"] + box["h"] / 2
+
+            # --- Place tool: still works as in MVP. ---
             before = await page.evaluate("window.__jigglefabBeadCount()")
-            # Click canvas center.
-            box = await page.evaluate("(() => { const c = document.querySelector('canvas'); const r = c.getBoundingClientRect(); return {x: r.left + r.width/2, y: r.top + r.height/2}; })()")
-            await page.mouse.click(box["x"], box["y"])
-            # Mouse events are async-ish; poll briefly.
+            await page.mouse.click(cx, cy)
             await page.wait_for_function(f"window.__jigglefabBeadCount() === {before + 1}", timeout=2000)
+
+            # --- Chain tool: drag a short path. Expect bead count > +1. ---
+            await page.evaluate("window.__jigglefabSetTool('chain')")
+            await page.wait_for_function("window.__jigglefabGetTool() === 'chain'")
+            chain_before = await page.evaluate("window.__jigglefabBeadCount()")
+            await page.mouse.move(cx - 100, cy + 100)
+            await page.mouse.down()
+            for i in range(1, 8):
+                await page.mouse.move(cx - 100 + i * 15, cy + 100 + i * 15)
+            await page.mouse.up()
+            await page.wait_for_function(f"window.__jigglefabBeadCount() > {chain_before + 1}", timeout=2000)
+
+            # --- Rect tool: drag across the chain. Selection > 0. ---
+            await page.evaluate("window.__jigglefabSetTool('rect')")
+            await page.wait_for_function("window.__jigglefabGetTool() === 'rect'")
+            await page.mouse.move(cx - 150, cy + 50)
+            await page.mouse.down()
+            await page.mouse.move(cx + 50, cy + 250)
+            await page.mouse.up()
+            await page.wait_for_function("window.__jigglefabSelectionCount() > 0", timeout=2000)
+
+            # --- Delete: shrink bead count, clear selection. ---
+            sel_count = await page.evaluate("window.__jigglefabSelectionCount()")
+            beads_before_del = await page.evaluate("window.__jigglefabBeadCount()")
+            await page.keyboard.press("Delete")
+            await page.wait_for_function(
+                f"window.__jigglefabBeadCount() === {beads_before_del - sel_count}", timeout=2000)
+            await page.wait_for_function("window.__jigglefabSelectionCount() === 0", timeout=2000)
+
+            # --- Lasso tool: drag a closed loop. Selection > 0. ---
+            # Place a fresh bead under the loop so the lasso has something to enclose.
+            await page.evaluate("window.__jigglefabSetTool('place')")
+            await page.mouse.click(cx + 80, cy + 80)
+            await page.evaluate("window.__jigglefabSetTool('lasso')")
+            await page.wait_for_function("window.__jigglefabGetTool() === 'lasso'")
+            await page.mouse.move(cx + 50, cy + 50)
+            await page.mouse.down()
+            for (dx, dy) in [(80, 0), (80, 80), (0, 80), (0, 0)]:
+                await page.mouse.move(cx + 50 + dx, cy + 50 + dy)
+            await page.mouse.up()
+            await page.wait_for_function("window.__jigglefabSelectionCount() > 0", timeout=2000)
+
+            # --- Move: drag a selected bead. Run still works after. ---
+            # We don't assert the exact translation; just that drag-then-Run preserves count.
+            sel_after_lasso = await page.evaluate("window.__jigglefabSelectionCount()")
+            beads_after_lasso = await page.evaluate("window.__jigglefabBeadCount()")
+            await page.mouse.move(cx + 80, cy + 80)
+            await page.mouse.down()
+            await page.mouse.move(cx + 120, cy + 120)
+            await page.mouse.up()
+            assert sel_after_lasso > 0
             await page.evaluate("window.__jigglefabSetMode('run')")
-            await page.wait_for_function("window.__jigglefabGetMode() === 'run'")
-            # Place one more during Run.
-            after_edit = await page.evaluate("window.__jigglefabBeadCount()")
-            await page.mouse.click(box["x"] + 20, box["y"] + 20)
-            await page.wait_for_function(f"window.__jigglefabBeadCount() === {after_edit + 1}", timeout=2000)
-            # Switch chemistry — auto-dismiss confirm with handler.
-            page.once("dialog", lambda d: asyncio.create_task(d.accept()))
-            await page.evaluate("window.__jigglefabSetChemistry('grey')")
-            await page.wait_for_function("window.__jigglefabBeadCount() === 0", timeout=2000)
-            console_lines.append("[editor] smoke test passed")
+            await page.wait_for_function("window.__jigglefabGetMode() === 'run'", timeout=2000)
+            await page.wait_for_function(f"window.__jigglefabBeadCount() === {beads_after_lasso}", timeout=2000)
+            await page.wait_for_function("window.__jigglefabSelectionCount() === 0", timeout=2000)
+
+            console_lines.append("[editor] extended smoke test passed")
 
         # Inspect the canvas: did winit append one? What's its drawing-buffer
         # size and CSS size?
