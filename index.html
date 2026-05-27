@@ -184,12 +184,20 @@
         <div class="body">
             <div><span class="lbl">fab </span><span class="v" id="hud-fab">—</span></div>
             <div><span class="lbl">beads </span><span class="v" id="hud-beads">—</span></div>
+            <div><span class="lbl">sel </span><span class="v" id="hud-sel">0</span></div>
             <div><span class="lbl">fps </span><span class="v" id="hud-fps">—</span></div>
             <div><span class="lbl">frame </span><span class="v" id="hud-frame">—</span><span class="lbl"> ms</span></div>
             <div><span class="lbl">|v| </span><span class="v" id="hud-vmin">—</span><span class="lbl"> / </span><span class="v" id="hud-vmean">—</span><span class="lbl"> / </span><span class="v" id="hud-vmax">—</span><span class="lbl"> (min/mean/max)</span></div>
         </div>
     </div>
     <nav id="editor-toolbar">
+        <div class="row">
+            <span class="group-label">tool</span>
+            <a id="btn-tool-place" class="tool active" data-tool="place">Place</a>
+            <a id="btn-tool-chain" class="tool" data-tool="chain">Chain</a>
+            <a id="btn-tool-rect" class="tool" data-tool="rect">Rect</a>
+            <a id="btn-tool-lasso" class="tool" data-tool="lasso">Lasso</a>
+        </div>
         <div class="row">
             <span class="group-label">mode</span>
             <a id="btn-edit" class="mode">Edit</a>
@@ -443,6 +451,24 @@
             window.__jigglefabSetMode && window.__jigglefabSetMode("run");
         });
 
+        // Tool pills. Active class follows __jigglefabGetTool(); each click
+        // forwards the tool name to wasm via __jigglefabSetTool.
+        const toolButtons = document.querySelectorAll("#editor-toolbar a.tool");
+        function paintToolButtons(active) {
+            toolButtons.forEach(btn => {
+                btn.classList.toggle("active", btn.dataset.tool === active);
+            });
+        }
+        toolButtons.forEach(btn => {
+            btn.addEventListener("click", (e) => {
+                e.preventDefault();
+                if (window.__jigglefabSetTool) {
+                    window.__jigglefabSetTool(btn.dataset.tool);
+                }
+                paintToolButtons(btn.dataset.tool);
+            });
+        });
+
         // Poll the wasm side once a tick to reflect mode, repaint state pills
         // when the palette changes (i.e. after chemistry switch), and keep the
         // HUD bead count in sync with edits. Cheap.
@@ -464,6 +490,13 @@
             if (typeof window.__jigglefabBeadCount === "function" && hudBeadsEl) {
                 // Overrides the static count set by paintFabInfo() so edits show up.
                 hudBeadsEl.textContent = window.__jigglefabBeadCount().toLocaleString();
+            }
+            if (typeof window.__jigglefabGetTool === "function") {
+                paintToolButtons(window.__jigglefabGetTool());
+            }
+            const selEl = document.getElementById("hud-sel");
+            if (typeof window.__jigglefabSelectionCount === "function" && selEl) {
+                selEl.textContent = window.__jigglefabSelectionCount();
             }
             requestAnimationFrame(refreshToolbar);
         }
