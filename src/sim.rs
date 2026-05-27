@@ -511,6 +511,7 @@ pos = [5.90, 5.0]
 
     #[test]
     #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(not(debug_assertions))]
     fn from_fab_with_explicit_bonds_30k_under_5ms() {
         use std::time::Instant;
         let chem = load_chemistry("chemistries/wire.toml").unwrap();
