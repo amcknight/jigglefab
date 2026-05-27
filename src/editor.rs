@@ -150,16 +150,27 @@ impl Scene {
         self.bonds = sim.bonds().clone();
     }
 
-    /// Append a new bead at `pos` with `self.next_state_idx`. Velocity is
-    /// left `None`; `Sim::from_fab` will give it a seeded random unit
-    /// direction (matches existing preset convention).
-    pub fn place(&mut self, pos: Vec2) {
+    /// Append a new bead at `pos` with `self.next_state_idx`. Derives bonds
+    /// from the new bead to any existing bead within RADIUS (Place semantics:
+    /// "drop near a chain → it joins"). Returns the new bead's index.
+    pub fn place(&mut self, pos: Vec2) -> u32 {
         let state_name = self.chemistry.states[self.next_state_idx as usize].clone();
+        let new_idx = self.beads.len() as u32;
         self.beads.push(BeadSpec {
             state: state_name,
             pos: [pos.x, pos.y],
             vel: None,
         });
+        let grid = crate::grid::Grid::new(self.world_size);
+        for i in 0..(new_idx as usize) {
+            let pa = pos;
+            let pb_raw = Vec2::from(self.beads[i].pos);
+            let pb = pa + grid.min_image(pa, pb_raw);
+            if (pb - pa).length() < crate::ccd::RADIUS {
+                self.bonds.insert((i as u32, new_idx));
+            }
+        }
+        new_idx
     }
 
     /// Switch chemistry. Empties beads because state names from the old
@@ -357,5 +368,29 @@ mod tests {
         let chem = load_chemistry_by_name("wire").unwrap();
         let scene = Scene::from_fab(&fab, chem, "wire".into());
         assert_eq!(scene.tool, Tool::Place);
+    }
+
+    #[test]
+    fn place_derives_bond_to_nearby_bead() {
+        let fab = small_wire_fab();
+        let chem = load_chemistry_by_name("wire").unwrap();
+        let mut scene = Scene::from_fab(&fab, chem, "wire".into());
+        scene.beads.clear();
+        scene.bonds.clear();
+        scene.place(Vec2::new(5.0, 5.0));
+        scene.place(Vec2::new(5.5, 5.0));  // 0.5 apart < RADIUS=1.0
+        assert!(scene.bonds.contains(&(0, 1)), "Place should bond near pairs");
+    }
+
+    #[test]
+    fn place_no_bond_when_far() {
+        let fab = small_wire_fab();
+        let chem = load_chemistry_by_name("wire").unwrap();
+        let mut scene = Scene::from_fab(&fab, chem, "wire".into());
+        scene.beads.clear();
+        scene.bonds.clear();
+        scene.place(Vec2::new(5.0, 5.0));
+        scene.place(Vec2::new(10.0, 10.0));
+        assert!(scene.bonds.is_empty(), "Place should not bond far pairs");
     }
 }
