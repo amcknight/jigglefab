@@ -78,10 +78,13 @@ pub const CHAIN_STEP: f32 = 0.667;
 /// Chemistries the editor can switch between. Tied to the files in
 /// `chemistries/`, baked in at compile time on web (same pattern as fab
 /// presets in `app.rs`).
+///
+/// sem_basic is intentionally absent: its TOML uses [[sem_rule]] and only
+/// parses via load_chemistry_compiled, which the editor's Run path doesn't
+/// yet execute. Re-add once Run drives sem chemistries end-to-end.
 pub const CHEMISTRY_REGISTRY: &[(&str, &str)] = &[
     ("wire", include_str!("../chemistries/wire.toml")),
     ("grey", include_str!("../chemistries/grey.toml")),
-    ("sem_basic", include_str!("../chemistries/sem_basic.toml")),
 ];
 
 pub fn chemistry_toml(name: &str) -> Option<&'static str> {
@@ -414,6 +417,18 @@ mod tests {
     }
 
     #[test]
+    fn every_registry_entry_loads() {
+        // Regression guard: the picker advertises chemistry_names(), and Set
+        // routes through load_chemistry_by_name. If those disagree the picker
+        // shows a chemistry that errors on click (the sem_basic case before
+        // it was removed from the registry).
+        for name in chemistry_names() {
+            load_chemistry_by_name(name)
+                .unwrap_or_else(|e| panic!("registry chemistry {name:?} won't load: {e}"));
+        }
+    }
+
+    #[test]
     fn from_fab_preserves_bead_count() {
         let fab = small_wire_fab();
         let chem = load_chemistry_by_name("wire").unwrap();
@@ -479,8 +494,9 @@ mod tests {
     fn chemistry_registry_has_known_entries() {
         assert!(chemistry_toml("wire").is_some());
         assert!(chemistry_toml("grey").is_some());
-        assert!(chemistry_toml("sem_basic").is_some());
         assert!(chemistry_toml("nonexistent").is_none());
+        // sem_basic is intentionally absent — see CHEMISTRY_REGISTRY note.
+        assert!(chemistry_toml("sem_basic").is_none());
     }
 
     #[test]

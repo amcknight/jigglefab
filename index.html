@@ -400,8 +400,12 @@
             btnRun.classList.toggle("active", mode === "run");
         }
 
-        function paintChemistryPills() {
-            if (typeof window.__jigglefabGetChemistries !== "function") return;
+        function buildChemistryPills() {
+            // Builds the pill DOM. Called once when the bridge becomes
+            // available; refreshToolbar then toggles the active class each
+            // frame. Bridge-install races a single rAF, so we can't paint
+            // these once and forget — see the active-pill repaint below.
+            if (typeof window.__jigglefabGetChemistries !== "function") return false;
             chemPills.innerHTML = "";
             for (const name of window.__jigglefabGetChemistries()) {
                 const a = document.createElement("a");
@@ -415,9 +419,16 @@
                     )) return;
                     window.__jigglefabSetChemistry(name);
                     editStateIdx = 0;
-                    // Repaint will happen on next refreshToolbar tick.
                 });
                 chemPills.appendChild(a);
+            }
+            return true;
+        }
+
+        function paintChemistryActive() {
+            const active = (window.__jigglefabGetChemistryName && window.__jigglefabGetChemistryName()) || "";
+            for (const a of chemPills.querySelectorAll("a")) {
+                a.classList.toggle("active", a.dataset.name === active);
             }
         }
 
@@ -484,11 +495,14 @@
         // when the palette changes (i.e. after chemistry switch), and keep the
         // HUD bead count in sync with edits. Cheap.
         let lastChemName = "";
+        let chemPillsBuilt = false;
         const hudBeadsEl = document.getElementById("hud-beads");
         function refreshToolbar() {
             if (typeof window.__jigglefabGetMode === "function") {
                 setModeBtnActive(window.__jigglefabGetMode());
             }
+            if (!chemPillsBuilt) chemPillsBuilt = buildChemistryPills();
+            if (chemPillsBuilt) paintChemistryActive();
             if (typeof window.__jigglefabGetPalette === "function") {
                 const palette = window.__jigglefabGetPalette();
                 // Cheap signature: comma-joined names. Reflows pills only when changed.
@@ -511,13 +525,11 @@
             }
             requestAnimationFrame(refreshToolbar);
         }
-        // Bridge installers fire inside `resumed`, after window creation. Wait
-        // one frame so they exist before our first read.
-        requestAnimationFrame(() => {
-            paintChemistryPills();
-            paintStatePills();
-            refreshToolbar();
-        });
+        // Bridge installers fire inside `resumed`, after window creation, on
+        // an unpredictable frame. refreshToolbar retries every frame until
+        // the bridge is up, then builds chemistry pills once and keeps the
+        // active class in sync. State pills follow the palette signature.
+        requestAnimationFrame(refreshToolbar);
     </script>
 </body>
 </html>

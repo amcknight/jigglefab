@@ -42,6 +42,7 @@ mod web_bridge {
         pub palette: Vec<(String, [f32; 3])>,
         pub tool: &'static str,
         pub selection_count: u32,
+        pub chemistry_name: String,
     }
 }
 
@@ -228,6 +229,15 @@ fn install_window_get_chemistries() {
         arr
     }) as Box<dyn Fn() -> js_sys::Array>);
     expose_to_window!("__jigglefabGetChemistries", cb);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_window_get_chemistry_name() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|| -> String {
+        web_bridge::SNAPSHOT.with(|s| s.borrow().chemistry_name.clone())
+    }) as Box<dyn Fn() -> String>);
+    expose_to_window!("__jigglefabGetChemistryName", cb);
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -607,6 +617,7 @@ impl ApplicationHandler<UserEvent> for App {
             install_window_set_edit_state();
             install_window_bead_count();
             install_window_get_chemistries();
+            install_window_get_chemistry_name();
             install_window_set_chemistry();
             install_window_get_tool();
             install_window_set_tool();
@@ -776,6 +787,7 @@ impl ApplicationHandler<UserEvent> for App {
                     };
                     let tool_str = self.scene.as_ref().map(|s| s.tool.as_str()).unwrap_or("place");
                     let selection_count = self.scene.as_ref().map(|s| s.selection.len() as u32).unwrap_or(0);
+                    let chemistry_name = self.scene.as_ref().map(|s| s.chemistry_name.clone()).unwrap_or_default();
                     web_bridge::SNAPSHOT.with(|s| {
                         *s.borrow_mut() = web_bridge::Snapshot {
                             mode: mode_str,
@@ -783,6 +795,7 @@ impl ApplicationHandler<UserEvent> for App {
                             palette,
                             tool: tool_str,
                             selection_count,
+                            chemistry_name,
                         };
                     });
                 }
