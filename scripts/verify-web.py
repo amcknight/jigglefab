@@ -143,8 +143,13 @@ async def main() -> int:
             await page.wait_for_function("window.__jigglefabSelectionCount() === 0", timeout=2000)
 
             # --- Lasso tool: drag a closed loop. Selection > 0. ---
-            # Place a fresh bead under the loop so the lasso has something to enclose.
+            # Place a fresh bead under the loop so the lasso has something to
+            # enclose. Wait for the tool switch to land before clicking — a
+            # SetTool command is processed a frame later, so clicking too soon
+            # runs the click under the *previous* tool (here Rect), which
+            # starts a selection drag instead of placing a bead.
             await page.evaluate("window.__jigglefabSetTool('place')")
+            await page.wait_for_function("window.__jigglefabGetTool() === 'place'")
             await page.mouse.click(cx + 80, cy + 80)
             await page.evaluate("window.__jigglefabSetTool('lasso')")
             await page.wait_for_function("window.__jigglefabGetTool() === 'lasso'")
@@ -175,6 +180,7 @@ async def main() -> int:
             await page.evaluate("window.__jigglefabSetMode('edit')")
             await page.wait_for_function("window.__jigglefabGetMode() === 'edit'", timeout=2000)
             await page.evaluate("window.__jigglefabSetTool('place')")
+            await page.wait_for_function("window.__jigglefabGetTool() === 'place'")
             beads_pre_run = await page.evaluate("window.__jigglefabBeadCount()")
             await page.mouse.click(cx + 30, cy - 30)
             await page.wait_for_function(
