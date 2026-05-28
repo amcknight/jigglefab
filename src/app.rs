@@ -289,6 +289,24 @@ fn install_window_clear() {
     expose_to_window!("__jigglefabClear", cb);
 }
 
+#[cfg(target_arch = "wasm32")]
+fn install_window_revert() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|| {
+        web_bridge::COMMANDS.with(|c| c.borrow_mut().revert = true);
+    }) as Box<dyn Fn()>);
+    expose_to_window!("__jigglefabRevert", cb);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_window_can_revert() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|| -> bool {
+        web_bridge::SNAPSHOT.with(|s| s.borrow().can_revert)
+    }) as Box<dyn Fn() -> bool>);
+    expose_to_window!("__jigglefabCanRevert", cb);
+}
+
 pub enum UserEvent {
     RendererReady(Renderer),
 }
@@ -643,6 +661,8 @@ impl ApplicationHandler<UserEvent> for App {
             install_window_set_tool();
             install_window_selection_count();
             install_window_clear();
+            install_window_revert();
+            install_window_can_revert();
 
             let proxy = self.proxy.clone().expect("proxy not set before resumed()");
             let window_clone = window.clone();
