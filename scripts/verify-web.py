@@ -11,7 +11,7 @@ rendering pixels other than the dark clear colour after a few seconds.
 
 import asyncio
 import sys
-from playwright.async_api import async_playwright
+from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
 
 URL = sys.argv[1] if len(sys.argv) > 1 else "https://amcknight.ca/jigglefab/"
 OUT_DIR = "C:/Users/thedo/git/jigglefab/scripts/verify-out"
@@ -109,6 +109,24 @@ async def main() -> int:
             )
             cx, cy = box["x"] + box["w"] / 2, box["y"] + box["h"] / 2
 
+            async def place_bead(x, y):
+                """Place exactly one bead at (x, y), retrying until it lands.
+                The editor swallows the first place-click after a delete /
+                selection-clear (deselect-click handling), so a single click
+                isn't reliable. (x, y) must also clear existing beads'
+                placement min-spacing (~115 px on screen) or it's a no-op."""
+                await page.evaluate("window.__jigglefabSetTool('place')")
+                start = await page.evaluate("window.__jigglefabBeadCount()")
+                for _ in range(4):
+                    await page.mouse.click(x, y)
+                    try:
+                        await page.wait_for_function(
+                            f"window.__jigglefabBeadCount() > {start}", timeout=1000)
+                        return
+                    except PlaywrightTimeoutError:
+                        continue
+                raise AssertionError(f"failed to place a bead at ({x}, {y})")
+
             # --- Place tool: still works as in MVP. ---
             before = await page.evaluate("window.__jigglefabBeadCount()")
             await page.mouse.click(cx, cy)
@@ -143,15 +161,19 @@ async def main() -> int:
             await page.wait_for_function("window.__jigglefabSelectionCount() === 0", timeout=2000)
 
             # --- Lasso tool: drag a closed loop. Selection > 0. ---
-            # Place a fresh bead under the loop so the lasso has something to enclose.
-            await page.evaluate("window.__jigglefabSetTool('place')")
-            await page.mouse.click(cx + 80, cy + 80)
+            # Place a fresh bead inside the loop so the lasso has something to
+            # enclose. (cx+100,cy+100) sits well inside the loop below and clear
+            # of the centre bead's placement min-spacing.
+            await place_bead(cx + 100, cy + 100)
             await page.evaluate("window.__jigglefabSetTool('lasso')")
             await page.wait_for_function("window.__jigglefabGetTool() === 'lasso'")
             await page.mouse.move(cx + 50, cy + 50)
             await page.mouse.down()
+            # Interpolate (steps) so the lasso polyline gets enough sample
+            # points to form a well-defined polygon — a sparse 4-jump loop
+            # selects unreliably.
             for (dx, dy) in [(80, 0), (80, 80), (0, 80), (0, 0)]:
-                await page.mouse.move(cx + 50 + dx, cy + 50 + dy)
+                await page.mouse.move(cx + 50 + dx, cy + 50 + dy, steps=5)
             await page.mouse.up()
             await page.wait_for_function("window.__jigglefabSelectionCount() > 0", timeout=2000)
 
@@ -159,9 +181,9 @@ async def main() -> int:
             # We don't assert the exact translation; just that drag-then-Run preserves count.
             sel_after_lasso = await page.evaluate("window.__jigglefabSelectionCount()")
             beads_after_lasso = await page.evaluate("window.__jigglefabBeadCount()")
-            await page.mouse.move(cx + 80, cy + 80)
+            await page.mouse.move(cx + 100, cy + 100)
             await page.mouse.down()
-            await page.mouse.move(cx + 120, cy + 120)
+            await page.mouse.move(cx + 140, cy + 140)
             await page.mouse.up()
             assert sel_after_lasso > 0
             await page.evaluate("window.__jigglefabSetMode('run')")
@@ -171,15 +193,12 @@ async def main() -> int:
 
             # --- Revert: snapshot at Edit→Run is restored, persists across reverts,
             # and is invalidated by Clear. ---
-            # Establish a known scene: drop into Edit, place one bead.
+            # Establish a known scene: drop into Edit, place one bead clear of
+            # existing beads' placement min-spacing.
             await page.evaluate("window.__jigglefabSetMode('edit')")
             await page.wait_for_function("window.__jigglefabGetMode() === 'edit'", timeout=2000)
-            await page.evaluate("window.__jigglefabSetTool('place')")
-            beads_pre_run = await page.evaluate("window.__jigglefabBeadCount()")
-            await page.mouse.click(cx + 30, cy - 30)
-            await page.wait_for_function(
-                f"window.__jigglefabBeadCount() === {beads_pre_run + 1}", timeout=2000)
-            snap_count = beads_pre_run + 1
+            await place_bead(cx, cy - 150)
+            snap_count = await page.evaluate("window.__jigglefabBeadCount()")
 
             # Run, let the sim mutate, then Revert.
             await page.evaluate("window.__jigglefabSetMode('run')")
