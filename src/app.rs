@@ -25,6 +25,7 @@ mod web_bridge {
         pub set_chemistry: Option<String>,
         pub set_tool: Option<crate::editor::Tool>,
         pub clear: bool,
+        pub revert: bool,
     }
 
     thread_local! {
@@ -43,6 +44,7 @@ mod web_bridge {
         pub tool: &'static str,
         pub selection_count: u32,
         pub chemistry_name: String,
+        pub can_revert: bool,
     }
 }
 
@@ -371,6 +373,17 @@ impl App {
         self.sim = Some(new_sim);
     }
 
+    fn revert_to_snapshot(&mut self) {
+        let Some(payload) = self.pre_run_snapshot.as_ref() else { return };
+        if let Some(scene) = self.scene.as_mut() {
+            scene.restore_payload(payload);
+        }
+        self.sim = None;
+        self.mode = crate::editor::Mode::Edit;
+        self.drag = crate::editor::DragState::None;
+        self.mouse_down = false;
+    }
+
     fn on_mouse_down(&mut self) {
         self.mouse_down = true;
         let Some(world_pos) = self.cursor_world() else { return };
@@ -691,10 +704,11 @@ impl ApplicationHandler<UserEvent> for App {
                 let Some(window_arc) = self.window.clone() else { return };
                 #[cfg(target_arch = "wasm32")]
                 {
-                    let (new_mode, edit_state, new_chemistry, new_tool, clear_scene) = web_bridge::COMMANDS.with(|c| {
+                    let (new_mode, edit_state, new_chemistry, new_tool, clear_scene, revert) = web_bridge::COMMANDS.with(|c| {
                         let mut cmds = c.borrow_mut();
                         let clr = std::mem::replace(&mut cmds.clear, false);
-                        (cmds.set_mode.take(), cmds.set_edit_state.take(), cmds.set_chemistry.take(), cmds.set_tool.take(), clr)
+                        let rev = std::mem::replace(&mut cmds.revert, false);
+                        (cmds.set_mode.take(), cmds.set_edit_state.take(), cmds.set_chemistry.take(), cmds.set_tool.take(), clr, rev)
                     });
                     if let Some(new_mode) = new_mode { self.transition_mode(new_mode); }
                     if let Some(idx) = edit_state {
@@ -736,6 +750,9 @@ impl ApplicationHandler<UserEvent> for App {
                         self.mode = crate::editor::Mode::Edit;
                         self.drag = crate::editor::DragState::None;
                         self.mouse_down = false;
+                    }
+                    if revert {
+                        self.revert_to_snapshot();
                     }
                 }
                 let overlay = self.overlay_segments();
@@ -797,6 +814,7 @@ impl ApplicationHandler<UserEvent> for App {
                     let tool_str = self.scene.as_ref().map(|s| s.tool.as_str()).unwrap_or("place");
                     let selection_count = self.scene.as_ref().map(|s| s.selection.len() as u32).unwrap_or(0);
                     let chemistry_name = self.scene.as_ref().map(|s| s.chemistry_name.clone()).unwrap_or_default();
+                    let can_revert = self.pre_run_snapshot.is_some();
                     web_bridge::SNAPSHOT.with(|s| {
                         *s.borrow_mut() = web_bridge::Snapshot {
                             mode: mode_str,
@@ -805,6 +823,7 @@ impl ApplicationHandler<UserEvent> for App {
                             tool: tool_str,
                             selection_count,
                             chemistry_name,
+                            can_revert,
                         };
                     });
                 }
