@@ -91,6 +91,17 @@ async def main() -> int:
             await page.evaluate("window.__jigglefabSetMode('edit')")
             await page.wait_for_function("window.__jigglefabGetMode() === 'edit'")
 
+            # Start from a known-empty canvas. The default scene is densely
+            # packed, so placing on an occupied spot is a silent no-op — which
+            # makes placement-based steps (lasso enclosure, revert setup)
+            # non-deterministic. Clearing first makes every step reliable; the
+            # tool assertions below all use relative bead counts, so an empty
+            # start is fine.
+            if await page.evaluate("window.__jigglefabBeadCount()") > 0:
+                page.once("dialog", lambda d: d.accept())
+                await page.evaluate("document.getElementById('btn-clear').click()")
+                await page.wait_for_function("window.__jigglefabBeadCount() === 0", timeout=2000)
+
             box = await page.evaluate(
                 "(() => { const c = document.querySelector('canvas');"
                 " const r = c.getBoundingClientRect();"
@@ -157,6 +168,38 @@ async def main() -> int:
             await page.wait_for_function("window.__jigglefabGetMode() === 'run'", timeout=2000)
             await page.wait_for_function(f"window.__jigglefabBeadCount() === {beads_after_lasso}", timeout=2000)
             await page.wait_for_function("window.__jigglefabSelectionCount() === 0", timeout=2000)
+
+            # --- Revert: snapshot at Edit→Run is restored, persists across reverts,
+            # and is invalidated by Clear. ---
+            # Establish a known scene: drop into Edit, place one bead.
+            await page.evaluate("window.__jigglefabSetMode('edit')")
+            await page.wait_for_function("window.__jigglefabGetMode() === 'edit'", timeout=2000)
+            await page.evaluate("window.__jigglefabSetTool('place')")
+            beads_pre_run = await page.evaluate("window.__jigglefabBeadCount()")
+            await page.mouse.click(cx + 30, cy - 30)
+            await page.wait_for_function(
+                f"window.__jigglefabBeadCount() === {beads_pre_run + 1}", timeout=2000)
+            snap_count = beads_pre_run + 1
+
+            # Run, let the sim mutate, then Revert.
+            await page.evaluate("window.__jigglefabSetMode('run')")
+            await page.wait_for_function("window.__jigglefabGetMode() === 'run'", timeout=2000)
+            await page.wait_for_function("window.__jigglefabCanRevert() === true", timeout=2000)
+            await page.wait_for_timeout(300)
+
+            await page.evaluate("window.__jigglefabRevert()")
+            await page.wait_for_function("window.__jigglefabGetMode() === 'edit'", timeout=2000)
+            assert await page.evaluate("window.__jigglefabBeadCount()") == snap_count, \
+                "revert did not restore the pre-Run bead count"
+            assert await page.evaluate("window.__jigglefabCanRevert()") is True, \
+                "snapshot should persist across reverts"
+
+            # Clear should invalidate the snapshot.
+            page.once("dialog", lambda d: d.accept())
+            await page.evaluate(
+                "document.getElementById('btn-clear').click()"
+            )
+            await page.wait_for_function("window.__jigglefabCanRevert() === false", timeout=2000)
 
             console_lines.append("[editor] extended smoke test passed")
 
