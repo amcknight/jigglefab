@@ -167,6 +167,11 @@
         }
         #editor-toolbar a:hover { background: rgba(255, 255, 255, 0.12); }
         #editor-toolbar a.active { background: #2a4d3a; color: #fff; border-color: #4a8; }
+        #editor-toolbar a.disabled {
+            opacity: 0.4;
+            cursor: default;
+            pointer-events: none;
+        }
         #editor-toolbar a.state-pill .dot {
             display: inline-block; width: 10px; height: 10px;
             border-radius: 50%; margin-right: 6px; vertical-align: middle;
@@ -203,6 +208,7 @@
             <a id="btn-edit" class="mode">Edit</a>
             <a id="btn-run" class="mode">Run</a>
             <a id="btn-clear">Clear</a>
+            <a id="btn-revert" class="disabled">Revert</a>
         </div>
         <div class="row">
             <span class="group-label">chemistry</span>
@@ -473,6 +479,20 @@
             window.__jigglefabClear();
         });
 
+        // Revert button. No-op when disabled (snapshot absent). Confirms
+        // before discarding a non-empty scene, mirroring Clear's pattern.
+        document.getElementById("btn-revert").addEventListener("click", (e) => {
+            e.preventDefault();
+            const btn = document.getElementById("btn-revert");
+            if (btn.classList.contains("disabled")) return;
+            if (!window.__jigglefabRevert) return;
+            const beads = (window.__jigglefabBeadCount && window.__jigglefabBeadCount()) || 0;
+            if (beads > 0 && !window.confirm(
+                `Revert to pre-Run scene? This discards ${beads} bead${beads === 1 ? "" : "s"}.`
+            )) return;
+            window.__jigglefabRevert();
+        });
+
         // Tool pills. Active class follows __jigglefabGetTool(); each click
         // forwards the tool name to wasm via __jigglefabSetTool.
         const toolButtons = document.querySelectorAll("#editor-toolbar a.tool");
@@ -518,6 +538,10 @@
             }
             if (typeof window.__jigglefabGetTool === "function") {
                 paintToolButtons(window.__jigglefabGetTool());
+            }
+            const revertBtn = document.getElementById("btn-revert");
+            if (revertBtn && typeof window.__jigglefabCanRevert === "function") {
+                revertBtn.classList.toggle("disabled", !window.__jigglefabCanRevert());
             }
             const selEl = document.getElementById("hud-sel");
             if (typeof window.__jigglefabSelectionCount === "function" && selEl) {
