@@ -53,6 +53,9 @@ console_log = "1"
 web-sys = { version = "0.3", features = ["Document", "Element", "HtmlCanvasElement", "Window", "Location"] }
 js-sys = "0.3"
 
+[dev-dependencies]
+serde_json = "1"
+
 [profile.release]
 opt-level = 3
 lto = "thin"

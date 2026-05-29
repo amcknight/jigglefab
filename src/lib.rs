@@ -1,4 +1,5 @@
 pub mod fab;
+pub mod bond;
 pub mod chemistry;
 pub mod rng;
 pub mod ccd;
