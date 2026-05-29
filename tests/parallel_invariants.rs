@@ -1,3 +1,4 @@
+use jigglefab::bond::BondPair;
 use jigglefab::ccd::RADIUS;
 use jigglefab::chemistry::{compile_chemistry, load_chemistry};
 use jigglefab::fab::load_fab;
@@ -13,7 +14,7 @@ fn min_free_pair_distance(sim: &Sim) -> f32 {
     let n = sim.positions.len();
     for i in 0..n {
         for j in (i + 1)..n {
-            let key = (i as u32, j as u32);
+            let key = BondPair::new(i as u32, j as u32);
             if bonds.contains(&key) {
                 continue;
             }
@@ -76,7 +77,8 @@ fn bonds_stay_within_radius_plus_eps_grey_30() {
     let eps = 0.01;
     for f in 0..600 {
         sched.step(&mut sim, 1.0 / 60.0);
-        for &(a, b) in sim.bonds() {
+        for bond in sim.bonds() {
+            let (a, b) = (bond.lo(), bond.hi());
             let d = (sim.positions[a as usize] - sim.positions[b as usize]).length();
             assert!(
                 d <= RADIUS + eps,

@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use crate::bond::BondPair;
 use crate::chemistry::{CompiledChemistry, Op, Tag};
 use crate::grid::Grid;
 use crate::parallel::substep::do_substep;
@@ -11,7 +12,7 @@ pub const DEFAULT_DT_SUB: f32 = 1.0 / 240.0;
 
 pub struct CpuParallel {
     pool: BeadPool,
-    bonds: HashSet<(u32, u32)>,
+    bonds: HashSet<BondPair>,
     grid: Grid,
     chem: CompiledChemistry,
     dt_sub: f32,
@@ -56,7 +57,7 @@ impl CpuParallel {
 }
 
 // Tiny helper: sim.bonds is pub(crate); within the crate this just clones it.
-fn sim_bonds_clone(sim: &Sim) -> HashSet<(u32, u32)> {
+fn sim_bonds_clone(sim: &Sim) -> HashSet<BondPair> {
     sim.bonds.clone()
 }
 

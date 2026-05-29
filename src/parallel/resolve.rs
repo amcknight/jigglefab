@@ -1,6 +1,7 @@
 use glam::Vec2;
 use std::collections::HashSet;
 
+use crate::bond::BondPair;
 use crate::ccd::RADIUS;
 use crate::chemistry::{BeadKey, CompiledChemistry, NewState, Op, ReactionKind, Rule, Side};
 use crate::collide::reflect;
@@ -13,8 +14,8 @@ pub struct ResolveContext<'a> {
     pub pool: &'a mut BeadPool,
     pub chem: &'a CompiledChemistry,
     pub grid: &'a Grid,
-    pub bonds: &'a HashSet<(u32, u32)>,
-    pub pending_bonds: &'a mut Vec<(u32, u32)>,
+    pub bonds: &'a HashSet<BondPair>,
+    pub pending_bonds: &'a mut Vec<BondPair>,
     pub pending_deaths: &'a mut Vec<u32>,
 }
 
@@ -115,8 +116,8 @@ pub fn resolve_pair(pair: &Pair, ctx: &mut ResolveContext) {
                 new_bead.load_program(ctx.chem.program(prog_idx));
             }
             if let Ok(new_slot) = ctx.pool.try_alloc(new_bead) {
-                ctx.pending_bonds.push((a.min(new_slot), a.max(new_slot)));
-                ctx.pending_bonds.push((b.min(new_slot), b.max(new_slot)));
+                ctx.pending_bonds.push(BondPair::new(a, new_slot));
+                ctx.pending_bonds.push(BondPair::new(b, new_slot));
             }
             // Snap parents to the same side they came from so the next substep
             // sees a clean pair.
@@ -166,9 +167,8 @@ fn snap_back(pool: &mut BeadPool, a: u32, b: u32, grid: &Grid, post_state_inside
     pool.get_mut(b).pos = new_b;
 }
 
-fn is_bonded(bonds: &HashSet<(u32, u32)>, a: u32, b: u32) -> bool {
-    let key = if a < b { (a, b) } else { (b, a) };
-    bonds.contains(&key)
+fn is_bonded(bonds: &HashSet<BondPair>, a: u32, b: u32) -> bool {
+    bonds.contains(&BondPair::new(a, b))
 }
 
 #[cfg(test)]
@@ -217,7 +217,7 @@ mod tests {
         let b = place(&mut pool, Vec2::new(17.0, 15.0), Vec2::new(-1.0, 0.0));
         let chem = make_grey_chem();
         let grid = Grid::new(30.0);
-        let bonds: HashSet<(u32, u32)> = Default::default();
+        let bonds: HashSet<BondPair> = Default::default();
         let pair = Pair { a, b, t: 1.0 };
         let mut pending_bonds = Vec::new();
         let mut pending_deaths = Vec::new();

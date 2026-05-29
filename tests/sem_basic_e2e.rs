@@ -14,6 +14,7 @@
 use std::collections::HashSet;
 
 use glam::Vec2;
+use jigglefab::bond::BondPair;
 use jigglefab::chemistry::{parse_sem_chemistry, CompiledChemistry, Op, OpKind, Tag};
 use jigglefab::grid::Grid;
 use jigglefab::parallel::substep::do_substep;
@@ -50,12 +51,12 @@ fn run_to_first_reaction(
     chem: &CompiledChemistry,
     a_top: Op,
     b_top: Op,
-) -> (BeadPool, HashSet<(u32, u32)>, u32, u32) {
+) -> (BeadPool, HashSet<BondPair>, u32, u32) {
     let mut pool = BeadPool::with_capacity(8);
     let a = place(&mut pool, Vec2::new(15.0, 15.0), Vec2::new(-0.5, 0.0), a_top);
     let b = place(&mut pool, Vec2::new(15.5, 15.0), Vec2::new(0.5, 0.0), b_top);
-    let mut bonds: HashSet<(u32, u32)> = HashSet::new();
-    bonds.insert((a.min(b), a.max(b)));
+    let mut bonds: HashSet<BondPair> = HashSet::new();
+    bonds.insert(BondPair::new(a, b));
     let mut grid = Grid::new(WORLD);
     for _ in 0..240 {
         do_substep(&mut pool, &mut grid, chem, &mut bonds, DT_SUB);
@@ -85,7 +86,7 @@ fn apply_die_kills_the_die_bead() {
         "apply-bead's stack must be popped (was [Apply], now empty)"
     );
     assert!(
-        !bonds.contains(&(a.min(b), a.max(b))),
+        !bonds.contains(&BondPair::new(a, b)),
         "bond touching the dead slot must be removed"
     );
 }
@@ -120,7 +121,7 @@ fn apply_spawn_births_a_new_wire_bonded_to_both_parents() {
     );
 
     // Triangle of bonds: parents stay bonded, newborn bonded to each parent.
-    let key = |x: u32, y: u32| (x.min(y), x.max(y));
+    let key = |x: u32, y: u32| BondPair::new(x, y);
     assert!(bonds.contains(&key(a, b)), "parents' bond is preserved");
     assert!(bonds.contains(&key(a, new_slot)), "newborn bonded to a");
     assert!(bonds.contains(&key(b, new_slot)), "newborn bonded to b");
@@ -141,5 +142,5 @@ fn no_rule_no_population_change() {
     let alive_count = pool.alive_slots().count();
     assert_eq!(alive_count, 2, "no rule → no population change");
     assert!(pool.get(a).alive && pool.get(b).alive);
-    assert!(bonds.contains(&(a.min(b), a.max(b))), "bond intact");
+    assert!(bonds.contains(&BondPair::new(a, b)), "bond intact");
 }

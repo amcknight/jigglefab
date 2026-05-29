@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use crate::bond::BondPair;
 use crate::chemistry::{CompiledChemistry, Op, Tag};
 use crate::grid::Grid;
 use crate::parallel::substep::do_substep_mt;
@@ -15,7 +16,7 @@ pub const DEFAULT_DT_SUB: f32 = 1.0 / 240.0;
 // tests/parallel_self_determinism.rs.
 pub struct CpuParallelMt {
     pool: BeadPool,
-    bonds: HashSet<(u32, u32)>,
+    bonds: HashSet<BondPair>,
     grid: Grid,
     chem: CompiledChemistry,
     dt_sub: f32,

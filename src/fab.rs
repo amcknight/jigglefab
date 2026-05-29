@@ -1,35 +1,37 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use glam::Vec2;
 
-#[derive(Debug, Deserialize)]
+use crate::bond::BondPair;
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Fab {
     pub meta: Meta,
     #[serde(rename = "bead")]
     pub beads: Vec<BeadSpec>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Meta {
     pub name: String,
     pub chemistry: String,
     pub seed: u64,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub world_size: Option<f32>,
-    #[serde(default)]
-    pub bonds: Option<Vec<[u32; 2]>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bonds: Option<Vec<BondPair>>,
 }
 
 impl Fab {
-    pub fn bonds(&self) -> Option<&Vec<[u32; 2]>> {
+    pub fn bonds(&self) -> Option<&Vec<BondPair>> {
         self.meta.bonds.as_ref()
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BeadSpec {
     pub state: String,
     pub pos: [f32; 2],
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub vel: Option<[f32; 2]>,
 }
 
@@ -93,6 +95,38 @@ state = "grey"
 pos = [5.5, 5.0]
 "#;
         let fab = parse_fab(toml_text).unwrap();
-        assert_eq!(fab.bonds(), Some(&vec![[0u32, 1u32]]));
+        assert_eq!(fab.bonds(), Some(&vec![BondPair::new(0, 1)]));
+    }
+
+    #[test]
+    fn fab_serializes_and_reparses() {
+        let toml_text = r#"
+[meta]
+name = "two"
+chemistry = "grey"
+seed = 7
+world_size = 30.0
+bonds = [[0, 1]]
+
+[[bead]]
+state = "grey"
+pos = [5.0, 5.0]
+
+[[bead]]
+state = "grey"
+pos = [5.5, 5.0]
+"#;
+        let fab = parse_fab(toml_text).unwrap();
+        let out = toml::to_string_pretty(&fab).unwrap();
+        let reparsed = parse_fab(&out).unwrap();
+        assert_eq!(reparsed.meta.name, "two");
+        assert_eq!(reparsed.meta.chemistry, "grey");
+        assert_eq!(reparsed.meta.seed, 7);
+        assert_eq!(reparsed.meta.world_size, Some(30.0));
+        assert_eq!(reparsed.bonds(), Some(&vec![BondPair::new(0, 1)]));
+        assert_eq!(reparsed.beads.len(), 2);
+        assert_eq!(reparsed.beads[0].pos, [5.0, 5.0]);
+        // vel is None on every bead, so the skip attribute must omit it entirely.
+        assert!(!out.contains("vel"), "None vel must be skipped, got:\n{out}");
     }
 }

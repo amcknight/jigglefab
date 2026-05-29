@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use std::sync::atomic::Ordering;
 
+use crate::bond::BondPair;
 use crate::ccd::{next_contact, RADIUS};
 use crate::chemistry::CompiledChemistry;
 use crate::collide::reflect;
@@ -15,9 +16,10 @@ const BOND_EPS: f32 = 1e-5;
 // normal velocity if it was still outward. Matches Sim::enforce_bonds:
 // without this, a bonded pair nudged across R by a sibling pair's snap
 // is invisible to the next substep's CCD and would drift apart forever.
-pub fn enforce_bonds(pool: &mut BeadPool, grid: &Grid, bonds: &HashSet<(u32, u32)>) {
-    let pairs: Vec<(u32, u32)> = bonds.iter().copied().collect();
-    for (a, b) in pairs {
+pub fn enforce_bonds(pool: &mut BeadPool, grid: &Grid, bonds: &HashSet<BondPair>) {
+    let pairs: Vec<BondPair> = bonds.iter().copied().collect();
+    for bond in pairs {
+        let (a, b) = (bond.lo(), bond.hi());
         if !pool.get(a).alive || !pool.get(b).alive {
             continue;
         }
@@ -59,7 +61,7 @@ pub fn do_substep_mt(
     pool: &mut BeadPool,
     grid: &mut Grid,
     chem: &CompiledChemistry,
-    bonds: &mut HashSet<(u32, u32)>,
+    bonds: &mut HashSet<BondPair>,
     dt_sub: f32,
 ) {
     let contacts = compute_active_contacts_par(pool, grid, dt_sub);
@@ -70,7 +72,7 @@ pub fn do_substep_mt(
     }
     let colors = coloring::color_pairs(&contacts);
     let max_color = colors.iter().copied().max().unwrap_or(0);
-    let mut pending_bonds: Vec<(u32, u32)> = Vec::new();
+    let mut pending_bonds: Vec<BondPair> = Vec::new();
     let mut pending_deaths: Vec<u32> = Vec::new();
     for c in 0..=max_color {
         let mut pairs_in_color: Vec<Pair> = contacts
@@ -92,7 +94,7 @@ pub fn do_substep_mt(
     }
     for slot in pending_deaths {
         pool.free(slot);
-        bonds.retain(|&(a, b)| a != slot && b != slot);
+        bonds.retain(|bp| !bp.contains(slot));
     }
     enforce_bonds(pool, grid, bonds);
     clear_substep_flags(pool);
@@ -102,7 +104,7 @@ pub fn do_substep(
     pool: &mut BeadPool,
     grid: &mut Grid,
     chem: &CompiledChemistry,
-    bonds: &mut HashSet<(u32, u32)>,
+    bonds: &mut HashSet<BondPair>,
     dt_sub: f32,
 ) {
     let contacts = time_phase!(
@@ -117,7 +119,7 @@ pub fn do_substep(
     }
     let colors = time_phase!(profile::COLOR_NS, coloring::color_pairs(&contacts));
     let max_color = colors.iter().copied().max().unwrap_or(0);
-    let mut pending_bonds: Vec<(u32, u32)> = Vec::new();
+    let mut pending_bonds: Vec<BondPair> = Vec::new();
     let mut pending_deaths: Vec<u32> = Vec::new();
     time_phase!(profile::RESOLVE_NS, {
         for c in 0..=max_color {
@@ -152,7 +154,7 @@ pub fn do_substep(
     for slot in pending_deaths {
         pool.free(slot);
         grid.remove_bead(slot);
-        bonds.retain(|&(a, b)| a != slot && b != slot);
+        bonds.retain(|bp| !bp.contains(slot));
     }
     time_phase!(profile::BONDS_NS, enforce_bonds(pool, grid, bonds));
     clear_substep_flags(pool);
@@ -281,8 +283,8 @@ pub(crate) fn resolve_color_par(
     pool: &mut BeadPool,
     chem: &CompiledChemistry,
     grid: &Grid,
-    bonds: &HashSet<(u32, u32)>,
-    pending_bonds: &mut Vec<(u32, u32)>,
+    bonds: &HashSet<BondPair>,
+    pending_bonds: &mut Vec<BondPair>,
     pending_deaths: &mut Vec<u32>,
 ) {
     use rayon::prelude::*;
@@ -301,10 +303,10 @@ pub(crate) fn resolve_color_par(
     };
     let sync = SyncBeads(beads_cell);
 
-    let per_pair: Vec<(Vec<(u32, u32)>, Vec<u32>)> = pairs_in_color
+    let per_pair: Vec<(Vec<BondPair>, Vec<u32>)> = pairs_in_color
         .par_iter()
         .map(|pair| {
-            let mut pb: Vec<(u32, u32)> = Vec::new();
+            let mut pb: Vec<BondPair> = Vec::new();
             let mut pd: Vec<u32> = Vec::new();
             resolve_pair_disjoint(pair, &sync, chem, grid, bonds, &mut pb, &mut pd);
             (pb, pd)
@@ -327,8 +329,8 @@ fn resolve_pair_disjoint(
     beads: &sync_beads_impl::SyncBeads<'_>,
     chem: &CompiledChemistry,
     grid: &Grid,
-    bonds: &HashSet<(u32, u32)>,
-    pending_bonds: &mut Vec<(u32, u32)>,
+    bonds: &HashSet<BondPair>,
+    pending_bonds: &mut Vec<BondPair>,
     pending_deaths: &mut Vec<u32>,
 ) {
     use crate::chemistry::{BeadKey, NewState, ReactionKind, Rule, Side};
@@ -340,10 +342,7 @@ fn resolve_pair_disjoint(
     let bb = unsafe { beads.read(b) };
     let pa = ba.pos;
     let pb = ba.pos + grid.min_image(ba.pos, bb.pos);
-    let bonded = {
-        let key = if a < b { (a, b) } else { (b, a) };
-        bonds.contains(&key)
-    };
+    let bonded = bonds.contains(&BondPair::new(a, b));
     let exiting = (pb - pa).dot(bb.vel - ba.vel) > 0.0;
     let side = if bonded { Side::In } else { Side::Out };
     let effective_side = if bonded == exiting { side } else { Side::Out };
@@ -540,8 +539,8 @@ mod tests {
             stack,
         });
         let mut grid = Grid::new(30.0);
-        let mut bonds: std::collections::HashSet<(u32, u32)> = Default::default();
-        bonds.insert((a.min(b), a.max(b)));
+        let mut bonds: std::collections::HashSet<BondPair> = Default::default();
+        bonds.insert(BondPair::new(a, b));
         let chem = {
             let mut c = crate::chemistry::CompiledChemistry::empty();
             let key = crate::chemistry::BeadKey {
@@ -616,7 +615,7 @@ mod tests {
             stack,
         });
         let mut grid = Grid::new(30.0);
-        let mut bonds: std::collections::HashSet<(u32, u32)> = Default::default();
+        let mut bonds: std::collections::HashSet<BondPair> = Default::default();
         let chem = {
             let mut c = crate::chemistry::CompiledChemistry::empty();
             let key = crate::chemistry::BeadKey {
@@ -645,7 +644,7 @@ mod tests {
     #[test]
     fn do_substep_mt_bit_matches_do_substep() {
         use std::collections::HashSet;
-        fn build_chain() -> (BeadPool, HashSet<(u32, u32)>) {
+        fn build_chain() -> (BeadPool, HashSet<BondPair>) {
             let mut pool = BeadPool::with_capacity(64);
             let mut stack = [Op::nop(); STACK_CAP];
             stack[0] = Op::sig_legacy(0);
@@ -663,7 +662,7 @@ mod tests {
             }
             let mut bonds = HashSet::new();
             for i in 0..29u32 {
-                bonds.insert((i, i + 1));
+                bonds.insert(BondPair::new(i, i + 1));
             }
             (pool, bonds)
         }
@@ -707,7 +706,7 @@ mod tests {
     #[test]
     fn parallel_resolve_color_bit_matches_sequential() {
         use std::collections::HashSet;
-        fn build_chain() -> (BeadPool, HashSet<(u32, u32)>) {
+        fn build_chain() -> (BeadPool, HashSet<BondPair>) {
             let mut pool = BeadPool::with_capacity(4);
             let mut stack = [Op::nop(); STACK_CAP];
             stack[0] = Op::sig_legacy(0);
@@ -724,8 +723,8 @@ mod tests {
                 });
             }
             let mut bonds = HashSet::new();
-            bonds.insert((0u32, 1u32));
-            bonds.insert((2u32, 3u32));
+            bonds.insert(BondPair::new(0, 1));
+            bonds.insert(BondPair::new(2, 3));
             (pool, bonds)
         }
         let (mut pool_seq, bonds_seq) = build_chain();
@@ -753,7 +752,7 @@ mod tests {
         ];
 
         // Sequential: existing resolve_pair loop
-        let mut pb_seq: Vec<(u32, u32)> = Vec::new();
+        let mut pb_seq: Vec<BondPair> = Vec::new();
         let mut pd_seq: Vec<u32> = Vec::new();
         for p in &pairs {
             let mut ctx = crate::parallel::resolve::ResolveContext {
@@ -768,7 +767,7 @@ mod tests {
         }
 
         // Parallel: resolve_color_par
-        let mut pb_par: Vec<(u32, u32)> = Vec::new();
+        let mut pb_par: Vec<BondPair> = Vec::new();
         let mut pd_par: Vec<u32> = Vec::new();
         resolve_color_par(
             &pairs, &mut pool_par, &chem, &grid, &bonds_par,

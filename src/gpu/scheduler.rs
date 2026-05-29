@@ -40,7 +40,7 @@ impl GpuEventLoop {
 
     fn sort_bonds(sim: &Sim) -> Vec<[u32; 2]> {
         let mut v: Vec<[u32; 2]> = sim.bonds.iter()
-            .map(|&(a, b)| if a < b { [a, b] } else { [b, a] })
+            .map(|bp| bp.as_array())
             .collect();
         v.sort_unstable();
         v

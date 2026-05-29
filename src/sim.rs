@@ -2,6 +2,7 @@ use glam::Vec2;
 use std::collections::HashSet;
 use std::f32::consts::TAU;
 
+use crate::bond::BondPair;
 use crate::ccd::{next_contact, RADIUS};
 use crate::chemistry::{Action, Chemistry};
 use crate::collide::reflect;
@@ -47,7 +48,7 @@ pub struct Sim {
     // source of truth — initialised from initial geometry, then carried through
     // sim time independent of float drift in |d|. For grey chemistry the set is
     // invariant; future chemistries that form/break bonds will mutate it.
-    pub(crate) bonds: HashSet<(u32, u32)>,
+    pub(crate) bonds: HashSet<BondPair>,
     last_metrics: StepMetrics,
     tick: u32,
 }
@@ -55,7 +56,7 @@ pub struct Sim {
 /// Distance-derive bonds for legacy presets (no explicit `bonds` field). A
 /// pair bonds when their min-image separation is < RADIUS at preset time.
 /// Mirrors the Haskell `bbSides` build at `haskell/src/Motion/Point.hs:40-41`.
-pub(crate) fn derive_bonds_by_distance(positions: &[Vec2], grid: &Grid) -> HashSet<(u32, u32)> {
+pub(crate) fn derive_bonds_by_distance(positions: &[Vec2], grid: &Grid) -> HashSet<BondPair> {
     let n = positions.len();
     let mut bonds = HashSet::new();
     for i in 0..n {
@@ -63,7 +64,7 @@ pub(crate) fn derive_bonds_by_distance(positions: &[Vec2], grid: &Grid) -> HashS
             let pa = positions[i];
             let pb = pa + grid.min_image(pa, positions[j]);
             if (pb - pa).length() < RADIUS {
-                bonds.insert((i as u32, j as u32));
+                bonds.insert(BondPair::new(i as u32, j as u32));
             }
         }
     }
@@ -75,7 +76,7 @@ impl Sim {
 
     pub fn chemistry(&self) -> &Chemistry { &self.chemistry }
 
-    pub fn bonds(&self) -> &HashSet<(u32, u32)> { &self.bonds }
+    pub fn bonds(&self) -> &HashSet<BondPair> { &self.bonds }
 
     /// Per-state colors for rendering, defined by the chemistry. The renderer
     /// uploads this once at startup and indexes into it per-bead.
@@ -103,7 +104,7 @@ impl Sim {
         let world_size = fab.meta.world_size.unwrap_or(WORLD_SIZE);
         let grid = Grid::new(world_size);
         let bonds = match fab.bonds() {
-            Some(explicit) => explicit.iter().map(|p| (p[0].min(p[1]), p[0].max(p[1]))).collect(),
+            Some(explicit) => explicit.iter().copied().collect(),
             None => derive_bonds_by_distance(&positions, &grid),
         };
         Self { positions, velocities, states, chemistry, grid, bonds, last_metrics: StepMetrics::default(), tick: 0 }
@@ -114,8 +115,7 @@ impl Sim {
     pub fn last_step_metrics(&self) -> StepMetrics { self.last_metrics }
 
     fn is_bonded(&self, a: u32, b: u32) -> bool {
-        let key = if a < b { (a, b) } else { (b, a) };
-        self.bonds.contains(&key)
+        self.bonds.contains(&BondPair::new(a, b))
     }
 
     /// Walk the bond set and pull any pair that has drifted to |d| ≥ R back
@@ -126,8 +126,9 @@ impl Sim {
     /// `None`. The pair would drift apart forever. Calling this once per
     /// step bounds total drift to one frame's worth.
     pub(crate) fn enforce_bonds(&mut self) {
-        let pairs: Vec<(u32, u32)> = self.bonds.iter().copied().collect();
-        for (a, b) in pairs {
+        let pairs: Vec<BondPair> = self.bonds.iter().copied().collect();
+        for bond in pairs {
+            let (a, b) = (bond.lo(), bond.hi());
             let pa = self.positions[a as usize];
             let pb_raw = self.positions[b as usize];
             let pb = pa + self.grid.min_image(pa, pb_raw);
@@ -331,7 +332,7 @@ mod tests {
         let chem = load_chemistry("chemistries/grey.toml").unwrap();
         let g = chem.state_index("grey").unwrap() as u32;
         let mut bonds = HashSet::new();
-        bonds.insert((0u32, 1u32));
+        bonds.insert(BondPair::new(0, 1));
         let mut sim = Sim {
             positions: vec![Vec2::new(15.0, 14.75), Vec2::new(15.0, 15.25)],
             velocities: vec![Vec2::new(0.0, -1.0), Vec2::new(0.0, 1.0)],
@@ -393,7 +394,7 @@ mod tests {
         let off = chem.state_index("off").unwrap() as u32;
         let on = chem.state_index("on").unwrap() as u32;
         let mut bonds = HashSet::new();
-        bonds.insert((0u32, 1u32));
+        bonds.insert(BondPair::new(0, 1));
         let mut sim = Sim {
             // Start close, moving apart, so they hit |d|=R from the inside.
             positions: vec![Vec2::new(14.75, 5.0), Vec2::new(15.25, 5.0)],
@@ -469,9 +470,9 @@ pos = [5.90, 5.0]
         let fab = crate::fab::parse_fab(toml_text).unwrap();
         let sim = Sim::from_fab(&fab, chem);
         assert_eq!(sim.bonds().len(), 2);
-        assert!(sim.bonds().contains(&(0, 1)));
-        assert!(sim.bonds().contains(&(1, 2)));
-        assert!(!sim.bonds().contains(&(0, 2)), "explicit bonds must not be widened");
+        assert!(sim.bonds().contains(&BondPair::new(0, 1)));
+        assert!(sim.bonds().contains(&BondPair::new(1, 2)));
+        assert!(!sim.bonds().contains(&BondPair::new(0, 2)), "explicit bonds must not be widened");
     }
 
     #[test]
@@ -518,7 +519,7 @@ pos = [5.90, 5.0]
         // Cold path: derive once so we have a bond list to seed the explicit path with.
         let mut fab = load_fab("fabs/wire-100x30x10.toml").unwrap();
         let sim_warm = Sim::from_fab(&fab, chem.clone());
-        let bonds_vec: Vec<[u32; 2]> = sim_warm.bonds().iter().map(|&(a, b)| [a, b]).collect();
+        let bonds_vec: Vec<BondPair> = sim_warm.bonds().iter().copied().collect();
         fab.meta.bonds = Some(bonds_vec);
         // Warm-up build (don't measure first iteration — allocator hot path).
         let _ = Sim::from_fab(&fab, chem.clone());

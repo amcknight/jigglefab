@@ -6,6 +6,7 @@ use std::collections::HashSet;
 
 use glam::Vec2;
 
+use crate::bond::BondPair;
 use crate::chemistry::{parse_chemistry, Chemistry};
 use crate::fab::{BeadSpec, Fab};
 use crate::sim::Sim;
@@ -107,7 +108,7 @@ pub struct Scene {
     /// Canonical (low, high) bond keys. Authoritative; carried through
     /// snapshot/to_sim round-trips so Sim never re-derives from positions
     /// once a Scene has been edited.
-    pub bonds: HashSet<(u32, u32)>,
+    pub bonds: HashSet<BondPair>,
     /// Bead indices in the current selection. Replaced on each Rect/Lasso
     /// gesture; cleared on Run, on switch_chemistry, and on delete.
     pub selection: HashSet<u32>,
@@ -126,7 +127,7 @@ pub struct ScenePayload {
     pub seed: u64,
     pub next_state_idx: u32,
     pub beads: Vec<BeadSpec>,
-    pub bonds: HashSet<(u32, u32)>,
+    pub bonds: HashSet<BondPair>,
 }
 
 impl Scene {
@@ -136,7 +137,7 @@ impl Scene {
         let positions: Vec<glam::Vec2> = fab.beads.iter().map(|b| b.pos()).collect();
         let grid = crate::grid::Grid::new(world_size);
         let bonds = match fab.bonds() {
-            Some(explicit) => explicit.iter().map(|p| (p[0].min(p[1]), p[0].max(p[1]))).collect(),
+            Some(explicit) => explicit.iter().copied().collect(),
             None => crate::sim::derive_bonds_by_distance(&positions, &grid),
         };
         Self {
@@ -158,7 +159,7 @@ impl Scene {
 
     /// Construct a fresh `Sim` from the current scene state.
     pub fn to_sim(&self) -> Sim {
-        let mut bonds_vec: Vec<[u32; 2]> = self.bonds.iter().map(|&(a, b)| [a, b]).collect();
+        let mut bonds_vec: Vec<BondPair> = self.bonds.iter().copied().collect();
         // Stable order so debug prints / fixture snapshots are deterministic.
         bonds_vec.sort_unstable();
         let fab = Fab {
@@ -211,7 +212,7 @@ impl Scene {
             let pb_raw = Vec2::from(self.beads[i].pos);
             let pb = pa + grid.min_image(pa, pb_raw);
             if (pb - pa).length() < crate::ccd::RADIUS {
-                self.bonds.insert((i as u32, new_idx));
+                self.bonds.insert(BondPair::new(i as u32, new_idx));
             }
         }
         new_idx
@@ -228,8 +229,7 @@ impl Scene {
             pos: [pos.x, pos.y],
             vel: None,
         });
-        let key = if prev_idx < new_idx { (prev_idx, new_idx) } else { (new_idx, prev_idx) };
-        self.bonds.insert(key);
+        self.bonds.insert(BondPair::new(prev_idx, new_idx));
         new_idx
     }
 
@@ -316,11 +316,9 @@ impl Scene {
         }
         self.beads = kept_beads;
         // Rewrite the bond set: keep bonds whose endpoints both survived, remap them.
-        let new_bonds: HashSet<(u32, u32)> = self.bonds.iter().filter_map(|&(a, b)| {
-            match (remap[a as usize], remap[b as usize]) {
-                (Some(na), Some(nb)) => {
-                    Some(if na < nb { (na, nb) } else { (nb, na) })
-                }
+        let new_bonds: HashSet<BondPair> = self.bonds.iter().filter_map(|&bond| {
+            match (remap[bond.lo() as usize], remap[bond.hi() as usize]) {
+                (Some(na), Some(nb)) => Some(BondPair::new(na, nb)),
                 _ => None,
             }
         }).collect();
@@ -621,10 +619,10 @@ mod tests {
         let mut scene = Scene::from_fab(&fab, chem, "wire".into());
         // Hand-edit the bond set so to_sim has something distinctive to pass.
         scene.bonds.clear();
-        scene.bonds.insert((0, 1));
+        scene.bonds.insert(BondPair::new(0, 1));
         let sim = scene.to_sim();
         assert_eq!(sim.bonds().len(), 1);
-        assert!(sim.bonds().contains(&(0, 1)));
+        assert!(sim.bonds().contains(&BondPair::new(0, 1)));
     }
 
     #[test]
@@ -655,7 +653,7 @@ mod tests {
         scene.bonds.clear();
         scene.place(Vec2::new(5.0, 5.0));
         scene.place(Vec2::new(5.5, 5.0));  // 0.5 apart < RADIUS=1.0
-        assert!(scene.bonds.contains(&(0, 1)), "Place should bond near pairs");
+        assert!(scene.bonds.contains(&BondPair::new(0, 1)), "Place should bond near pairs");
     }
 
     #[test]
@@ -681,9 +679,9 @@ mod tests {
         let b = scene.append_chain_bead(Vec2::new(0.7, 0.0), a);
         let c = scene.append_chain_bead(Vec2::new(0.7, -0.7), b);
         // |a-c| = sqrt(0.49 + 0.49) ≈ 0.99 < RADIUS — but chain MUST NOT bond a-c.
-        assert!(scene.bonds.contains(&(a, b)));
-        assert!(scene.bonds.contains(&(b, c)));
-        assert!(!scene.bonds.contains(&(a, c)), "chain must not form corner triangle");
+        assert!(scene.bonds.contains(&BondPair::new(a, b)));
+        assert!(scene.bonds.contains(&BondPair::new(b, c)));
+        assert!(!scene.bonds.contains(&BondPair::new(a, c)), "chain must not form corner triangle");
         assert_eq!(scene.bonds.len(), 2);
     }
 
@@ -707,9 +705,9 @@ mod tests {
             assert!(p[1].abs() < 1e-3);
         }
         // Consecutive bonds.
-        assert!(scene.bonds.contains(&(0, 1)));
-        assert!(scene.bonds.contains(&(1, 2)));
-        assert!(scene.bonds.contains(&(2, 3)));
+        assert!(scene.bonds.contains(&BondPair::new(0, 1)));
+        assert!(scene.bonds.contains(&BondPair::new(1, 2)));
+        assert!(scene.bonds.contains(&BondPair::new(2, 3)));
         assert_eq!(scene.bonds.len(), 3);
     }
 
@@ -914,8 +912,8 @@ mod tests {
         scene.delete_selection();
         assert_eq!(scene.beads.len(), 4);
         assert_eq!(scene.bonds.len(), 2);
-        assert!(scene.bonds.contains(&(0, 1)));
-        assert!(scene.bonds.contains(&(2, 3)));
+        assert!(scene.bonds.contains(&BondPair::new(0, 1)));
+        assert!(scene.bonds.contains(&BondPair::new(2, 3)));
         assert!(scene.selection.is_empty(), "selection clears after delete");
     }
 
