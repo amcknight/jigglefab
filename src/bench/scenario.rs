@@ -1,12 +1,13 @@
 use std::collections::HashSet;
 use glam::Vec2;
 
+use crate::bond::BondPair;
 use crate::ccd::RADIUS;
 use crate::sim::Sim;
 
 /// Captures the initial configuration of a Sim for end-of-run invariant checks.
 pub struct Invariants {
-    pub initial_bond_set: HashSet<(u32, u32)>,
+    pub initial_bond_set: HashSet<BondPair>,
     pub initial_state_histogram: Vec<usize>,
 }
 
@@ -21,7 +22,7 @@ pub trait Scenario {
 /// is strictly less than RADIUS (the bond threshold). Used to capture
 /// initial bonds and check final bonds. O(N²) — only run at scenario setup
 /// and at end-of-run, never per-step.
-pub fn geometric_bonds(positions: &[Vec2], world_size: f32) -> HashSet<(u32, u32)> {
+pub fn geometric_bonds(positions: &[Vec2], world_size: f32) -> HashSet<BondPair> {
     let mut bonds = HashSet::new();
     let half = world_size * 0.5;
     for i in 0..positions.len() {
@@ -32,7 +33,7 @@ pub fn geometric_bonds(positions: &[Vec2], world_size: f32) -> HashSet<(u32, u32
             if d.y >  half { d.y -= world_size; }
             if d.y < -half { d.y += world_size; }
             if d.length() < RADIUS {
-                bonds.insert((i as u32, j as u32));
+                bonds.insert(BondPair::new(i as u32, j as u32));
             }
         }
     }
@@ -52,7 +53,7 @@ mod tests {
         ];
         let bonds = geometric_bonds(&positions, 50.0);
         assert_eq!(bonds.len(), 1);
-        assert!(bonds.contains(&(0u32, 1u32)));
+        assert!(bonds.contains(&BondPair::new(0, 1)));
     }
 
     #[test]
@@ -64,7 +65,7 @@ mod tests {
         ];
         let bonds = geometric_bonds(&positions, 10.0);
         assert_eq!(bonds.len(), 1);
-        assert!(bonds.contains(&(0u32, 1u32)));
+        assert!(bonds.contains(&BondPair::new(0, 1)));
     }
 
     #[test]
