@@ -1,3 +1,4 @@
+pub mod camera;
 pub mod fab;
 pub mod bond;
 pub mod chemistry;
