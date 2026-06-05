@@ -333,8 +333,11 @@ pub struct App {
     camera: crate::camera::Camera,
     /// True while Space is held — turns a left-drag into a pan.
     space_held: bool,
-    /// Some(last_cursor) while a pan drag (middle-button or space+left) is active.
-    pan_anchor: Option<winit::dpi::PhysicalPosition<f64>>,
+    /// `Some` while a pan drag is active; the value is the button that owns the
+    /// pan (Middle, or Left for a space+left pan). Tracking the owner keeps pan
+    /// and edit gestures mutually exclusive: a left press/release can't disturb a
+    /// middle-button pan, and vice versa.
+    pan_button: Option<winit::event::MouseButton>,
     drag: crate::editor::DragState,
     /// True only while the left mouse button is held. mousemove uses this to
     /// know whether to extend the current `drag`.
@@ -359,7 +362,7 @@ impl App {
             cursor: winit::dpi::PhysicalPosition::new(0.0, 0.0),
             camera: crate::camera::Camera::fit(crate::sim::WORLD_SIZE),
             space_held: false,
-            pan_anchor: None,
+            pan_button: None,
             drag: crate::editor::DragState::None,
             mouse_down: false,
             pre_run_snapshot: None,
@@ -767,6 +770,12 @@ impl ApplicationHandler<UserEvent> for App {
         let Some(_window) = &self.window else { return };
         match event {
             WindowEvent::CloseRequested => event_loop.exit(),
+            WindowEvent::Focused(false) => {
+                // Focus loss swallows key/button releases, so clear held-modifier
+                // and in-progress pan state to avoid a stuck pan mode.
+                self.space_held = false;
+                self.pan_button = None;
+            }
             WindowEvent::Resized(size) => {
                 let Some(renderer) = &mut self.renderer else { return };
                 let Some(sim) = &mut self.sim else { return };
@@ -916,7 +925,7 @@ impl ApplicationHandler<UserEvent> for App {
             WindowEvent::CursorMoved { position, .. } => {
                 let prev = self.cursor;
                 self.cursor = position;
-                if self.pan_anchor.is_some() {
+                if self.pan_button.is_some() {
                     let dx = (position.x - prev.x) as f32;
                     let dy = (position.y - prev.y) as f32;
                     if let Some(viewport) = self.viewport() {
@@ -936,21 +945,29 @@ impl ApplicationHandler<UserEvent> for App {
                         // so it doesn't resume (and corrupt the scene) after the pan ends.
                         self.drag = crate::editor::DragState::None;
                         self.mouse_down = false;
-                        self.pan_anchor = Some(self.cursor);
+                        self.pan_button = Some(MouseButton::Middle);
                     }
                     (MouseButton::Middle, ElementState::Released) => {
-                        self.pan_anchor = None;
+                        if self.pan_button == Some(MouseButton::Middle) {
+                            self.pan_button = None;
+                        }
                     }
                     (MouseButton::Left, ElementState::Pressed) => {
-                        if self.space_held {
-                            self.pan_anchor = Some(self.cursor);
+                        if self.pan_button.is_some() {
+                            // A pan (e.g. middle held) already owns the gesture —
+                            // ignore the left press so it can't start a latent edit.
+                        } else if self.space_held {
+                            self.pan_button = Some(MouseButton::Left);
                         } else {
                             self.on_mouse_down();
                         }
                     }
                     (MouseButton::Left, ElementState::Released) => {
-                        if self.pan_anchor.is_some() {
-                            self.pan_anchor = None;
+                        if self.pan_button == Some(MouseButton::Left) {
+                            self.pan_button = None; // end the space+left pan
+                        } else if self.pan_button.is_some() {
+                            // A middle-button pan owns the gesture; a stray left
+                            // release must not end it, and no edit drag is pending.
                         } else {
                             self.on_mouse_up();
                         }
