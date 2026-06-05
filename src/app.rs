@@ -771,6 +771,8 @@ impl ApplicationHandler<UserEvent> for App {
                 let Some(renderer) = &mut self.renderer else { return };
                 let Some(sim) = &mut self.sim else { return };
                 renderer.resize(size);
+                // Zero-delta pan to re-clamp the center to the new viewport: the
+                // fit extent changes with aspect, so a prior pan may now be out of bounds.
                 self.camera.pan_by((0.0, 0.0), (size.width, size.height), sim.world_size());
                 renderer.update_camera(&self.camera, sim.world_size(), &sim.palette());
             }

@@ -108,6 +108,7 @@ impl Camera {
         self.clamp_pan(viewport, world_size);
     }
 
+    /// Reset to the default fit-world view (zoom 1, centered).
     pub fn reset(&mut self, world_size: f32) {
         *self = Camera::fit(world_size);
     }
