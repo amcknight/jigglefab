@@ -84,7 +84,33 @@ impl Camera {
         self.clamp_pan(viewport, world_size);
     }
 
-    fn clamp_pan(&mut self, _viewport: (u32, u32), _world_size: f32) {}
+    fn clamp_pan(&mut self, viewport: (u32, u32), world_size: f32) {
+        let vis = self.visible_extent(viewport, world_size);
+        let clamp_axis = |c: f32, ext: f32| -> f32 {
+            let h = ext * 0.5;
+            if ext <= world_size {
+                c.clamp(h, world_size - h)
+            } else {
+                world_size * 0.5 // visible exceeds world ⇒ pin to centre
+            }
+        };
+        self.center.x = clamp_axis(self.center.x, vis.x);
+        self.center.y = clamp_axis(self.center.y, vis.y);
+    }
+
+    /// Pan by a cursor screen-delta in physical pixels (content follows the cursor).
+    pub fn pan_by(&mut self, screen_delta: (f32, f32), viewport: (u32, u32), world_size: f32) {
+        let vw = viewport.0.max(1) as f32;
+        let vh = viewport.1.max(1) as f32;
+        let vis = self.visible_extent(viewport, world_size);
+        self.center.x -= screen_delta.0 * vis.x / vw;
+        self.center.y += screen_delta.1 * vis.y / vh;
+        self.clamp_pan(viewport, world_size);
+    }
+
+    pub fn reset(&mut self, world_size: f32) {
+        *self = Camera::fit(world_size);
+    }
 
     /// World→clip orthographic projection for the current view.
     pub fn view_proj(&self, viewport: (u32, u32), world_size: f32) -> Mat4 {
@@ -186,5 +212,41 @@ mod tests {
         cam.zoom_at((100.0, 700.0), 0.5, viewport, WS);
         assert!((cam.zoom - MIN_ZOOM).abs() < 1e-4, "zoom {}", cam.zoom);
         assert!(approx(cam.center, Vec2::new(WS / 2.0, WS / 2.0)), "center {:?}", cam.center);
+    }
+
+    #[test]
+    fn pan_clamp_keeps_world_in_view() {
+        let mut cam = Camera { zoom: 4.0, center: Vec2::new(WS / 2.0, WS / 2.0) };
+        let viewport = (800, 800);
+        // Huge pan up-left; centre must stay so the visible rect is inside [0,WS].
+        cam.pan_by((10_000.0, 10_000.0), viewport, WS);
+        let half = WS / (2.0 * cam.zoom); // square viewport ⇒ visible = WS/zoom
+        assert!(cam.center.x >= half - 1e-3 && cam.center.x <= WS - half + 1e-3, "x {}", cam.center.x);
+        assert!(cam.center.y >= half - 1e-3 && cam.center.y <= WS - half + 1e-3, "y {}", cam.center.y);
+    }
+
+    #[test]
+    fn pan_letterboxed_axis_pins_to_center() {
+        // Wide viewport at zoom 1: x-extent exceeds world ⇒ centre.x pinned.
+        let mut cam = Camera::fit(WS);
+        let viewport = (1600, 800); // aspect 2 ⇒ visible.x = 2*WS > WS
+        cam.pan_by((500.0, 0.0), viewport, WS);
+        assert!((cam.center.x - WS / 2.0).abs() < 1e-3, "x {}", cam.center.x);
+    }
+
+    #[test]
+    fn pan_moves_center_opposite_to_cursor_x() {
+        let mut cam = Camera { zoom: 4.0, center: Vec2::new(WS / 2.0, WS / 2.0) };
+        let viewport = (800, 800);
+        let before = cam.center.x;
+        cam.pan_by((20.0, 0.0), viewport, WS); // drag cursor right
+        assert!(cam.center.x < before, "center.x should decrease: {before} -> {}", cam.center.x);
+    }
+
+    #[test]
+    fn reset_equals_fit() {
+        let mut cam = Camera { zoom: 7.0, center: Vec2::new(10.0, 10.0) };
+        cam.reset(WS);
+        assert_eq!(cam, Camera::fit(WS));
     }
 }
