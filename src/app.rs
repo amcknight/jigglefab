@@ -45,6 +45,7 @@ mod web_bridge {
         pub selection_count: u32,
         pub chemistry_name: String,
         pub can_revert: bool,
+        pub zoom: f32,
     }
 }
 
@@ -305,6 +306,15 @@ fn install_window_can_revert() {
         web_bridge::SNAPSHOT.with(|s| s.borrow().can_revert)
     }) as Box<dyn Fn() -> bool>);
     expose_to_window!("__jigglefabCanRevert", cb);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_window_get_zoom() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|| -> f32 {
+        web_bridge::SNAPSHOT.with(|s| s.borrow().zoom)
+    }) as Box<dyn Fn() -> f32>);
+    expose_to_window!("__jigglefabGetZoom", cb);
 }
 
 pub enum UserEvent {
@@ -705,6 +715,7 @@ impl ApplicationHandler<UserEvent> for App {
             install_window_clear();
             install_window_revert();
             install_window_can_revert();
+            install_window_get_zoom();
 
             self.camera = crate::camera::Camera::fit(world_size);
             let camera = self.camera;
@@ -892,6 +903,7 @@ impl ApplicationHandler<UserEvent> for App {
                             selection_count,
                             chemistry_name,
                             can_revert,
+                            zoom: self.camera.zoom,
                         };
                     });
                 }

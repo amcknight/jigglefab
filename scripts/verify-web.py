@@ -207,6 +207,31 @@ async def main() -> int:
             )
             await page.wait_for_function("window.__jigglefabCanRevert() === false", timeout=2000)
 
+            # --- Zoom: wheel changes zoom; '0' resets to fit. ---
+            # winit's web wheel-sign convention isn't assumed: scroll one way,
+            # reset, scroll the other; the zoom-in direction must raise zoom > 1,
+            # the zoom-out direction is clamped at the fit minimum (1.0).
+            await page.evaluate("window.__jigglefabSetMode('edit')")
+            await page.wait_for_function("window.__jigglefabGetMode() === 'edit'", timeout=2000)
+            z0 = await page.evaluate("window.__jigglefabGetZoom()")
+            await page.mouse.move(cx, cy)
+            await page.mouse.wheel(0, -300)
+            await page.wait_for_timeout(150)
+            z_up = await page.evaluate("window.__jigglefabGetZoom()")
+            await page.keyboard.press("0")
+            await page.wait_for_timeout(100)
+            await page.mouse.move(cx, cy)
+            await page.mouse.wheel(0, 300)
+            await page.wait_for_timeout(150)
+            z_down = await page.evaluate("window.__jigglefabGetZoom()")
+            assert max(z_up, z_down) > z0 + 0.01, \
+                f"wheel did not zoom in (either direction): z0={z0} up={z_up} down={z_down}"
+            await page.keyboard.press("0")
+            await page.wait_for_timeout(100)
+            z_reset = await page.evaluate("window.__jigglefabGetZoom()")
+            assert abs(z_reset - 1.0) < 0.01, f"0-key did not reset to fit: {z_reset}"
+            console_lines.append(f"[editor] zoom smoke OK: z0={z0} up={z_up} down={z_down} reset={z_reset}")
+
             console_lines.append("[editor] extended smoke test passed")
 
         # Inspect the canvas: did winit append one? What's its drawing-buffer
