@@ -918,6 +918,10 @@ impl ApplicationHandler<UserEvent> for App {
                 use winit::event::{ElementState, MouseButton};
                 match (button, state) {
                     (MouseButton::Middle, ElementState::Pressed) => {
+                        // Cancel any in-progress left-drag before switching to pan,
+                        // so it doesn't resume (and corrupt the scene) after the pan ends.
+                        self.drag = crate::editor::DragState::None;
+                        self.mouse_down = false;
                         self.pan_anchor = Some(self.cursor);
                     }
                     (MouseButton::Middle, ElementState::Released) => {
