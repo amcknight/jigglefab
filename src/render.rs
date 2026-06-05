@@ -2,7 +2,7 @@ use std::sync::Arc;
 use winit::window::Window;
 use anyhow::Result;
 use bytemuck::{Pod, Zeroable};
-use glam::{Mat4, Vec2};
+use glam::Vec2;
 use wgpu::util::DeviceExt;
 
 #[repr(C)]
@@ -313,20 +313,8 @@ impl Renderer {
         self.queue.write_buffer(&self.bead_buf, 0, bytemuck::cast_slice(&gpu_beads));
     }
 
-    pub fn update_camera(&mut self, world_size: f32, palette: &[[f32; 3]]) {
-        // Orthographic projection covering the whole world, square, centered.
-        let aspect = self.size.width as f32 / self.size.height as f32;
-        let (w, h) = if aspect >= 1.0 {
-            (world_size * aspect, world_size)
-        } else {
-            (world_size, world_size / aspect)
-        };
-        let proj = Mat4::orthographic_rh(0.0, w, 0.0, h, -1.0, 1.0);
-        // Center the world inside the view if aspect > 1.
-        let offset_x = (w - world_size) * 0.5;
-        let offset_y = (h - world_size) * 0.5;
-        let view = Mat4::from_translation(glam::Vec3::new(offset_x, offset_y, 0.0));
-        let vp = proj * view;
+    pub fn update_camera(&mut self, camera: &crate::camera::Camera, world_size: f32, palette: &[[f32; 3]]) {
+        let vp = camera.view_proj((self.size.width, self.size.height), world_size);
         let mut state_colors = [[0.0f32, 0.0, 0.0, 1.0]; MAX_STATES];
         for (i, slot) in state_colors.iter_mut().enumerate() {
             // Cycle through the palette if there are more states than entries,

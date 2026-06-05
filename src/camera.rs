@@ -249,4 +249,13 @@ mod tests {
         cam.reset(WS);
         assert_eq!(cam, Camera::fit(WS));
     }
+
+    #[test]
+    fn wide_viewport_clamps_x_outside_world() {
+        // Aspect 2 view: a pixel at the far left maps left of the world, clamped to 0.
+        let cam = Camera::fit(WS);
+        let w = cam.screen_to_world((0.0, 400.0), (1600, 800), WS);
+        assert!(w.x >= 0.0 && w.x <= WS, "x {}", w.x);
+        assert!((w.x - 0.0).abs() < 1e-3, "expected left-edge clamp, got {}", w.x);
+    }
 }

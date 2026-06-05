@@ -320,6 +320,11 @@ pub struct App {
     mode: crate::editor::Mode,
     scene: Option<crate::editor::Scene>,
     cursor: winit::dpi::PhysicalPosition<f64>,
+    camera: crate::camera::Camera,
+    /// True while Space is held — turns a left-drag into a pan.
+    space_held: bool,
+    /// Some(last_cursor) while a pan drag (middle-button or space+left) is active.
+    pan_anchor: Option<winit::dpi::PhysicalPosition<f64>>,
     drag: crate::editor::DragState,
     /// True only while the left mouse button is held. mousemove uses this to
     /// know whether to extend the current `drag`.
@@ -342,6 +347,9 @@ impl App {
             mode: crate::editor::Mode::Run,
             scene: None,
             cursor: winit::dpi::PhysicalPosition::new(0.0, 0.0),
+            camera: crate::camera::Camera::fit(crate::sim::WORLD_SIZE),
+            space_held: false,
+            pan_anchor: None,
             drag: crate::editor::DragState::None,
             mouse_down: false,
             pre_run_snapshot: None,
@@ -359,7 +367,7 @@ impl App {
         let window = self.window.as_ref()?;
         let scene = self.scene.as_ref()?;
         let viewport = window.inner_size();
-        Some(crate::editor::screen_to_world(
+        Some(self.camera.screen_to_world(
             (self.cursor.x, self.cursor.y),
             (viewport.width, viewport.height),
             scene.world_size,
@@ -617,7 +625,8 @@ impl ApplicationHandler<UserEvent> for App {
         {
             let mut renderer = pollster::block_on(Renderer::new(window.clone(), sim.positions.len()))
                 .expect("create renderer");
-            renderer.update_camera(world_size, &palette);
+            self.camera = crate::camera::Camera::fit(world_size);
+            renderer.update_camera(&self.camera, world_size, &palette);
 
             // Upgrade to GPU scheduler now that we have the wgpu device/queue
             // from the renderer. GpuEventLoop shares the same device as the
@@ -664,13 +673,15 @@ impl ApplicationHandler<UserEvent> for App {
             install_window_revert();
             install_window_can_revert();
 
+            self.camera = crate::camera::Camera::fit(world_size);
+            let camera = self.camera;
             let proxy = self.proxy.clone().expect("proxy not set before resumed()");
             let window_clone = window.clone();
             let n = sim.positions.len();
             wasm_bindgen_futures::spawn_local(async move {
                 let mut renderer = Renderer::new(window_clone, n).await
                     .expect("create renderer");
-                renderer.update_camera(world_size, &palette);
+                renderer.update_camera(&camera, world_size, &palette);
                 let _ = proxy.send_event(UserEvent::RendererReady(renderer));
             });
         }
@@ -691,7 +702,7 @@ impl ApplicationHandler<UserEvent> for App {
                     let size = w.inner_size();
                     if size.width > 0 && size.height > 0 {
                         renderer.resize(size);
-                        renderer.update_camera(sim.world_size(), &sim.palette());
+                        renderer.update_camera(&self.camera, sim.world_size(), &sim.palette());
                     }
                     w.request_redraw();
                 }
@@ -716,7 +727,8 @@ impl ApplicationHandler<UserEvent> for App {
                 let Some(renderer) = &mut self.renderer else { return };
                 let Some(sim) = &mut self.sim else { return };
                 renderer.resize(size);
-                renderer.update_camera(sim.world_size(), &sim.palette());
+                self.camera.pan_by((0.0, 0.0), (size.width, size.height), sim.world_size());
+                renderer.update_camera(&self.camera, sim.world_size(), &sim.palette());
             }
             WindowEvent::RedrawRequested => {
                 // Clone the Arc so we can call request_redraw() at the end
@@ -748,9 +760,12 @@ impl ApplicationHandler<UserEvent> for App {
                             self.mode = crate::editor::Mode::Edit;
                             self.drag = crate::editor::DragState::None;
                             self.mouse_down = false;
+                            if let Some(scene) = self.scene.as_ref() {
+                                self.camera = crate::camera::Camera::fit(scene.world_size);
+                            }
                             if let (Some(renderer), Some(scene)) = (self.renderer.as_mut(), self.scene.as_ref()) {
                                 let palette: Vec<[f32; 3]> = scene.chemistry.colors.clone();
-                                renderer.update_camera(scene.world_size, &palette);
+                                renderer.update_camera(&self.camera, scene.world_size, &palette);
                             }
                         } else {
                             log::warn!("set_chemistry: unknown chemistry {:?}", name);
