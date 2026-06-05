@@ -374,6 +374,39 @@ impl App {
         ))
     }
 
+    fn viewport(&self) -> Option<(u32, u32)> {
+        let s = self.window.as_ref()?.inner_size();
+        Some((s.width, s.height))
+    }
+
+    fn world_size(&self) -> f32 {
+        self.scene.as_ref().map(|s| s.world_size)
+            .or_else(|| self.sim.as_ref().map(|s| s.world_size()))
+            .unwrap_or(crate::sim::WORLD_SIZE)
+    }
+
+    fn palette_for_camera(&self) -> Vec<[f32; 3]> {
+        if let Some(scene) = &self.scene {
+            scene.chemistry.colors.clone()
+        } else if let Some(sim) = &self.sim {
+            sim.palette()
+        } else {
+            Vec::new()
+        }
+    }
+
+    /// Re-upload the current camera to the renderer. Locals are pulled out first
+    /// so the `&mut self.renderer` borrow doesn't overlap the `&self` reads
+    /// (`palette_for_camera`/`world_size` borrow self whole; `Camera` is `Copy`).
+    fn refresh_camera(&mut self) {
+        let ws = self.world_size();
+        let palette = self.palette_for_camera();
+        let camera = self.camera;
+        if let Some(r) = &mut self.renderer {
+            r.update_camera(&camera, ws, &palette);
+        }
+    }
+
     /// True if `world_pos` lies within RADIUS of any currently-selected bead.
     fn hit_selected(scene: &crate::editor::Scene, world_pos: glam::Vec2) -> bool {
         scene.selection.iter().any(|&idx| {
@@ -867,22 +900,69 @@ impl ApplicationHandler<UserEvent> for App {
                 self.last_frame = Instant::now();
             }
             WindowEvent::CursorMoved { position, .. } => {
+                let prev = self.cursor;
                 self.cursor = position;
-                self.on_mouse_move();
+                if self.pan_anchor.is_some() {
+                    let dx = (position.x - prev.x) as f32;
+                    let dy = (position.y - prev.y) as f32;
+                    if let Some(viewport) = self.viewport() {
+                        let ws = self.world_size();
+                        self.camera.pan_by((dx, dy), viewport, ws);
+                        self.refresh_camera();
+                    }
+                } else {
+                    self.on_mouse_move();
+                }
             }
             WindowEvent::MouseInput { state, button, .. } => {
                 use winit::event::{ElementState, MouseButton};
-                if button == MouseButton::Left {
-                    match state {
-                        ElementState::Pressed => self.on_mouse_down(),
-                        ElementState::Released => self.on_mouse_up(),
+                match (button, state) {
+                    (MouseButton::Middle, ElementState::Pressed) => {
+                        self.pan_anchor = Some(self.cursor);
+                    }
+                    (MouseButton::Middle, ElementState::Released) => {
+                        self.pan_anchor = None;
+                    }
+                    (MouseButton::Left, ElementState::Pressed) => {
+                        if self.space_held {
+                            self.pan_anchor = Some(self.cursor);
+                        } else {
+                            self.on_mouse_down();
+                        }
+                    }
+                    (MouseButton::Left, ElementState::Released) => {
+                        if self.pan_anchor.is_some() {
+                            self.pan_anchor = None;
+                        } else {
+                            self.on_mouse_up();
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            WindowEvent::MouseWheel { delta, .. } => {
+                use winit::event::MouseScrollDelta;
+                let scroll = match delta {
+                    MouseScrollDelta::LineDelta(_, y) => y,
+                    MouseScrollDelta::PixelDelta(p) => (p.y as f32) / 50.0,
+                };
+                if scroll != 0.0 {
+                    if let Some(viewport) = self.viewport() {
+                        let ws = self.world_size();
+                        let factor = crate::camera::ZOOM_STEP.powf(scroll);
+                        self.camera.zoom_at((self.cursor.x, self.cursor.y), factor, viewport, ws);
+                        self.refresh_camera();
                     }
                 }
             }
             WindowEvent::KeyboardInput { event: key_event, .. } => {
                 use winit::event::ElementState;
                 use winit::keyboard::{Key, NamedKey};
-                if key_event.state == ElementState::Pressed {
+                let pressed = key_event.state == ElementState::Pressed;
+                if matches!(key_event.logical_key, Key::Named(NamedKey::Space)) {
+                    self.space_held = pressed;
+                }
+                if pressed {
                     let is_delete = matches!(
                         key_event.logical_key,
                         Key::Named(NamedKey::Delete) | Key::Named(NamedKey::Backspace)
@@ -893,6 +973,10 @@ impl ApplicationHandler<UserEvent> for App {
                                 scene.delete_selection();
                             }
                         }
+                    }
+                    if matches!(&key_event.logical_key, Key::Character(c) if c.as_str() == "0") {
+                        self.camera.reset(self.world_size());
+                        self.refresh_camera();
                     }
                 }
             }
