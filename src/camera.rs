@@ -62,6 +62,30 @@ impl Camera {
         (fx * vw, fy * vh)
     }
 
+    /// Multiply zoom by `factor` (clamped to [MIN_ZOOM, MAX_ZOOM]) while keeping the
+    /// world point under `cursor` fixed on screen.
+    pub fn zoom_at(&mut self, cursor: (f64, f64), factor: f32, viewport: (u32, u32), world_size: f32) {
+        let new_zoom = (self.zoom * factor).clamp(MIN_ZOOM, MAX_ZOOM);
+        if (new_zoom - self.zoom).abs() < f32::EPSILON {
+            return; // at a clamp: no zoom change ⇒ no centre shift (anchor stays exact)
+        }
+        let anchor = self.screen_to_world_raw(cursor, viewport, world_size);
+        self.zoom = new_zoom;
+        // Solve for the centre that puts `anchor` back under `cursor` at the new zoom.
+        let vw = viewport.0.max(1) as f32;
+        let vh = viewport.1.max(1) as f32;
+        let vis = self.visible_extent(viewport, world_size);
+        let fx = cursor.0 as f32 / vw;
+        let fy = cursor.1 as f32 / vh;
+        self.center = Vec2::new(
+            anchor.x - (fx - 0.5) * vis.x,
+            anchor.y + (fy - 0.5) * vis.y,
+        );
+        self.clamp_pan(viewport, world_size);
+    }
+
+    fn clamp_pan(&mut self, _viewport: (u32, u32), _world_size: f32) {}
+
     /// World→clip orthographic projection for the current view.
     pub fn view_proj(&self, viewport: (u32, u32), world_size: f32) -> Mat4 {
         let vis = self.visible_extent(viewport, world_size);
@@ -130,5 +154,37 @@ mod tests {
         let sy = (1.0 - (clip.y * 0.5 + 0.5)) * viewport.1 as f32;
         let world_out = cam.screen_to_world((sx as f64, sy as f64), viewport, WS);
         assert!(approx(world_in, world_out), "in {world_in:?} out {world_out:?}");
+    }
+
+    #[test]
+    fn zoom_at_keeps_cursor_world_point_fixed() {
+        let mut cam = Camera::fit(WS);
+        let viewport = (1024, 768);
+        let cursor = (300.0, 500.0);
+        let before = cam.screen_to_world(cursor, viewport, WS);
+        cam.zoom_at(cursor, 2.0, viewport, WS);
+        let after = cam.screen_to_world(cursor, viewport, WS);
+        assert!((cam.zoom - 2.0).abs() < 1e-4, "zoom {}", cam.zoom);
+        assert!(approx(before, after), "anchor moved: {before:?} -> {after:?}");
+    }
+
+    #[test]
+    fn zoom_at_clamps_to_max() {
+        let mut cam = Camera::fit(WS);
+        let viewport = (800, 800);
+        for _ in 0..100 {
+            cam.zoom_at((400.0, 400.0), 2.0, viewport, WS);
+        }
+        assert!((cam.zoom - MAX_ZOOM).abs() < 1e-4, "zoom {}", cam.zoom);
+    }
+
+    #[test]
+    fn zoom_at_clamps_to_min_and_anchor_exact_at_clamp() {
+        // Already at min; zooming out further is a no-op, so the centre cannot drift.
+        let mut cam = Camera::fit(WS);
+        let viewport = (800, 800);
+        cam.zoom_at((100.0, 700.0), 0.5, viewport, WS);
+        assert!((cam.zoom - MIN_ZOOM).abs() < 1e-4, "zoom {}", cam.zoom);
+        assert!(approx(cam.center, Vec2::new(WS / 2.0, WS / 2.0)), "center {:?}", cam.center);
     }
 }
