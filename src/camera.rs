@@ -7,7 +7,8 @@ pub const ZOOM_STEP: f32 = 1.1;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Camera {
-    /// 1.0 = fit-world (whole world fills the viewport — today's behavior).
+    /// 1.0 = fit-world: the whole world fits within the viewport (letterboxed on
+    /// the long axis) — today's behavior. Larger = zoomed in.
     pub zoom: f32,
     /// World point shown at the centre of the viewport.
     pub center: Vec2,
@@ -20,6 +21,7 @@ impl Camera {
 
     /// Width/height of the world rect currently visible, in world units.
     fn visible_extent(&self, viewport: (u32, u32), world_size: f32) -> Vec2 {
+        debug_assert!(self.zoom > 0.0, "camera zoom must be positive, got {}", self.zoom);
         let vw = viewport.0.max(1) as f32;
         let vh = viewport.1.max(1) as f32;
         let a = vw / vh;
