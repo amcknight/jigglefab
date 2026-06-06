@@ -176,6 +176,41 @@
             display: inline-block; width: 10px; height: 10px;
             border-radius: 50%; margin-right: 6px; vertical-align: middle;
         }
+        #device-dock {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            width: 150px;
+            max-height: calc(100vh - 16px);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 6px;
+            background: rgba(0, 0, 0, 0.45);
+            border-radius: 10px;
+            font: 12px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            z-index: 10;
+        }
+        #device-dock .dock-actions { display: flex; flex-wrap: wrap; gap: 4px; }
+        #device-dock .dock-actions a {
+            color: #cfd; text-decoration: none; padding: 3px 8px; border-radius: 6px;
+            background: rgba(255, 255, 255, 0.06); border: 1px solid transparent; cursor: pointer;
+        }
+        #device-dock .dock-actions a:hover { background: rgba(255, 255, 255, 0.12); }
+        #device-dock .dock-actions a.disabled { opacity: 0.4; cursor: default; pointer-events: none; }
+        #device-dock .dock-list { display: flex; flex-direction: column; gap: 4px; overflow-y: auto; }
+        #device-dock .dock-empty { color: #888; padding: 6px 2px; }
+        #device-dock .dock-item {
+            display: flex; align-items: center; gap: 6px; padding: 3px;
+            border-radius: 6px; border: 1px solid transparent; cursor: pointer;
+        }
+        #device-dock .dock-item:hover { background: rgba(255, 255, 255, 0.08); }
+        #device-dock .dock-item.active { background: #2a4d3a; border-color: #4a8; }
+        #device-dock .dock-item.incompatible { opacity: 0.4; cursor: default; }
+        #device-dock .dock-item canvas { background: rgba(255,255,255,0.04); border-radius: 4px; }
+        #device-dock .dock-item .name { flex: 1; color: #cfd; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        #device-dock .dock-item .rm { color: #a88; padding: 0 4px; }
+        #device-dock .dock-item .rm:hover { color: #f88; }
     </style>
 </head>
 <body>
@@ -219,6 +254,17 @@
             <span id="state-pills"></span>
         </div>
     </nav>
+    <aside id="device-dock">
+        <div class="dock-actions">
+            <a id="dock-save-sel" class="disabled">Save selection</a>
+            <a id="dock-save-suite">Save suite</a>
+            <a id="dock-load-suite">Load suite</a>
+            <a id="dock-export">Export</a>
+            <a id="dock-import">Import</a>
+        </div>
+        <div class="dock-list" id="dock-list"></div>
+        <input id="dock-import-file" type="file" accept=".json,application/json" style="display:none" />
+    </aside>
     <nav id="speed-picker"></nav>
     <nav id="picker"></nav>
     <script>
@@ -511,6 +557,92 @@
             });
         });
 
+        // ---- Device dock ----
+        const dockList = document.getElementById("dock-list");
+        const dockSaveSel = document.getElementById("dock-save-sel");
+        let lastDockRev = -1;
+
+        function drawThumb(canvas, beads) {
+            const ctx = canvas.getContext("2d");
+            const W = canvas.width, H = canvas.height;
+            ctx.clearRect(0, 0, W, H);
+            if (!beads.length) return;
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            for (const b of beads) {
+                minX = Math.min(minX, b.pos[0]); maxX = Math.max(maxX, b.pos[0]);
+                minY = Math.min(minY, b.pos[1]); maxY = Math.max(maxY, b.pos[1]);
+            }
+            const pad = 4, span = Math.max(maxX - minX, maxY - minY, 1e-3);
+            const scale = (Math.min(W, H) - 2 * pad) / span;
+            const ox = (W - (maxX - minX) * scale) / 2 - minX * scale;
+            const oy = (H - (maxY - minY) * scale) / 2 - minY * scale;
+            for (const b of beads) {
+                const x = b.pos[0] * scale + ox, y = b.pos[1] * scale + oy;
+                ctx.fillStyle = `rgb(${Math.round(b.color[0]*255)},${Math.round(b.color[1]*255)},${Math.round(b.color[2]*255)})`;
+                ctx.beginPath();
+                ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function renderDock() {
+            if (typeof window.__jigglefabGetDock !== "function") return;
+            const chem = (window.__jigglefabGetChemistryName && window.__jigglefabGetChemistryName()) || "";
+            const armed = (window.__jigglefabArmedId && window.__jigglefabArmedId()) ?? -1;
+            const all = window.__jigglefabGetDock();
+            const devices = all.filter(d => d.chemistry === chem);
+            dockList.innerHTML = "";
+            if (!devices.length) {
+                const empty = document.createElement("div");
+                empty.className = "dock-empty";
+                empty.textContent = "Select beads, then Save selection";
+                dockList.appendChild(empty);
+                return;
+            }
+            for (const d of devices) {
+                const item = document.createElement("div");
+                item.className = "dock-item"
+                    + (d.id === armed ? " active" : "")
+                    + (d.compatible ? "" : " incompatible");
+                if (!d.compatible) item.title = "Incompatible with the current chemistry";
+                const canvas = document.createElement("canvas");
+                canvas.width = 32; canvas.height = 32;
+                drawThumb(canvas, d.beads);
+                item.appendChild(canvas);
+                const name = document.createElement("span");
+                name.className = "name";
+                name.textContent = d.name;
+                item.appendChild(name);
+                const rm = document.createElement("span");
+                rm.className = "rm";
+                rm.textContent = "×";
+                rm.title = "Remove from dock";
+                rm.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    if (window.confirm(`Remove "${d.name}" from the dock?`)) {
+                        window.__jigglefabRemoveDevice(d.id);
+                    }
+                });
+                item.appendChild(rm);
+                name.addEventListener("dblclick", (e) => {
+                    e.stopPropagation();
+                    const next = window.prompt("Rename device", d.name);
+                    if (next && next !== d.name) window.__jigglefabRenameDevice(d.id, next);
+                });
+                // Click body to arm/disarm (wired in Task 3; placeholder no-op now).
+                item.dataset.id = d.id;
+                item.dataset.compatible = d.compatible;
+                dockList.appendChild(item);
+            }
+        }
+
+        dockSaveSel.addEventListener("click", () => {
+            if (dockSaveSel.classList.contains("disabled")) return;
+            const count = (window.__jigglefabGetDock && window.__jigglefabGetDock().length) || 0;
+            const name = window.prompt("Device name", "device " + (count + 1));
+            if (name) window.__jigglefabSaveToDock(name);
+        });
+
         // Poll the wasm side once a tick to reflect mode, repaint state pills
         // when the palette changes (i.e. after chemistry switch), and keep the
         // HUD bead count in sync with edits. Cheap.
@@ -546,6 +678,17 @@
             const selEl = document.getElementById("hud-sel");
             if (typeof window.__jigglefabSelectionCount === "function" && selEl) {
                 selEl.textContent = window.__jigglefabSelectionCount();
+            }
+            if (typeof window.__jigglefabGetLibraryRev === "function") {
+                const rev = window.__jigglefabGetLibraryRev();
+                const chemName = (window.__jigglefabGetChemistryName && window.__jigglefabGetChemistryName()) || "";
+                const sig = rev + "|" + chemName + "|" + ((window.__jigglefabArmedId && window.__jigglefabArmedId()) ?? -1);
+                if (sig !== lastDockRev) { lastDockRev = sig; renderDock(); }
+            }
+            if (dockSaveSel && typeof window.__jigglefabSelectionCount === "function") {
+                const mode = (window.__jigglefabGetMode && window.__jigglefabGetMode()) || "run";
+                const ok = mode === "edit" && window.__jigglefabSelectionCount() > 0;
+                dockSaveSel.classList.toggle("disabled", !ok);
             }
             requestAnimationFrame(refreshToolbar);
         }
