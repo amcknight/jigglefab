@@ -30,10 +30,10 @@ impl Camera {
         Vec2::new(base_w / self.zoom, base_h / self.zoom)
     }
 
-    /// Convert a screen pixel to a world point. Result is NOT clamped — callers
-    /// that want edge-snapping clamp the return value. (Internal anchor math
-    /// needs the raw value.)
-    fn screen_to_world_raw(&self, cursor: (f64, f64), viewport: (u32, u32), world_size: f32) -> Vec2 {
+    /// Convert a screen pixel to a continuous world point. On the torus the
+    /// result may lie outside `[0, world_size]`; callers wrap when committing a
+    /// position to the scene.
+    pub fn screen_to_world(&self, cursor: (f64, f64), viewport: (u32, u32), world_size: f32) -> Vec2 {
         let vw = viewport.0.max(1) as f32;
         let vh = viewport.1.max(1) as f32;
         let vis = self.visible_extent(viewport, world_size);
@@ -45,14 +45,7 @@ impl Camera {
         )
     }
 
-    /// Public screen->world, clamped to `[0, world_size]` per axis so a click
-    /// outside the rendered world still yields a placeable (edge-snapped) point.
-    pub fn screen_to_world(&self, cursor: (f64, f64), viewport: (u32, u32), world_size: f32) -> Vec2 {
-        let w = self.screen_to_world_raw(cursor, viewport, world_size);
-        Vec2::new(w.x.clamp(0.0, world_size), w.y.clamp(0.0, world_size))
-    }
-
-    /// Inverse of `screen_to_world_raw`, for tests/overlay math.
+    /// Inverse of `screen_to_world`, for tests/overlay math.
     pub fn world_to_screen(&self, world: Vec2, viewport: (u32, u32), world_size: f32) -> (f32, f32) {
         let vw = viewport.0.max(1) as f32;
         let vh = viewport.1.max(1) as f32;
@@ -69,7 +62,7 @@ impl Camera {
         if (new_zoom - self.zoom).abs() < f32::EPSILON {
             return; // at a clamp: no zoom change ⇒ no centre shift (anchor stays exact)
         }
-        let anchor = self.screen_to_world_raw(cursor, viewport, world_size);
+        let anchor = self.screen_to_world(cursor, viewport, world_size);
         self.zoom = new_zoom;
         // Solve for the centre that puts `anchor` back under `cursor` at the new zoom.
         let vw = viewport.0.max(1) as f32;
@@ -81,31 +74,21 @@ impl Camera {
             anchor.x - (fx - 0.5) * vis.x,
             anchor.y + (fy - 0.5) * vis.y,
         );
-        self.clamp_pan(viewport, world_size);
+        self.center.x = self.center.x.rem_euclid(world_size);
+        self.center.y = self.center.y.rem_euclid(world_size);
     }
 
-    fn clamp_pan(&mut self, viewport: (u32, u32), world_size: f32) {
-        let vis = self.visible_extent(viewport, world_size);
-        let clamp_axis = |c: f32, ext: f32| -> f32 {
-            let h = ext * 0.5;
-            if ext <= world_size {
-                c.clamp(h, world_size - h)
-            } else {
-                world_size * 0.5 // visible exceeds world ⇒ pin to centre
-            }
-        };
-        self.center.x = clamp_axis(self.center.x, vis.x);
-        self.center.y = clamp_axis(self.center.y, vis.y);
-    }
-
-    /// Pan by a cursor screen-delta in physical pixels (content follows the cursor).
+    /// Pan by a cursor screen-delta in physical pixels (content follows the
+    /// cursor). The center wraps mod `world_size` — the world is a torus, so
+    /// panning never hits a wall; the renderer's ghost ring keeps a full
+    /// neighborhood visible.
     pub fn pan_by(&mut self, screen_delta: (f32, f32), viewport: (u32, u32), world_size: f32) {
         let vw = viewport.0.max(1) as f32;
         let vh = viewport.1.max(1) as f32;
         let vis = self.visible_extent(viewport, world_size);
-        self.center.x -= screen_delta.0 * vis.x / vw;
-        self.center.y += screen_delta.1 * vis.y / vh;
-        self.clamp_pan(viewport, world_size);
+        let cx = self.center.x - screen_delta.0 * vis.x / vw;
+        let cy = self.center.y + screen_delta.1 * vis.y / vh;
+        self.center = Vec2::new(cx.rem_euclid(world_size), cy.rem_euclid(world_size));
     }
 
     /// Reset to the default fit-world view (zoom 1, centered).
@@ -122,6 +105,13 @@ impl Camera {
         let top = self.center.y + vis.y * 0.5;
         Mat4::orthographic_rh(left, right, bottom, top, -1.0, 1.0)
     }
+
+    /// The raw world-space rectangle currently visible: (min corner, max corner).
+    /// Corners may lie outside `[0, world_size]` (the view can straddle the seam).
+    pub fn visible_world_rect(&self, viewport: (u32, u32), world_size: f32) -> (Vec2, Vec2) {
+        let vis = self.visible_extent(viewport, world_size);
+        (self.center - vis * 0.5, self.center + vis * 0.5)
+    }
 }
 
 #[cfg(test)]
@@ -132,6 +122,14 @@ mod tests {
 
     fn approx(a: Vec2, b: Vec2) -> bool {
         (a - b).length() < 1e-3
+    }
+
+    /// True if `a` equals `b` per-axis modulo `ws` (torus equivalence).
+    fn approx_mod(a: Vec2, b: Vec2, ws: f32) -> bool {
+        let dx = (a.x - b.x).rem_euclid(ws);
+        let dy = (a.y - b.y).rem_euclid(ws);
+        let near = |v: f32| v < 1e-2 || (ws - v) < 1e-2;
+        near(dx) && near(dy)
     }
 
     #[test]
@@ -192,7 +190,7 @@ mod tests {
         cam.zoom_at(cursor, 2.0, viewport, WS);
         let after = cam.screen_to_world(cursor, viewport, WS);
         assert!((cam.zoom - 2.0).abs() < 1e-4, "zoom {}", cam.zoom);
-        assert!(approx(before, after), "anchor moved: {before:?} -> {after:?}");
+        assert!(approx_mod(before, after, WS), "anchor moved: {before:?} -> {after:?}");
     }
 
     #[test]
@@ -216,26 +214,6 @@ mod tests {
     }
 
     #[test]
-    fn pan_clamp_keeps_world_in_view() {
-        let mut cam = Camera { zoom: 4.0, center: Vec2::new(WS / 2.0, WS / 2.0) };
-        let viewport = (800, 800);
-        // Huge pan up-left; centre must stay so the visible rect is inside [0,WS].
-        cam.pan_by((10_000.0, 10_000.0), viewport, WS);
-        let half = WS / (2.0 * cam.zoom); // square viewport ⇒ visible = WS/zoom
-        assert!(cam.center.x >= half - 1e-3 && cam.center.x <= WS - half + 1e-3, "x {}", cam.center.x);
-        assert!(cam.center.y >= half - 1e-3 && cam.center.y <= WS - half + 1e-3, "y {}", cam.center.y);
-    }
-
-    #[test]
-    fn pan_letterboxed_axis_pins_to_center() {
-        // Wide viewport at zoom 1: x-extent exceeds world ⇒ centre.x pinned.
-        let mut cam = Camera::fit(WS);
-        let viewport = (1600, 800); // aspect 2 ⇒ visible.x = 2*WS > WS
-        cam.pan_by((500.0, 0.0), viewport, WS);
-        assert!((cam.center.x - WS / 2.0).abs() < 1e-3, "x {}", cam.center.x);
-    }
-
-    #[test]
     fn pan_moves_center_opposite_to_cursor_x() {
         let mut cam = Camera { zoom: 4.0, center: Vec2::new(WS / 2.0, WS / 2.0) };
         let viewport = (800, 800);
@@ -252,11 +230,37 @@ mod tests {
     }
 
     #[test]
-    fn wide_viewport_clamps_x_outside_world() {
-        // Aspect 2 view: a pixel at the far left maps left of the world, clamped to 0.
+    fn pan_wraps_center_into_domain() {
+        let mut cam = Camera::fit(WS); // center (64,64), zoom 1
+        let viewport = (800, 800);
+        cam.pan_by((100_000.0, 0.0), viewport, WS);
+        assert!(cam.center.x >= 0.0 && cam.center.x < WS, "center.x not wrapped: {}", cam.center.x);
+    }
+
+    #[test]
+    fn pan_full_world_returns_to_start() {
+        let mut cam = Camera { zoom: 2.0, center: Vec2::new(30.0, 40.0) };
+        let viewport = (800, 800); // square ⇒ vis = WS/zoom = 64; world-per-px = 64/800
+        let start = cam.center;
+        // dx that moves center by exactly -WS on x: dx = WS * vw / vis.x = 128*800/64 = 1600.
+        cam.pan_by((1600.0, 0.0), viewport, WS);
+        assert!(approx_mod(cam.center, start, WS), "not seamless: {:?} vs {:?}", cam.center, start);
+    }
+
+    #[test]
+    fn screen_to_world_is_unclamped() {
         let cam = Camera::fit(WS);
-        let w = cam.screen_to_world((0.0, 400.0), (1600, 800), WS);
-        assert!(w.x >= 0.0 && w.x <= WS, "x {}", w.x);
-        assert!((w.x - 0.0).abs() < 1e-3, "expected left-edge clamp, got {}", w.x);
+        let w = cam.screen_to_world((0.0, 400.0), (1600, 800), WS); // aspect 2 ⇒ vis.x = 2*WS
+        assert!(w.x < 0.0, "expected raw negative x, got {}", w.x);
+    }
+
+    #[test]
+    fn visible_world_rect_matches_extent() {
+        let cam = Camera { zoom: 2.0, center: Vec2::new(70.0, 60.0) };
+        let viewport = (800, 800);
+        let (min, max) = cam.visible_world_rect(viewport, WS);
+        let half = WS / (2.0 * 2.0); // square, vis = WS/zoom = 64 ⇒ half = 32
+        assert!(approx(min, Vec2::new(70.0 - half, 60.0 - half)), "min {min:?}");
+        assert!(approx(max, Vec2::new(70.0 + half, 60.0 + half)), "max {max:?}");
     }
 }
