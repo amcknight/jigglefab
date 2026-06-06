@@ -320,4 +320,56 @@ mod tests {
         assert_eq!(lib.suites.len(), 1);
         assert_eq!(lib.suites[0].devices.len(), 1);
     }
+
+    #[test]
+    fn capture_persist_reload_stamp_round_trip() {
+        use crate::editor::{load_chemistry_by_name, Scene};
+        use glam::Vec2;
+
+        // Build a 3-bead elbow scene and select all of it.
+        let chem = load_chemistry_by_name("wire").unwrap();
+        let mut scene = Scene {
+            chemistry: chem,
+            chemistry_name: "wire".into(),
+            world_size: 128.0,
+            beads: Vec::new(),
+            seed: 0,
+            next_state_idx: 0,
+            bonds: std::collections::HashSet::new(),
+            selection: std::collections::HashSet::new(),
+            tool: crate::editor::Tool::Place,
+        };
+        let a = scene.place(Vec2::new(10.0, 10.0));
+        let b = scene.append_chain_bead(Vec2::new(10.667, 10.0), a);
+        let c = scene.append_chain_bead(Vec2::new(10.667, 9.333), b);
+        scene.selection.insert(a);
+        scene.selection.insert(b);
+        scene.selection.insert(c);
+
+        // Capture -> dock -> serialize -> reload.
+        let dev = scene.extract_device("elbow".into()).unwrap();
+        let mut lib = Library::default();
+        lib.add_to_dock(dev);
+        let lib = Library::load_or_default(&lib.to_json());
+        let reloaded = &lib.dock[0];
+        assert_eq!(reloaded.beads.len(), 3);
+        assert_eq!(reloaded.bonds.len(), 2);
+
+        // Stamp it into a fresh empty scene.
+        let mut target = Scene {
+            chemistry: load_chemistry_by_name("wire").unwrap(),
+            chemistry_name: "wire".into(),
+            world_size: 128.0,
+            beads: Vec::new(),
+            seed: 0,
+            next_state_idx: 0,
+            bonds: std::collections::HashSet::new(),
+            selection: std::collections::HashSet::new(),
+            tool: crate::editor::Tool::Place,
+        };
+        target.instantiate_device(reloaded, Vec2::new(50.0, 50.0), 0.0);
+        assert_eq!(target.beads.len(), 3);
+        assert_eq!(target.bonds.len(), 2);
+        assert_eq!(target.selection.len(), 3);
+    }
 }
