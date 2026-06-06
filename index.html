@@ -16,7 +16,10 @@
             font-family: system-ui, sans-serif;
             color: #ccc;
         }
-        canvas {
+        /* Target only the top-level render canvas (winit appends directly to body).
+           Dock thumbnail canvases live inside #device-dock and must NOT inherit
+           the full-viewport size/position rules. */
+        body > canvas {
             display: block;
             position: absolute;
             top: 0; left: 0;
