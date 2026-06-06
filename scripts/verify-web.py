@@ -263,11 +263,92 @@ async def main() -> int:
 
             console_lines.append("[editor] extended smoke test passed")
 
+            # ---- Device library ----
+            print("editor: device library")
+            await page.wait_for_function("typeof window.__jigglefabGetDock === 'function'", timeout=10000)
+            await page.evaluate("window.__jigglefabSetMode('edit')")
+            await page.wait_for_function("window.__jigglefabGetMode() === 'edit'")
+            # Clear to a known empty scene.
+            if await page.evaluate("window.__jigglefabBeadCount()") > 0:
+                page.once("dialog", lambda d: d.accept())
+                await page.evaluate("document.getElementById('btn-clear').click()")
+                await page.wait_for_function("window.__jigglefabBeadCount() === 0", timeout=2000)
+
+            # Recompute canvas center using the main render canvas (identified by
+            # its alt attribute, not the thumbnail canvases added to the dock).
+            box = await page.evaluate(
+                "() => { const c = document.querySelector('canvas[alt]');"
+                " const r = c.getBoundingClientRect();"
+                " return {x: r.x + r.width/2, y: r.y + r.height/2}; }"
+            )
+            cx, cy = box["x"], box["y"]
+
+            # Place 3 beads with the Place tool, then Rect-select them.
+            await page.evaluate("window.__jigglefabSetTool('place')")
+            await page.wait_for_function("window.__jigglefabGetTool() === 'place'")
+            for (dx, dy) in [(-20, 0), (0, 0), (20, 0)]:
+                await page.mouse.click(cx + dx, cy + dy)
+            await page.wait_for_function("window.__jigglefabBeadCount() === 3", timeout=2000)
+            await page.evaluate("window.__jigglefabSetTool('rect')")
+            await page.wait_for_function("window.__jigglefabGetTool() === 'rect'")
+            await page.mouse.move(cx - 60, cy - 40)
+            await page.mouse.down()
+            await page.mouse.move(cx + 60, cy + 40)
+            await page.mouse.up()
+            await page.wait_for_function("window.__jigglefabSelectionCount() === 3", timeout=2000)
+
+            # Save selection to the dock.
+            await page.evaluate("window.__jigglefabSaveToDock('smoke-device')")
+            await page.wait_for_function("window.__jigglefabGetDock().length === 1", timeout=2000)
+            dock0 = await page.evaluate("window.__jigglefabGetDock()[0]")
+            assert dock0["beads"] and len(dock0["beads"]) == 3, f"expected 3 device beads, got {dock0}"
+
+            # Persistence: localStorage should hold the library after the save.
+            await page.wait_for_function(
+                "() => { const v = localStorage.getItem('jigglefab.library.v1');"
+                " return v && JSON.parse(v).dock.length === 1; }", timeout=2000)
+
+            # Arm + stamp: bead count grows by 3 (isolated copy).
+            dev_id = dock0["id"]
+            await page.evaluate(f"window.__jigglefabArmDevice({dev_id})")
+            await page.wait_for_function(f"window.__jigglefabArmedId() === {dev_id}", timeout=2000)
+            beads_before_stamp = await page.evaluate("window.__jigglefabBeadCount()")
+            await page.mouse.click(cx, cy + 80)
+            await page.wait_for_function(
+                f"window.__jigglefabBeadCount() === {beads_before_stamp + 3}", timeout=2000)
+            await page.evaluate("window.__jigglefabDisarm()")
+            await page.wait_for_function("window.__jigglefabArmedId() === -1", timeout=2000)
+
+            # Suite save -> remove device -> load suite restores it.
+            await page.evaluate("window.__jigglefabSaveSuite('smoke-suite')")
+            await page.wait_for_function(
+                "window.__jigglefabGetSuiteNames().includes('smoke-suite')", timeout=2000)
+            await page.evaluate(f"window.__jigglefabRemoveDevice({dev_id})")
+            await page.wait_for_function("window.__jigglefabGetDock().length === 0", timeout=2000)
+            await page.evaluate("window.__jigglefabLoadSuite('smoke-suite')")
+            await page.wait_for_function("window.__jigglefabGetDock().length === 1", timeout=2000)
+
+            # Import a device with a bogus state -> present but incompatible.
+            chem_now = await page.evaluate("window.__jigglefabGetChemistryName()")
+            bad_json = (
+                '{"name":"bad-suite","chemistry":"' + chem_now + '",'
+                '"devices":[{"id":0,"name":"bogus","chemistry":"' + chem_now + '",'
+                '"chemistry_hash":0,"beads":[{"state":"__no_such_state__","pos":[0,0]}],'
+                '"bonds":[],"ports":[]}]}'
+            )
+            await page.evaluate("(j) => window.__jigglefabImportSuite(j)", bad_json)
+            await page.wait_for_function(
+                "window.__jigglefabGetSuiteNames().includes('bad-suite')", timeout=2000)
+            await page.evaluate("window.__jigglefabLoadSuite('bad-suite')")
+            await page.wait_for_function(
+                "window.__jigglefabGetDock().some(d => d.compatible === false)", timeout=2000)
+            print("editor: device library OK")
+
         # Inspect the canvas: did winit append one? What's its drawing-buffer
         # size and CSS size?
         canvas_info = await page.evaluate(
             "() => {"
-            "  const c = document.querySelector('canvas');"
+            "  const c = document.querySelector('canvas[alt]') || document.querySelector('canvas');"
             "  if (!c) return { exists: false };"
             "  const r = c.getBoundingClientRect();"
             "  return {"
@@ -288,7 +369,7 @@ async def main() -> int:
         # the dark clear colour.
         sample = await page.evaluate(
             "() => {"
-            "  const c = document.querySelector('canvas');"
+            "  const c = document.querySelector('canvas[alt]') || document.querySelector('canvas');"
             "  if (!c) return null;"
             "  try {"
             "    const ctx = c.getContext('2d', { willReadFrequently: true });"

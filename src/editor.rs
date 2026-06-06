@@ -370,6 +370,142 @@ impl Scene {
         self.bonds.clear();
         self.selection.clear();
     }
+
+    /// Capture the current selection as a reusable `Device` (rest shape only).
+    /// Positions are recentred on the selection's torus-aware centroid and
+    /// velocities dropped. Only bonds with both endpoints selected are kept,
+    /// remapped to local indices `0..n`. The returned device has `id = 0`; the
+    /// library assigns a real id on `add_to_dock`. Returns `None` if the
+    /// selection is empty.
+    pub fn extract_device(&self, name: String) -> Option<crate::library::Device> {
+        if self.selection.is_empty() {
+            return None;
+        }
+        // Stable local order: selected global indices, ascending.
+        let mut sel: Vec<u32> = self.selection.iter().copied().collect();
+        sel.sort_unstable();
+
+        // Torus-aware centroid: express each selected position relative to the
+        // first via min-image, average those offsets.
+        let anchor = Vec2::from(self.beads[sel[0] as usize].pos);
+        let offsets: Vec<Vec2> = sel
+            .iter()
+            .map(|&i| {
+                crate::grid::min_image(
+                    anchor,
+                    Vec2::from(self.beads[i as usize].pos),
+                    self.world_size,
+                )
+            })
+            .collect();
+        let centroid_off =
+            offsets.iter().copied().fold(Vec2::ZERO, |acc, v| acc + v) / sel.len() as f32;
+
+        // old global index -> new local index
+        let mut remap = std::collections::HashMap::new();
+        for (local, &g) in sel.iter().enumerate() {
+            remap.insert(g, local as u32);
+        }
+
+        let beads = sel
+            .iter()
+            .enumerate()
+            .map(|(k, &g)| {
+                let rel = offsets[k] - centroid_off;
+                crate::library::DeviceBead {
+                    state: self.beads[g as usize].state.clone(),
+                    pos: [rel.x, rel.y],
+                }
+            })
+            .collect();
+
+        let mut bonds: Vec<[u32; 2]> = self
+            .bonds
+            .iter()
+            .filter_map(|b| match (remap.get(&b.lo()), remap.get(&b.hi())) {
+                (Some(&la), Some(&lb)) => Some(BondPair::new(la, lb).as_array()),
+                _ => None,
+            })
+            .collect();
+        bonds.sort_unstable();
+
+        Some(crate::library::Device {
+            id: 0,
+            name,
+            chemistry: self.chemistry_name.clone(),
+            chemistry_hash: crate::library::chemistry_hash(&self.chemistry),
+            beads,
+            bonds,
+            ports: Vec::new(),
+        })
+    }
+
+    /// Stamp `device` into the scene at world position `drop`, rotated by
+    /// `angle` radians about the device origin. Appends fresh beads (vel None)
+    /// and the device's internal bonds (remapped to the new indices). Does NOT
+    /// bond to pre-existing beads (isolated drop). Replaces the selection with
+    /// the newly-placed indices. Returns the first new bead's index.
+    pub fn instantiate_device(
+        &mut self,
+        device: &crate::library::Device,
+        drop: Vec2,
+        angle: f32,
+    ) -> u32 {
+        let base = self.beads.len() as u32;
+        let (s, c) = angle.sin_cos();
+        for db in &device.beads {
+            let (x, y) = (db.pos[0], db.pos[1]);
+            let rx = x * c - y * s;
+            let ry = x * s + y * c;
+            let world = wrap_vec(Vec2::new(rx + drop.x, ry + drop.y), self.world_size);
+            self.beads.push(BeadSpec {
+                state: db.state.clone(),
+                pos: [world.x, world.y],
+                vel: None,
+            });
+        }
+        for b in &device.bonds {
+            self.bonds.insert(BondPair::new(base + b[0], base + b[1]));
+        }
+        self.selection.clear();
+        for i in 0..device.beads.len() as u32 {
+            self.selection.insert(base + i);
+        }
+        base
+    }
+
+    /// Rotate the selected beads by `angle` radians about their torus-aware
+    /// centroid, wrapping each result into the world. Bonds are unaffected
+    /// (indices don't move). No-op on an empty selection. Snapping to fixed
+    /// increments is the caller's responsibility.
+    pub fn rotate_selection(&mut self, angle: f32) {
+        if self.selection.is_empty() {
+            return;
+        }
+        let mut sel: Vec<u32> = self.selection.iter().copied().collect();
+        sel.sort_unstable();
+        let anchor = Vec2::from(self.beads[sel[0] as usize].pos);
+        let offsets: Vec<Vec2> = sel
+            .iter()
+            .map(|&i| {
+                crate::grid::min_image(
+                    anchor,
+                    Vec2::from(self.beads[i as usize].pos),
+                    self.world_size,
+                )
+            })
+            .collect();
+        let centroid = anchor
+            + offsets.iter().copied().fold(Vec2::ZERO, |acc, v| acc + v) / sel.len() as f32;
+        let (s, c) = angle.sin_cos();
+        for (k, &i) in sel.iter().enumerate() {
+            let rel = (anchor + offsets[k]) - centroid;
+            let rx = rel.x * c - rel.y * s;
+            let ry = rel.x * s + rel.y * c;
+            let np = wrap_vec(Vec2::new(centroid.x + rx, centroid.y + ry), self.world_size);
+            self.beads[i as usize].pos = [np.x, np.y];
+        }
+    }
 }
 
 /// Parse a chemistry from the registry by name. Convenience wrapper.
@@ -950,5 +1086,164 @@ mod tests {
         scene.translate_selection(Vec2::new(3.0, 0.0));
         let p = Vec2::from(scene.beads[i as usize].pos);
         assert!((p.x - 2.0).abs() < 1e-4, "x not wrapped: {}", p.x);
+    }
+
+    #[test]
+    fn extract_device_recenters_and_keeps_internal_bonds() {
+        let mut scene = test_scene(128.0);
+        // 0—1—2 elbow at the chain step spacing.
+        let a = scene.place(Vec2::new(10.0, 10.0));
+        let b = scene.append_chain_bead(Vec2::new(10.667, 10.0), a);
+        let c = scene.append_chain_bead(Vec2::new(10.667, 9.333), b);
+        scene.selection.insert(a);
+        scene.selection.insert(b);
+        scene.selection.insert(c);
+
+        let dev = scene.extract_device("elbow".into()).unwrap();
+        assert_eq!(dev.beads.len(), 3);
+        assert_eq!(dev.chemistry, "wire");
+        assert_eq!(dev.bonds.len(), 2);
+        assert!(dev.bonds.contains(&[0, 1]));
+        assert!(dev.bonds.contains(&[1, 2]));
+        // Recentred: mean position is the origin.
+        let mx: f32 = dev.beads.iter().map(|b| b.pos[0]).sum::<f32>() / 3.0;
+        let my: f32 = dev.beads.iter().map(|b| b.pos[1]).sum::<f32>() / 3.0;
+        assert!(mx.abs() < 1e-4 && my.abs() < 1e-4, "centroid not at origin: {mx},{my}");
+    }
+
+    #[test]
+    fn extract_device_drops_bonds_to_unselected() {
+        let mut scene = test_scene(128.0);
+        let a = scene.place(Vec2::new(5.0, 5.0));
+        let _b = scene.append_chain_bead(Vec2::new(5.667, 5.0), a); // bonded a—b
+        scene.selection.insert(a); // select only a
+        let dev = scene.extract_device("x".into()).unwrap();
+        assert_eq!(dev.beads.len(), 1);
+        assert!(dev.bonds.is_empty());
+    }
+
+    #[test]
+    fn extract_device_empty_selection_is_none() {
+        let scene = test_scene(128.0);
+        assert!(scene.extract_device("x".into()).is_none());
+    }
+
+    #[test]
+    fn extract_device_centroid_correct_across_seam() {
+        let mut scene = test_scene(128.0);
+        // Two beads straddling the seam: 127.5 and 0.5 (min-image distance 1.0).
+        let a = scene.place(Vec2::new(127.5, 10.0));
+        let b = scene.place(Vec2::new(0.5, 10.0));
+        scene.selection.insert(a);
+        scene.selection.insert(b);
+        let dev = scene.extract_device("pair".into()).unwrap();
+        // Recentred pair sits at ±0.5 on x, not ±63.5 (which a naive mean gives).
+        let xs: Vec<f32> = dev.beads.iter().map(|d| d.pos[0]).collect();
+        for x in &xs {
+            assert!((x.abs() - 0.5).abs() < 1e-4, "expected ±0.5 across seam, got {x}");
+        }
+    }
+
+    fn two_bead_device() -> crate::library::Device {
+        crate::library::Device {
+            id: 1, name: "pair".into(), chemistry: "wire".into(), chemistry_hash: 0,
+            beads: vec![
+                crate::library::DeviceBead { state: "off".into(), pos: [-0.3, 0.0] },
+                crate::library::DeviceBead { state: "off".into(), pos: [ 0.3, 0.0] },
+            ],
+            bonds: vec![[0, 1]],
+            ports: vec![],
+        }
+    }
+
+    #[test]
+    fn instantiate_appends_isolated_with_internal_bond() {
+        let mut scene = test_scene(128.0);
+        // A pre-existing lone bead right at the drop point — must NOT bond.
+        scene.place(Vec2::new(20.0, 20.0));
+        let before = scene.beads.len();
+        let base = scene.instantiate_device(&two_bead_device(), Vec2::new(20.0, 20.0), 0.0);
+        assert_eq!(scene.beads.len(), before + 2);
+        assert_eq!(base, before as u32);
+        // The device's own internal bond is present...
+        assert!(scene.bonds.contains(&BondPair::new(base, base + 1)));
+        // ...and no accidental bond to the pre-existing bead.
+        assert_eq!(scene.bonds.len(), 1);
+        // Selection becomes exactly the two new beads.
+        assert_eq!(scene.selection.len(), 2);
+        assert!(scene.selection.contains(&base));
+        assert!(scene.selection.contains(&(base + 1)));
+    }
+
+    #[test]
+    fn instantiate_rotates_90_degrees() {
+        let mut scene = test_scene(128.0);
+        let dev = crate::library::Device {
+            id: 1, name: "p".into(), chemistry: "wire".into(), chemistry_hash: 0,
+            beads: vec![crate::library::DeviceBead { state: "off".into(), pos: [1.0, 0.0] }],
+            bonds: vec![], ports: vec![],
+        };
+        let base = scene.instantiate_device(&dev, Vec2::new(10.0, 10.0), std::f32::consts::FRAC_PI_2);
+        let p = Vec2::from(scene.beads[base as usize].pos);
+        // (1,0) rotated +90° -> (0,1); + drop (10,10) -> (10,11).
+        assert!((p.x - 10.0).abs() < 1e-4, "x={}", p.x);
+        assert!((p.y - 11.0).abs() < 1e-4, "y={}", p.y);
+    }
+
+    #[test]
+    fn rotate_selection_360_is_identity() {
+        let mut scene = test_scene(128.0);
+        let a = scene.place(Vec2::new(10.0, 10.0));
+        let b = scene.place(Vec2::new(14.0, 10.0)); // 4 apart: no bond
+        scene.selection.insert(a);
+        scene.selection.insert(b);
+        let (pa, pb) = (scene.beads[a as usize].pos, scene.beads[b as usize].pos);
+        scene.rotate_selection(std::f32::consts::TAU);
+        assert!((scene.beads[a as usize].pos[0] - pa[0]).abs() < 1e-3);
+        assert!((scene.beads[a as usize].pos[1] - pa[1]).abs() < 1e-3);
+        assert!((scene.beads[b as usize].pos[0] - pb[0]).abs() < 1e-3);
+        assert!((scene.beads[b as usize].pos[1] - pb[1]).abs() < 1e-3);
+    }
+
+    #[test]
+    fn rotate_selection_90_about_centroid() {
+        let mut scene = test_scene(128.0);
+        let a = scene.place(Vec2::new(10.0, 10.0));
+        let b = scene.place(Vec2::new(14.0, 10.0));
+        scene.selection.insert(a);
+        scene.selection.insert(b);
+        scene.rotate_selection(std::f32::consts::FRAC_PI_2);
+        let pa = Vec2::from(scene.beads[a as usize].pos);
+        let pb = Vec2::from(scene.beads[b as usize].pos);
+        // Centroid (12,10); a rel (-2,0) -> (0,-2) -> (12,8); b -> (12,12).
+        assert!((pa.x - 12.0).abs() < 1e-3 && (pa.y - 8.0).abs() < 1e-3, "{pa:?}");
+        assert!((pb.x - 12.0).abs() < 1e-3 && (pb.y - 12.0).abs() < 1e-3, "{pb:?}");
+    }
+
+    #[test]
+    fn rotate_selection_180_across_seam_swaps_positions() {
+        let mut scene = test_scene(128.0);
+        // Two beads straddling the seam, min-image distance 2.0 (no bond forms).
+        let a = scene.place(Vec2::new(127.0, 10.0));
+        let b = scene.place(Vec2::new(1.0, 10.0));
+        scene.selection.insert(a);
+        scene.selection.insert(b);
+        scene.rotate_selection(std::f32::consts::PI);
+        let pa = Vec2::from(scene.beads[a as usize].pos);
+        let pb = Vec2::from(scene.beads[b as usize].pos);
+        // Pivot is the seam (x≈128≡0); a 180° turn swaps the pair across it and
+        // wraps back into [0, world_size). y is on the pivot, so it is unchanged.
+        assert!((pa.x - 1.0).abs() < 1e-3, "a.x={}", pa.x);
+        assert!((pb.x - 127.0).abs() < 1e-3, "b.x={}", pb.x);
+        assert!((pa.y - 10.0).abs() < 1e-3 && (pb.y - 10.0).abs() < 1e-3, "y moved: {pa:?} {pb:?}");
+    }
+
+    #[test]
+    fn rotate_selection_empty_is_noop() {
+        let mut scene = test_scene(128.0);
+        let a = scene.place(Vec2::new(10.0, 10.0));
+        let pa = scene.beads[a as usize].pos;
+        scene.rotate_selection(std::f32::consts::FRAC_PI_2); // nothing selected
+        assert_eq!(scene.beads[a as usize].pos, pa);
     }
 }

@@ -6,6 +6,7 @@ pub mod rng;
 pub mod ccd;
 pub mod collide;
 pub mod grid;
+pub mod library;
 pub mod sim;
 pub mod render;
 pub mod app;
