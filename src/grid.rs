@@ -215,14 +215,22 @@ impl Grid {
     /// Shortest displacement from `from` to `to` under torus topology.
     /// Returns the vector with components in [-world_size/2, world_size/2].
     pub fn min_image(&self, from: Vec2, to: Vec2) -> Vec2 {
-        let half = self.world_size * 0.5;
-        let mut d = to - from;
-        if d.x >  half { d.x -= self.world_size; }
-        if d.x < -half { d.x += self.world_size; }
-        if d.y >  half { d.y -= self.world_size; }
-        if d.y < -half { d.y += self.world_size; }
-        d
+        min_image(from, to, self.world_size)
     }
+}
+
+/// Shortest displacement from `from` to `to` under torus topology, components
+/// in `[-world_size/2, world_size/2]`. Allocation-free (pure delta math) — the
+/// `Grid::min_image` method delegates here so callers that only need this don't
+/// have to construct a `Grid`.
+pub fn min_image(from: Vec2, to: Vec2, world_size: f32) -> Vec2 {
+    let half = world_size * 0.5;
+    let mut d = to - from;
+    if d.x >  half { d.x -= world_size; }
+    if d.x < -half { d.x += world_size; }
+    if d.y >  half { d.y -= world_size; }
+    if d.y < -half { d.y += world_size; }
+    d
 }
 
 #[cfg(test)]

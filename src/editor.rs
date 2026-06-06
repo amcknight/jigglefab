@@ -199,8 +199,7 @@ impl Scene {
     /// from the new bead to any existing bead within RADIUS (Place semantics:
     /// "drop near a chain → it joins"). Returns the new bead's index.
     pub fn place(&mut self, pos: Vec2) -> u32 {
-        let grid = crate::grid::Grid::new(self.world_size);
-        let pos = grid.wrap_pos(pos);
+        let pos = wrap_vec(pos, self.world_size);
         let state_name = self.chemistry.states[self.next_state_idx as usize].clone();
         let new_idx = self.beads.len() as u32;
         self.beads.push(BeadSpec {
@@ -211,7 +210,7 @@ impl Scene {
         for i in 0..(new_idx as usize) {
             let pa = pos;
             let pb_raw = Vec2::from(self.beads[i].pos);
-            let pb = pa + grid.min_image(pa, pb_raw);
+            let pb = pa + crate::grid::min_image(pa, pb_raw, self.world_size);
             if (pb - pa).length() < crate::ccd::RADIUS {
                 self.bonds.insert(BondPair::new(i as u32, new_idx));
             }
@@ -239,11 +238,10 @@ impl Scene {
     /// spacing along the segment from the previous bead to the cursor. Returns
     /// the new "last bead" index (== input `last_idx` if no bead was placed).
     pub fn chain_extend(&mut self, last_idx: u32, cursor: Vec2) -> u32 {
-        let grid = crate::grid::Grid::new(self.world_size);
         let mut last = last_idx;
         loop {
             let last_pos = Vec2::from(self.beads[last as usize].pos);
-            let to_cursor = grid.min_image(last_pos, cursor);
+            let to_cursor = crate::grid::min_image(last_pos, cursor, self.world_size);
             let dist = to_cursor.length();
             if dist < CHAIN_STEP {
                 break;

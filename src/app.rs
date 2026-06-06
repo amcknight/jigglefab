@@ -442,10 +442,9 @@ impl App {
 
     /// True if `world_pos` lies within RADIUS of any currently-selected bead.
     fn hit_selected(scene: &crate::editor::Scene, world_pos: glam::Vec2) -> bool {
-        let grid = crate::grid::Grid::new(scene.world_size);
         scene.selection.iter().any(|&idx| {
             let p = glam::Vec2::from(scene.beads[idx as usize].pos);
-            grid.min_image(world_pos, p).length() <= crate::ccd::RADIUS
+            crate::grid::min_image(world_pos, p, scene.world_size).length() <= crate::ccd::RADIUS
         })
     }
 
