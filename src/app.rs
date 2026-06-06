@@ -542,39 +542,53 @@ impl App {
         }
     }
 
+    /// Alpha multiplier for the faint domain-boundary seam grid.
+    const SEAM_SHADE: f32 = 0.25;
+
     /// Overlay line segments for this frame (LineList: consecutive pairs = one
-    /// segment). Drag overlay (rect/lasso) renders bright; a later task adds dim
-    /// seam lines.
+    /// segment). Faint seam grid prepended; drag overlay (rect/lasso) renders bright.
     fn overlay_segments(&self) -> Vec<crate::render::OverlayVertex> {
         use crate::render::OverlayVertex;
         let bright = |p: [f32; 2]| OverlayVertex { pos: p, shade: 1.0 };
+        let mut out: Vec<OverlayVertex> = Vec::new();
+        // Faint seam grid for orientation (shown in both Run and Edit).
+        if let Some(viewport) = self.viewport() {
+            let ws = self.world_size();
+            let (min, max) = self.camera.visible_world_rect(viewport, ws);
+            for p in crate::camera::seam_segments(min, max, ws) {
+                out.push(OverlayVertex { pos: p, shade: Self::SEAM_SHADE });
+            }
+        }
+        // Drag overlay (bright).
         match &self.drag {
             crate::editor::DragState::Rect { anchor, current, .. } => {
                 let (a, b) = (*anchor, *current);
                 let (xmin, xmax) = if a.x <= b.x { (a.x, b.x) } else { (b.x, a.x) };
                 let (ymin, ymax) = if a.y <= b.y { (a.y, b.y) } else { (b.y, a.y) };
-                vec![
+                for p in [
                     [xmin, ymin], [xmax, ymin],
                     [xmax, ymin], [xmax, ymax],
                     [xmax, ymax], [xmin, ymax],
                     [xmin, ymax], [xmin, ymin],
-                ].into_iter().map(bright).collect()
+                ] {
+                    out.push(bright(p));
+                }
             }
             crate::editor::DragState::Lasso { points } => {
-                if points.len() < 2 { return Vec::new(); }
-                let mut segs: Vec<OverlayVertex> = Vec::with_capacity((points.len() + 1) * 2);
-                for w in points.windows(2) {
-                    segs.push(bright([w[0].x, w[0].y]));
-                    segs.push(bright([w[1].x, w[1].y]));
+                if points.len() >= 2 {
+                    for w in points.windows(2) {
+                        out.push(bright([w[0].x, w[0].y]));
+                        out.push(bright([w[1].x, w[1].y]));
+                    }
+                    let last = points[points.len() - 1];
+                    let first = points[0];
+                    out.push(bright([last.x, last.y]));
+                    out.push(bright([first.x, first.y]));
                 }
-                let last = points[points.len() - 1];
-                let first = points[0];
-                segs.push(bright([last.x, last.y]));
-                segs.push(bright([first.x, first.y]));
-                segs
             }
-            _ => Vec::new(),
+            _ => {}
         }
+        out
     }
 
     fn transition_mode(&mut self, new_mode: crate::editor::Mode) {

@@ -114,6 +114,28 @@ impl Camera {
     }
 }
 
+/// World-boundary grid lines (at integer multiples of `world_size`) that
+/// intersect the visible rect `[min, max]`. Returns LineList vertex pairs in
+/// world space — purely cosmetic seam markers for orientation on the torus.
+pub fn seam_segments(min: Vec2, max: Vec2, world_size: f32) -> Vec<[f32; 2]> {
+    let mut segs = Vec::new();
+    let first = (min.x / world_size).ceil() as i32;
+    let last = (max.x / world_size).floor() as i32;
+    for m in first..=last {
+        let x = m as f32 * world_size;
+        segs.push([x, min.y]);
+        segs.push([x, max.y]);
+    }
+    let first = (min.y / world_size).ceil() as i32;
+    let last = (max.y / world_size).floor() as i32;
+    for m in first..=last {
+        let y = m as f32 * world_size;
+        segs.push([min.x, y]);
+        segs.push([max.x, y]);
+    }
+    segs
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -262,5 +284,19 @@ mod tests {
         let half = WS / (2.0 * 2.0); // square, vis = WS/zoom = 64 ⇒ half = 32
         assert!(approx(min, Vec2::new(70.0 - half, 60.0 - half)), "min {min:?}");
         assert!(approx(max, Vec2::new(70.0 + half, 60.0 + half)), "max {max:?}");
+    }
+
+    #[test]
+    fn seam_segments_covers_boundaries_in_view() {
+        let segs = seam_segments(Vec2::new(-10.0, -10.0), Vec2::new(138.0, 138.0), WS);
+        assert_eq!(segs.len(), 8, "got {:?}", segs); // 2 vertical + 2 horizontal lines × 2 verts
+        assert!(segs.windows(2).any(|w| w[0][0] == 0.0 && w[1][0] == 0.0));    // x=0 line
+        assert!(segs.windows(2).any(|w| w[0][0] == 128.0 && w[1][0] == 128.0)); // x=128 line
+    }
+
+    #[test]
+    fn seam_segments_fit_view_shows_outer_box() {
+        let segs = seam_segments(Vec2::new(0.0, 0.0), Vec2::new(WS, WS), WS);
+        assert_eq!(segs.len(), 8);
     }
 }
