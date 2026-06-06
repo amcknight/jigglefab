@@ -46,6 +46,8 @@ mod web_bridge {
         pub chemistry_name: String,
         pub can_revert: bool,
         pub zoom: f32,
+        pub center_x: f32,
+        pub center_y: f32,
     }
 }
 
@@ -317,6 +319,24 @@ fn install_window_get_zoom() {
     expose_to_window!("__jigglefabGetZoom", cb);
 }
 
+#[cfg(target_arch = "wasm32")]
+fn install_window_get_center_x() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|| -> f32 {
+        web_bridge::SNAPSHOT.with(|s| s.borrow().center_x)
+    }) as Box<dyn Fn() -> f32>);
+    expose_to_window!("__jigglefabGetCenterX", cb);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_window_get_center_y() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|| -> f32 {
+        web_bridge::SNAPSHOT.with(|s| s.borrow().center_y)
+    }) as Box<dyn Fn() -> f32>);
+    expose_to_window!("__jigglefabGetCenterY", cb);
+}
+
 pub enum UserEvent {
     RendererReady(Renderer),
 }
@@ -422,9 +442,10 @@ impl App {
 
     /// True if `world_pos` lies within RADIUS of any currently-selected bead.
     fn hit_selected(scene: &crate::editor::Scene, world_pos: glam::Vec2) -> bool {
+        let grid = crate::grid::Grid::new(scene.world_size);
         scene.selection.iter().any(|&idx| {
             let p = glam::Vec2::from(scene.beads[idx as usize].pos);
-            (p - world_pos).length() <= crate::ccd::RADIUS
+            grid.min_image(world_pos, p).length() <= crate::ccd::RADIUS
         })
     }
 
@@ -733,6 +754,8 @@ impl ApplicationHandler<UserEvent> for App {
             install_window_revert();
             install_window_can_revert();
             install_window_get_zoom();
+            install_window_get_center_x();
+            install_window_get_center_y();
 
             self.camera = crate::camera::Camera::fit(world_size);
             let camera = self.camera;
@@ -794,9 +817,6 @@ impl ApplicationHandler<UserEvent> for App {
                 let Some(renderer) = &mut self.renderer else { return };
                 let Some(sim) = &mut self.sim else { return };
                 renderer.resize(size);
-                // Zero-delta pan to re-clamp the center to the new viewport: the
-                // fit extent changes with aspect, so a prior pan may now be out of bounds.
-                self.camera.pan_by((0.0, 0.0), (size.width, size.height), sim.world_size());
                 renderer.update_camera(&self.camera, sim.world_size(), &sim.palette());
             }
             WindowEvent::RedrawRequested => {
@@ -929,6 +949,8 @@ impl ApplicationHandler<UserEvent> for App {
                             chemistry_name,
                             can_revert,
                             zoom: self.camera.zoom,
+                            center_x: self.camera.center.x,
+                            center_y: self.camera.center.y,
                         };
                     });
                 }

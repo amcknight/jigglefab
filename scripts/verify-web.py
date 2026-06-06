@@ -232,6 +232,21 @@ async def main() -> int:
             assert abs(z_reset - 1.0) < 0.01, f"0-key did not reset to fit: {z_reset}"
             console_lines.append(f"[editor] zoom smoke OK: z0={z0} up={z_up} down={z_down} reset={z_reset}")
 
+            # --- Torus pan: a huge pan wraps the center into the domain. ---
+            await page.keyboard.press("0")  # reset view to fit
+            await page.wait_for_timeout(100)
+            cx_before = await page.evaluate("window.__jigglefabGetCenterX()")
+            await page.mouse.move(cx, cy)
+            await page.mouse.down(button="middle")
+            await page.mouse.move(cx + 4000, cy)  # pan far right (many world-widths)
+            await page.mouse.up(button="middle")
+            await page.wait_for_timeout(150)
+            cx_after = await page.evaluate("window.__jigglefabGetCenterX()")
+            assert cx_after != cx_before, f"pan did not move center: {cx_before} -> {cx_after}"
+            # Wrapped (small, finite) — NOT clamped at an edge and NOT run away to thousands.
+            assert 0.0 <= cx_after < 1000.0, f"center not wrapped into domain: {cx_after}"
+            console_lines.append(f"[editor] torus pan OK: center.x {cx_before} -> {cx_after}")
+
             console_lines.append("[editor] extended smoke test passed")
 
         # Inspect the canvas: did winit append one? What's its drawing-buffer
