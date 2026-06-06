@@ -247,6 +247,20 @@ async def main() -> int:
             assert 0.0 <= cx_after < 1000.0, f"center not wrapped into domain: {cx_after}"
             console_lines.append(f"[editor] torus pan OK: center.x {cx_before} -> {cx_after}")
 
+            # --- Grid fade: ~0 at rest, rises while zooming, falls after idle. ---
+            await page.wait_for_timeout(2000)  # let any prior camera motion settle (hold=0.4s + fade-out tau=0.4s * ln(10) ~= 1.3s needed)
+            a_rest = await page.evaluate("window.__jigglefabGridAlpha()")
+            await page.mouse.move(cx, cy)
+            await page.mouse.wheel(0, -300)
+            await page.wait_for_timeout(100)
+            a_zoom = await page.evaluate("window.__jigglefabGridAlpha()")
+            await page.wait_for_timeout(2000)  # idle: HOLD + fade-out
+            a_idle = await page.evaluate("window.__jigglefabGridAlpha()")
+            assert a_rest < 0.1, f"grid not hidden at rest: {a_rest}"
+            assert a_zoom > 0.1, f"grid did not fade in on zoom: {a_zoom}"
+            assert a_idle < 0.1, f"grid did not fade out when idle: {a_idle}"
+            console_lines.append(f"[editor] grid fade OK: rest={a_rest} zoom={a_zoom} idle={a_idle}")
+
             console_lines.append("[editor] extended smoke test passed")
 
         # Inspect the canvas: did winit append one? What's its drawing-buffer

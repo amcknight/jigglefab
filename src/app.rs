@@ -48,6 +48,7 @@ mod web_bridge {
         pub zoom: f32,
         pub center_x: f32,
         pub center_y: f32,
+        pub grid_alpha: f32,
     }
 }
 
@@ -349,6 +350,15 @@ fn install_window_get_center_y() {
         web_bridge::SNAPSHOT.with(|s| s.borrow().center_y)
     }) as Box<dyn Fn() -> f32>);
     expose_to_window!("__jigglefabGetCenterY", cb);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_window_grid_alpha() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|| -> f32 {
+        web_bridge::SNAPSHOT.with(|s| s.borrow().grid_alpha)
+    }) as Box<dyn Fn() -> f32>);
+    expose_to_window!("__jigglefabGridAlpha", cb);
 }
 
 pub enum UserEvent {
@@ -781,6 +791,7 @@ impl ApplicationHandler<UserEvent> for App {
             install_window_get_zoom();
             install_window_get_center_x();
             install_window_get_center_y();
+            install_window_grid_alpha();
 
             self.camera = crate::camera::Camera::fit(world_size);
             let camera = self.camera;
@@ -981,6 +992,7 @@ impl ApplicationHandler<UserEvent> for App {
                             zoom: self.camera.zoom,
                             center_x: self.camera.center.x,
                             center_y: self.camera.center.y,
+                            grid_alpha: self.grid_alpha,
                         };
                     });
                 }
