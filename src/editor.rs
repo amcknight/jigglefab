@@ -223,7 +223,7 @@ impl Scene {
     /// Chain tool. Unlike `place`, this skips distance-derivation entirely —
     /// nearby non-predecessor beads do NOT form bonds. Returns the new index.
     pub fn append_chain_bead(&mut self, pos: Vec2, prev_idx: u32) -> u32 {
-        let pos = crate::grid::Grid::new(self.world_size).wrap_pos(pos);
+        let pos = wrap_vec(pos, self.world_size);
         let state_name = self.chemistry.states[self.next_state_idx as usize].clone();
         let new_idx = self.beads.len() as u32;
         self.beads.push(BeadSpec {
@@ -284,10 +284,9 @@ impl Scene {
     /// indices stay valid; velocities will be re-derived from positions only if
     /// the user presses Run, and snapshot has already stored them).
     pub fn translate_selection(&mut self, delta: Vec2) {
-        let grid = crate::grid::Grid::new(self.world_size);
         for &idx in &self.selection {
             let b = &mut self.beads[idx as usize];
-            let p = grid.wrap_pos(Vec2::new(b.pos[0] + delta.x, b.pos[1] + delta.y));
+            let p = wrap_vec(Vec2::new(b.pos[0] + delta.x, b.pos[1] + delta.y), self.world_size);
             b.pos = [p.x, p.y];
         }
     }
@@ -380,6 +379,16 @@ pub fn load_chemistry_by_name(name: &str) -> anyhow::Result<Chemistry> {
     let toml = chemistry_toml(name)
         .ok_or_else(|| anyhow::anyhow!("unknown chemistry: {name}"))?;
     parse_chemistry(toml)
+}
+
+/// Wrap a position into `[0, world_size)` per axis (torus), without allocating a
+/// `Grid`. Matches `Grid::wrap_pos`.
+fn wrap_vec(p: Vec2, world_size: f32) -> Vec2 {
+    let mut x = p.x.rem_euclid(world_size);
+    let mut y = p.y.rem_euclid(world_size);
+    if x == world_size { x = 0.0; }
+    if y == world_size { y = 0.0; }
+    Vec2::new(x, y)
 }
 
 /// True if any torus ghost copy of `pos` (offset by `±world_size` per axis)
