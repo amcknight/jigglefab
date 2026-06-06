@@ -199,6 +199,8 @@ impl Scene {
     /// from the new bead to any existing bead within RADIUS (Place semantics:
     /// "drop near a chain → it joins"). Returns the new bead's index.
     pub fn place(&mut self, pos: Vec2) -> u32 {
+        let grid = crate::grid::Grid::new(self.world_size);
+        let pos = grid.wrap_pos(pos);
         let state_name = self.chemistry.states[self.next_state_idx as usize].clone();
         let new_idx = self.beads.len() as u32;
         self.beads.push(BeadSpec {
@@ -206,7 +208,6 @@ impl Scene {
             pos: [pos.x, pos.y],
             vel: None,
         });
-        let grid = crate::grid::Grid::new(self.world_size);
         for i in 0..(new_idx as usize) {
             let pa = pos;
             let pb_raw = Vec2::from(self.beads[i].pos);
@@ -222,6 +223,7 @@ impl Scene {
     /// Chain tool. Unlike `place`, this skips distance-derivation entirely —
     /// nearby non-predecessor beads do NOT form bonds. Returns the new index.
     pub fn append_chain_bead(&mut self, pos: Vec2, prev_idx: u32) -> u32 {
+        let pos = crate::grid::Grid::new(self.world_size).wrap_pos(pos);
         let state_name = self.chemistry.states[self.next_state_idx as usize].clone();
         let new_idx = self.beads.len() as u32;
         self.beads.push(BeadSpec {
@@ -237,10 +239,11 @@ impl Scene {
     /// spacing along the segment from the previous bead to the cursor. Returns
     /// the new "last bead" index (== input `last_idx` if no bead was placed).
     pub fn chain_extend(&mut self, last_idx: u32, cursor: Vec2) -> u32 {
+        let grid = crate::grid::Grid::new(self.world_size);
         let mut last = last_idx;
         loop {
             let last_pos = Vec2::from(self.beads[last as usize].pos);
-            let to_cursor = cursor - last_pos;
+            let to_cursor = grid.min_image(last_pos, cursor);
             let dist = to_cursor.length();
             if dist < CHAIN_STEP {
                 break;
@@ -256,8 +259,9 @@ impl Scene {
     /// axis-aligned rectangle defined by `a` and `b` (corners in any order).
     pub fn select_rect(&mut self, a: Vec2, b: Vec2) {
         self.selection.clear();
+        let ws = self.world_size;
         for (i, bead) in self.beads.iter().enumerate() {
-            if point_in_rect(Vec2::from(bead.pos), a, b) {
+            if any_ghost(Vec2::from(bead.pos), ws, |g| point_in_rect(g, a, b)) {
                 self.selection.insert(i as u32);
             }
         }
@@ -267,24 +271,24 @@ impl Scene {
     /// closed polygon. Polygons with fewer than 3 vertices select nothing.
     pub fn select_lasso(&mut self, poly: &[Vec2]) {
         self.selection.clear();
+        let ws = self.world_size;
         for (i, bead) in self.beads.iter().enumerate() {
-            if point_in_polygon(Vec2::from(bead.pos), poly) {
+            if any_ghost(Vec2::from(bead.pos), ws, |g| point_in_polygon(g, poly)) {
                 self.selection.insert(i as u32);
             }
         }
     }
 
-    /// Translate every selected bead by `delta`, then clamp each component to
-    /// `[0, world_size]`. Bonds and velocities are untouched (bond indices stay
-    /// valid; velocities will be re-derived from positions only if the user
-    /// presses Run, and snapshot has already stored them).
+    /// Translate every selected bead by `delta`, then wrap each component into
+    /// `[0, world_size)` (torus). Bonds and velocities are untouched (bond
+    /// indices stay valid; velocities will be re-derived from positions only if
+    /// the user presses Run, and snapshot has already stored them).
     pub fn translate_selection(&mut self, delta: Vec2) {
-        let w = self.world_size;
+        let grid = crate::grid::Grid::new(self.world_size);
         for &idx in &self.selection {
             let b = &mut self.beads[idx as usize];
-            let new_x = (b.pos[0] + delta.x).clamp(0.0, w);
-            let new_y = (b.pos[1] + delta.y).clamp(0.0, w);
-            b.pos = [new_x, new_y];
+            let p = grid.wrap_pos(Vec2::new(b.pos[0] + delta.x, b.pos[1] + delta.y));
+            b.pos = [p.x, p.y];
         }
     }
 
@@ -378,6 +382,20 @@ pub fn load_chemistry_by_name(name: &str) -> anyhow::Result<Chemistry> {
     parse_chemistry(toml)
 }
 
+/// True if any torus ghost copy of `pos` (offset by `±world_size` per axis)
+/// satisfies `inside`. Used so selections work when the view straddles the seam.
+pub fn any_ghost<F: Fn(Vec2) -> bool>(pos: Vec2, world_size: f32, inside: F) -> bool {
+    for ky in -1..=1 {
+        for kx in -1..=1 {
+            let g = Vec2::new(pos.x + kx as f32 * world_size, pos.y + ky as f32 * world_size);
+            if inside(g) {
+                return true;
+            }
+        }
+    }
+    false
+}
+
 /// Inclusive point-in-rect using axis-aligned bounds. Accepts either corner
 /// ordering — anchor and current can be in any spatial order.
 pub fn point_in_rect(p: Vec2, a: Vec2, b: Vec2) -> bool {
@@ -422,6 +440,22 @@ mod tests {
     fn small_wire_fab() -> Fab {
         // 30-bead wire chain, smallest preset we ship.
         load_fab("fabs/wire-30.toml").unwrap()
+    }
+
+    /// Minimal scene with the given world_size and wire chemistry (≥1 state).
+    fn test_scene(world_size: f32) -> Scene {
+        let chem = load_chemistry_by_name("wire").unwrap();
+        Scene {
+            chemistry: chem,
+            chemistry_name: "wire".into(),
+            world_size,
+            beads: Vec::new(),
+            seed: 0,
+            next_state_idx: 0,
+            bonds: HashSet::new(),
+            selection: HashSet::new(),
+            tool: Tool::Place,
+        }
     }
 
     #[test]
@@ -810,21 +844,6 @@ mod tests {
     }
 
     #[test]
-    fn translate_selection_clamps_to_world() {
-        let fab = small_wire_fab();
-        let chem = load_chemistry_by_name("wire").unwrap();
-        let mut scene = Scene::from_fab(&fab, chem, "wire".into());
-        scene.beads.clear();
-        scene.bonds.clear();
-        let world = scene.world_size;
-        scene.place(Vec2::new(world - 1.0, 5.0));
-        scene.selection.insert(0);
-        scene.translate_selection(Vec2::new(10.0, 0.0));  // would push past world edge
-        assert!(scene.beads[0].pos[0] <= world);
-        assert_eq!(scene.beads[0].pos[0], world);
-    }
-
-    #[test]
     fn translate_selection_preserves_bonds() {
         let fab = small_wire_fab();
         let chem = load_chemistry_by_name("wire").unwrap();
@@ -884,5 +903,45 @@ mod tests {
         scene.delete_selection();
         assert_eq!(scene.beads.len(), before_beads);
         assert_eq!(scene.bonds.len(), before_bonds);
+    }
+
+    #[test]
+    fn place_wraps_out_of_domain_position() {
+        let mut scene = test_scene(128.0);
+        let idx = scene.place(Vec2::new(128.0 + 2.0, 10.0));
+        let p = Vec2::from(scene.beads[idx as usize].pos);
+        assert!(p.x >= 0.0 && p.x < 128.0, "x not wrapped: {}", p.x);
+        assert!((p.x - 2.0).abs() < 1e-4, "expected ~2.0, got {}", p.x);
+    }
+
+    #[test]
+    fn chain_extend_across_seam_keeps_step_spacing() {
+        let mut scene = test_scene(128.0);
+        let a = scene.place(Vec2::new(127.8, 10.0));
+        let b = scene.chain_extend(a, Vec2::new(128.8, 10.0));
+        assert_ne!(a, b, "a chain bead should have been placed across the seam");
+        let grid = crate::grid::Grid::new(128.0);
+        let pa = Vec2::from(scene.beads[a as usize].pos);
+        let pb = Vec2::from(scene.beads[b as usize].pos);
+        let d = grid.min_image(pa, pb).length();
+        assert!((d - CHAIN_STEP).abs() < 1e-3, "min-image spacing {d} != CHAIN_STEP {CHAIN_STEP}");
+    }
+
+    #[test]
+    fn select_rect_across_seam_selects_far_side_bead() {
+        let mut scene = test_scene(128.0);
+        let i = scene.place(Vec2::new(1.0, 64.0));
+        scene.select_rect(Vec2::new(126.0, 60.0), Vec2::new(130.0, 68.0));
+        assert!(scene.selection.contains(&i), "ghost-in-rect bead not selected");
+    }
+
+    #[test]
+    fn translate_selection_wraps_at_boundary() {
+        let mut scene = test_scene(128.0);
+        let i = scene.place(Vec2::new(127.0, 50.0));
+        scene.selection.insert(i);
+        scene.translate_selection(Vec2::new(3.0, 0.0));
+        let p = Vec2::from(scene.beads[i as usize].pos);
+        assert!((p.x - 2.0).abs() < 1e-4, "x not wrapped: {}", p.x);
     }
 }
