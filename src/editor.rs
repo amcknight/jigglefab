@@ -439,6 +439,40 @@ impl Scene {
             ports: Vec::new(),
         })
     }
+
+    /// Stamp `device` into the scene at world position `drop`, rotated by
+    /// `angle` radians about the device origin. Appends fresh beads (vel None)
+    /// and the device's internal bonds (remapped to the new indices). Does NOT
+    /// bond to pre-existing beads (isolated drop). Replaces the selection with
+    /// the newly-placed indices. Returns the first new bead's index.
+    pub fn instantiate_device(
+        &mut self,
+        device: &crate::library::Device,
+        drop: Vec2,
+        angle: f32,
+    ) -> u32 {
+        let base = self.beads.len() as u32;
+        let (s, c) = angle.sin_cos();
+        for db in &device.beads {
+            let (x, y) = (db.pos[0], db.pos[1]);
+            let rx = x * c - y * s;
+            let ry = x * s + y * c;
+            let world = wrap_vec(Vec2::new(rx + drop.x, ry + drop.y), self.world_size);
+            self.beads.push(BeadSpec {
+                state: db.state.clone(),
+                pos: [world.x, world.y],
+                vel: None,
+            });
+        }
+        for b in &device.bonds {
+            self.bonds.insert(BondPair::new(base + b[0], base + b[1]));
+        }
+        self.selection.clear();
+        for i in 0..device.beads.len() as u32 {
+            self.selection.insert(base + i);
+        }
+        base
+    }
 }
 
 /// Parse a chemistry from the registry by name. Convenience wrapper.
@@ -1075,5 +1109,51 @@ mod tests {
         for x in &xs {
             assert!((x.abs() - 0.5).abs() < 1e-4, "expected ±0.5 across seam, got {x}");
         }
+    }
+
+    fn two_bead_device() -> crate::library::Device {
+        crate::library::Device {
+            id: 1, name: "pair".into(), chemistry: "wire".into(), chemistry_hash: 0,
+            beads: vec![
+                crate::library::DeviceBead { state: "off".into(), pos: [-0.3, 0.0] },
+                crate::library::DeviceBead { state: "off".into(), pos: [ 0.3, 0.0] },
+            ],
+            bonds: vec![[0, 1]],
+            ports: vec![],
+        }
+    }
+
+    #[test]
+    fn instantiate_appends_isolated_with_internal_bond() {
+        let mut scene = test_scene(128.0);
+        // A pre-existing lone bead right at the drop point — must NOT bond.
+        scene.place(Vec2::new(20.0, 20.0));
+        let before = scene.beads.len();
+        let base = scene.instantiate_device(&two_bead_device(), Vec2::new(20.0, 20.0), 0.0);
+        assert_eq!(scene.beads.len(), before + 2);
+        assert_eq!(base, before as u32);
+        // The device's own internal bond is present...
+        assert!(scene.bonds.contains(&BondPair::new(base, base + 1)));
+        // ...and no accidental bond to the pre-existing bead.
+        assert_eq!(scene.bonds.len(), 1);
+        // Selection becomes exactly the two new beads.
+        assert_eq!(scene.selection.len(), 2);
+        assert!(scene.selection.contains(&base));
+        assert!(scene.selection.contains(&(base + 1)));
+    }
+
+    #[test]
+    fn instantiate_rotates_90_degrees() {
+        let mut scene = test_scene(128.0);
+        let dev = crate::library::Device {
+            id: 1, name: "p".into(), chemistry: "wire".into(), chemistry_hash: 0,
+            beads: vec![crate::library::DeviceBead { state: "off".into(), pos: [1.0, 0.0] }],
+            bonds: vec![], ports: vec![],
+        };
+        let base = scene.instantiate_device(&dev, Vec2::new(10.0, 10.0), std::f32::consts::FRAC_PI_2);
+        let p = Vec2::from(scene.beads[base as usize].pos);
+        // (1,0) rotated +90° -> (0,1); + drop (10,10) -> (10,11).
+        assert!((p.x - 10.0).abs() < 1e-4, "x={}", p.x);
+        assert!((p.y - 11.0).abs() < 1e-4, "y={}", p.y);
     }
 }
