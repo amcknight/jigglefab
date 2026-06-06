@@ -542,10 +542,12 @@ impl App {
         }
     }
 
-    /// World-space line segments to draw as the rect/lasso overlay this frame.
-    /// Returns an empty vec when no overlay is active. LineList topology: each
-    /// pair of consecutive entries defines one segment.
-    fn overlay_segments(&self) -> Vec<[f32; 2]> {
+    /// Overlay line segments for this frame (LineList: consecutive pairs = one
+    /// segment). Drag overlay (rect/lasso) renders bright; a later task adds dim
+    /// seam lines.
+    fn overlay_segments(&self) -> Vec<crate::render::OverlayVertex> {
+        use crate::render::OverlayVertex;
+        let bright = |p: [f32; 2]| OverlayVertex { pos: p, shade: 1.0 };
         match &self.drag {
             crate::editor::DragState::Rect { anchor, current, .. } => {
                 let (a, b) = (*anchor, *current);
@@ -556,21 +558,19 @@ impl App {
                     [xmax, ymin], [xmax, ymax],
                     [xmax, ymax], [xmin, ymax],
                     [xmin, ymax], [xmin, ymin],
-                ]
+                ].into_iter().map(bright).collect()
             }
             crate::editor::DragState::Lasso { points } => {
                 if points.len() < 2 { return Vec::new(); }
-                let mut segs = Vec::with_capacity((points.len() + 1) * 2);
+                let mut segs: Vec<OverlayVertex> = Vec::with_capacity((points.len() + 1) * 2);
                 for w in points.windows(2) {
-                    segs.push([w[0].x, w[0].y]);
-                    segs.push([w[1].x, w[1].y]);
+                    segs.push(bright([w[0].x, w[0].y]));
+                    segs.push(bright([w[1].x, w[1].y]));
                 }
-                // Close back to the first point so the lasso visual matches the
-                // closed-polygon semantics of select_lasso.
                 let last = points[points.len() - 1];
                 let first = points[0];
-                segs.push([last.x, last.y]);
-                segs.push([first.x, first.y]);
+                segs.push(bright([last.x, last.y]));
+                segs.push(bright([first.x, first.y]));
                 segs
             }
             _ => Vec::new(),

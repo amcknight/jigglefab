@@ -13,6 +13,13 @@ struct BeadGpu {
     selected: u32,
 }
 
+#[repr(C)]
+#[derive(Copy, Clone, Pod, Zeroable)]
+pub struct OverlayVertex {
+    pub pos: [f32; 2],
+    pub shade: f32,
+}
+
 // Maximum number of chemistry states the renderer can colour. Today's
 // chemistries (grey: 1, wire: 2) use a tiny fraction; the upper bound is fixed
 // here so the UBO has a stable layout the shader can index.
@@ -191,10 +198,10 @@ impl Renderer {
             cache: None,
         });
 
-        let overlay_capacity: usize = 256;
+        let overlay_capacity: usize = 512;
         let overlay_buf = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("overlay verts"),
-            size: (overlay_capacity * std::mem::size_of::<[f32; 2]>()) as u64,
+            size: (overlay_capacity * std::mem::size_of::<OverlayVertex>()) as u64,
             usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
@@ -237,13 +244,12 @@ impl Renderer {
                 module: &overlay_shader,
                 entry_point: Some("vs_main"),
                 buffers: &[wgpu::VertexBufferLayout {
-                    array_stride: 8,
+                    array_stride: std::mem::size_of::<OverlayVertex>() as u64,
                     step_mode: wgpu::VertexStepMode::Vertex,
-                    attributes: &[wgpu::VertexAttribute {
-                        offset: 0,
-                        shader_location: 0,
-                        format: wgpu::VertexFormat::Float32x2,
-                    }],
+                    attributes: &[
+                        wgpu::VertexAttribute { offset: 0, shader_location: 0, format: wgpu::VertexFormat::Float32x2 },
+                        wgpu::VertexAttribute { offset: 8, shader_location: 1, format: wgpu::VertexFormat::Float32 },
+                    ],
                 }],
                 compilation_options: Default::default(),
             },
@@ -341,8 +347,7 @@ impl Renderer {
     /// Upload a polyline of world-space vertex pairs. Each consecutive pair of
     /// vertices defines one line segment (LineList topology). Pass an empty
     /// slice to hide the overlay this frame.
-    pub fn update_overlay(&mut self, segments: &[[f32; 2]]) {
-        debug_assert!(segments.len() % 2 == 0, "LineList needs an even vertex count");
+    pub fn update_overlay(&mut self, segments: &[OverlayVertex]) {
         let count = segments.len().min(self.overlay_capacity) as u32;
         self.overlay_vertex_count = count;
         if count == 0 { return; }

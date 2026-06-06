@@ -11,20 +11,23 @@ struct Camera {
 
 struct VsIn {
     @location(0) world: vec2<f32>,
+    @location(1) shade: f32,
 };
 
 struct VsOut {
     @builtin(position) clip: vec4<f32>,
+    @location(0) shade: f32,
 };
 
 @vertex
 fn vs_main(in: VsIn) -> VsOut {
     var out: VsOut;
     out.clip = camera.view_proj * vec4<f32>(in.world, 0.0, 1.0);
+    out.shade = in.shade;
     return out;
 }
 
 @fragment
-fn fs_main(_in: VsOut) -> @location(0) vec4<f32> {
-    return vec4<f32>(1.0, 1.0, 1.0, 0.7);
+fn fs_main(in: VsOut) -> @location(0) vec4<f32> {
+    return vec4<f32>(1.0, 1.0, 1.0, 0.7 * in.shade);
 }
