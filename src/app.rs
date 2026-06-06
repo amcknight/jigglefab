@@ -65,6 +65,20 @@ use crate::sim::Sim;
 
 const FRAME_DT: f32 = 1.0 / 60.0;
 
+/// Seconds the grid stays fully in after the last camera move before fading.
+const GRID_HOLD_S: f32 = 0.4;
+const GRID_FADE_IN_S: f32 = 0.12;
+const GRID_FADE_OUT_S: f32 = 0.40;
+
+/// Advance the grid fade one frame (frame-rate independent exponential ease).
+/// `idle_since` = seconds since the last zoom/pan. Returns the new alpha in [0,1].
+fn grid_fade_step(alpha: f32, idle_since: f32, dt: f32) -> f32 {
+    let target = if idle_since < GRID_HOLD_S { 1.0 } else { 0.0 };
+    let tau = if target > alpha { GRID_FADE_IN_S } else { GRID_FADE_OUT_S };
+    let k = 1.0 - (-dt / tau.max(1e-6)).exp();
+    alpha + (target - alpha) * k
+}
+
 // Web demo: parallel bonded wire chains, each with one "on" signal walking
 // the chain. 30 beads per chain (not 100): with wire's outside=pass, long
 // chains can self-fold tightly because there's nothing pushing non-adjacent
@@ -358,6 +372,9 @@ pub struct App {
     /// and edit gestures mutually exclusive: a left press/release can't disturb a
     /// middle-button pan, and vice versa.
     pan_button: Option<winit::event::MouseButton>,
+    /// Adaptive grid fade: current alpha and seconds since the last camera move.
+    grid_alpha: f32,
+    idle_since: f32,
     drag: crate::editor::DragState,
     /// True only while the left mouse button is held. mousemove uses this to
     /// know whether to extend the current `drag`.
@@ -383,6 +400,8 @@ impl App {
             camera: crate::camera::Camera::fit(crate::sim::WORLD_SIZE),
             space_held: false,
             pan_button: None,
+            grid_alpha: 0.0,
+            idle_since: 1.0e9, // start fully idle (grid hidden)
             drag: crate::editor::DragState::None,
             mouse_down: false,
             pre_run_snapshot: None,
@@ -426,6 +445,11 @@ impl App {
         } else {
             Vec::new()
         }
+    }
+
+    /// Mark a camera move (zoom/pan) so the scale grid fades in this frame.
+    fn note_camera_activity(&mut self) {
+        self.idle_since = 0.0;
     }
 
     /// Re-upload the current camera to the renderer. Locals are pulled out first
@@ -562,24 +586,26 @@ impl App {
         }
     }
 
-    /// Alpha multiplier for the faint domain-boundary seam grid.
-    const SEAM_SHADE: f32 = 0.25;
+    /// Peak shade of the fully-faded-in scale grid (boundary lines); interior
+    /// subdivision lines get half. The overlay fragment also multiplies by 0.7.
+    const GRID_SHADE: f32 = 0.35;
 
-    /// Overlay line segments for this frame (LineList: consecutive pairs = one
-    /// segment). Faint seam grid prepended; drag overlay (rect/lasso) renders bright.
     fn overlay_segments(&self) -> Vec<crate::render::OverlayVertex> {
         use crate::render::OverlayVertex;
-        let bright = |p: [f32; 2]| OverlayVertex { pos: p, shade: 1.0 };
         let mut out: Vec<OverlayVertex> = Vec::new();
-        // Faint seam grid for orientation (shown in both Run and Edit).
-        if let Some(viewport) = self.viewport() {
-            let ws = self.world_size();
-            let (min, max) = self.camera.visible_world_rect(viewport, ws);
-            for p in crate::camera::seam_segments(min, max, ws) {
-                out.push(OverlayVertex { pos: p, shade: Self::SEAM_SHADE });
+        // Adaptive scale grid, faded by camera activity. Skipped entirely at rest.
+        if self.grid_alpha > 0.001 {
+            if let Some(viewport) = self.viewport() {
+                let ws = self.world_size();
+                let (min, max) = self.camera.visible_world_rect(viewport, ws);
+                let wpp = self.camera.world_per_px(viewport, ws);
+                for (pos, weight) in crate::camera::grid_segments(min, max, ws, wpp) {
+                    out.push(OverlayVertex { pos, shade: self.grid_alpha * weight * Self::GRID_SHADE });
+                }
             }
         }
         // Drag overlay (bright).
+        let bright = |p: [f32; 2]| OverlayVertex { pos: p, shade: 1.0 };
         match &self.drag {
             crate::editor::DragState::Rect { anchor, current, .. } => {
                 let (a, b) = (*anchor, *current);
@@ -822,6 +848,11 @@ impl ApplicationHandler<UserEvent> for App {
                 // Clone the Arc so we can call request_redraw() at the end
                 // without holding a borrow of self.window across the whole arm.
                 let Some(window_arc) = self.window.clone() else { return };
+                // Advance the adaptive-grid fade from this frame's dt (last_frame
+                // is reset at the end of this arm). Runs in Run and Edit.
+                let grid_dt = self.last_frame.elapsed().as_secs_f32();
+                self.idle_since += grid_dt;
+                self.grid_alpha = grid_fade_step(self.grid_alpha, self.idle_since, grid_dt);
                 #[cfg(target_arch = "wasm32")]
                 {
                     let (new_mode, edit_state, new_chemistry, new_tool, clear_scene, revert) = web_bridge::COMMANDS.with(|c| {
@@ -967,6 +998,7 @@ impl ApplicationHandler<UserEvent> for App {
                         let ws = self.world_size();
                         self.camera.pan_by((dx, dy), viewport, ws);
                         self.refresh_camera();
+                        self.note_camera_activity(); // pan trigger — delete this line for zoom-only
                     }
                 } else {
                     self.on_mouse_move();
@@ -1022,6 +1054,7 @@ impl ApplicationHandler<UserEvent> for App {
                         let factor = crate::camera::ZOOM_STEP.powf(scroll);
                         self.camera.zoom_at((self.cursor.x, self.cursor.y), factor, viewport, ws);
                         self.refresh_camera();
+                        self.note_camera_activity();
                     }
                 }
             }
@@ -1062,4 +1095,33 @@ pub fn run() -> anyhow::Result<()> {
     app.set_proxy(event_loop.create_proxy());
     event_loop.run_app(&mut app)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod fade_tests {
+    use super::{grid_fade_step, GRID_FADE_IN_S, GRID_HOLD_S};
+
+    #[test]
+    fn fades_in_while_active() {
+        let a = grid_fade_step(0.0, 0.0, GRID_FADE_IN_S);
+        assert!((a - (1.0 - (-1.0f32).exp())).abs() < 1e-3, "got {a}");
+        let mut alpha = a;
+        for _ in 0..30 { alpha = grid_fade_step(alpha, 0.0, 0.016); }
+        assert!(alpha > 0.95, "should be nearly full: {alpha}");
+    }
+
+    #[test]
+    fn fades_out_when_idle() {
+        let mut alpha = 1.0;
+        for _ in 0..120 { alpha = grid_fade_step(alpha, GRID_HOLD_S + 1.0, 0.016); }
+        assert!(alpha < 0.05, "should fade out: {alpha}");
+    }
+
+    #[test]
+    fn large_dt_does_not_overshoot() {
+        let a = grid_fade_step(0.0, 0.0, 100.0);
+        assert!(a <= 1.0 + 1e-6 && a > 0.99, "no overshoot, near target: {a}");
+        let b = grid_fade_step(1.0, GRID_HOLD_S + 1.0, 100.0);
+        assert!(b >= -1e-6 && b < 0.01, "no overshoot below 0: {b}");
+    }
 }
