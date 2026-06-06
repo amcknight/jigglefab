@@ -26,6 +26,15 @@ mod web_bridge {
         pub set_tool: Option<crate::editor::Tool>,
         pub clear: bool,
         pub revert: bool,
+        pub load_library: Option<String>,
+        pub save_to_dock: Option<String>,
+        pub rename_device: Option<(u32, String)>,
+        pub remove_device: Option<u32>,
+        pub arm_device: Option<u32>,
+        pub disarm: bool,
+        pub save_suite: Option<String>,
+        pub load_suite: Option<String>,
+        pub import_suite: Option<String>,
     }
 
     thread_local! {
@@ -33,6 +42,18 @@ mod web_bridge {
         /// Latest snapshot the App writes after each frame. The toolbar
         /// reads these via the getter closures.
         pub static SNAPSHOT: RefCell<Snapshot> = RefCell::new(Snapshot::default());
+    }
+
+    /// One dock device, projected for the JS thumbnail renderer. `beads` is a
+    /// list of (relative position, rgb color) pairs; `compatible` is computed
+    /// against the scene's current chemistry.
+    #[derive(Clone)]
+    pub struct DockEntry {
+        pub id: u32,
+        pub name: String,
+        pub chemistry: String,
+        pub beads: Vec<([f32; 2], [f32; 3])>,
+        pub compatible: bool,
     }
 
     #[derive(Default, Clone)]
@@ -49,6 +70,11 @@ mod web_bridge {
         pub center_x: f32,
         pub center_y: f32,
         pub grid_alpha: f32,
+        pub library_json: String,
+        pub library_rev: u32,
+        pub armed_id: i32,
+        pub dock: Vec<DockEntry>,
+        pub suite_names: Vec<String>,
     }
 }
 
@@ -361,6 +387,164 @@ fn install_window_grid_alpha() {
     expose_to_window!("__jigglefabGridAlpha", cb);
 }
 
+#[cfg(target_arch = "wasm32")]
+fn install_window_load_library() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|json: String| {
+        web_bridge::COMMANDS.with(|c| c.borrow_mut().load_library = Some(json));
+    }) as Box<dyn Fn(String)>);
+    expose_to_window!("__jigglefabLoadLibrary", cb);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_window_get_library_json() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|| -> String {
+        web_bridge::SNAPSHOT.with(|s| s.borrow().library_json.clone())
+    }) as Box<dyn Fn() -> String>);
+    expose_to_window!("__jigglefabGetLibraryJson", cb);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_window_get_library_rev() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|| -> u32 {
+        web_bridge::SNAPSHOT.with(|s| s.borrow().library_rev)
+    }) as Box<dyn Fn() -> u32>);
+    expose_to_window!("__jigglefabGetLibraryRev", cb);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_window_armed_id() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|| -> i32 {
+        web_bridge::SNAPSHOT.with(|s| s.borrow().armed_id)
+    }) as Box<dyn Fn() -> i32>);
+    expose_to_window!("__jigglefabArmedId", cb);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_window_get_suite_names() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|| -> js_sys::Array {
+        let arr = js_sys::Array::new();
+        web_bridge::SNAPSHOT.with(|s| {
+            for name in &s.borrow().suite_names {
+                arr.push(&wasm_bindgen::JsValue::from_str(name));
+            }
+        });
+        arr
+    }) as Box<dyn Fn() -> js_sys::Array>);
+    expose_to_window!("__jigglefabGetSuiteNames", cb);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_window_get_dock() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|| -> js_sys::Array {
+        let outer = js_sys::Array::new();
+        web_bridge::SNAPSHOT.with(|s| {
+            for d in &s.borrow().dock {
+                let entry = js_sys::Object::new();
+                let _ = js_sys::Reflect::set(&entry, &"id".into(), &wasm_bindgen::JsValue::from_f64(d.id as f64));
+                let _ = js_sys::Reflect::set(&entry, &"name".into(), &wasm_bindgen::JsValue::from_str(&d.name));
+                let _ = js_sys::Reflect::set(&entry, &"chemistry".into(), &wasm_bindgen::JsValue::from_str(&d.chemistry));
+                let _ = js_sys::Reflect::set(&entry, &"compatible".into(), &wasm_bindgen::JsValue::from_bool(d.compatible));
+                let beads = js_sys::Array::new();
+                for (pos, color) in &d.beads {
+                    let b = js_sys::Object::new();
+                    let p = js_sys::Array::new();
+                    p.push(&wasm_bindgen::JsValue::from_f64(pos[0] as f64));
+                    p.push(&wasm_bindgen::JsValue::from_f64(pos[1] as f64));
+                    let _ = js_sys::Reflect::set(&b, &"pos".into(), &p);
+                    let col = js_sys::Array::new();
+                    col.push(&wasm_bindgen::JsValue::from_f64(color[0] as f64));
+                    col.push(&wasm_bindgen::JsValue::from_f64(color[1] as f64));
+                    col.push(&wasm_bindgen::JsValue::from_f64(color[2] as f64));
+                    let _ = js_sys::Reflect::set(&b, &"color".into(), &col);
+                    beads.push(&b);
+                }
+                let _ = js_sys::Reflect::set(&entry, &"beads".into(), &beads);
+                outer.push(&entry);
+            }
+        });
+        outer
+    }) as Box<dyn Fn() -> js_sys::Array>);
+    expose_to_window!("__jigglefabGetDock", cb);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_window_save_to_dock() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|name: String| {
+        web_bridge::COMMANDS.with(|c| c.borrow_mut().save_to_dock = Some(name));
+    }) as Box<dyn Fn(String)>);
+    expose_to_window!("__jigglefabSaveToDock", cb);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_window_rename_device() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|id: u32, name: String| {
+        web_bridge::COMMANDS.with(|c| c.borrow_mut().rename_device = Some((id, name)));
+    }) as Box<dyn Fn(u32, String)>);
+    expose_to_window!("__jigglefabRenameDevice", cb);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_window_remove_device() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|id: u32| {
+        web_bridge::COMMANDS.with(|c| c.borrow_mut().remove_device = Some(id));
+    }) as Box<dyn Fn(u32)>);
+    expose_to_window!("__jigglefabRemoveDevice", cb);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_window_arm_device() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|id: u32| {
+        web_bridge::COMMANDS.with(|c| c.borrow_mut().arm_device = Some(id));
+    }) as Box<dyn Fn(u32)>);
+    expose_to_window!("__jigglefabArmDevice", cb);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_window_disarm() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|| {
+        web_bridge::COMMANDS.with(|c| c.borrow_mut().disarm = true);
+    }) as Box<dyn Fn()>);
+    expose_to_window!("__jigglefabDisarm", cb);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_window_save_suite() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|name: String| {
+        web_bridge::COMMANDS.with(|c| c.borrow_mut().save_suite = Some(name));
+    }) as Box<dyn Fn(String)>);
+    expose_to_window!("__jigglefabSaveSuite", cb);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_window_load_suite() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|name: String| {
+        web_bridge::COMMANDS.with(|c| c.borrow_mut().load_suite = Some(name));
+    }) as Box<dyn Fn(String)>);
+    expose_to_window!("__jigglefabLoadSuite", cb);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_window_import_suite() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|json: String| {
+        web_bridge::COMMANDS.with(|c| c.borrow_mut().import_suite = Some(json));
+    }) as Box<dyn Fn(String)>);
+    expose_to_window!("__jigglefabImportSuite", cb);
+}
+
 pub enum UserEvent {
     RendererReady(Renderer),
 }
@@ -392,6 +576,16 @@ pub struct App {
     /// Scene payload captured at the most recent Edit→Run transition.
     /// `Some` means Revert is available. Cleared on chemistry switch or Clear.
     pre_run_snapshot: Option<crate::editor::ScenePayload>,
+    /// In-app device library. Persisted to localStorage by JS; mutated here.
+    library: crate::library::Library,
+    /// The device currently armed for stamping (Edit mode), if any.
+    armed_device: Option<crate::library::Device>,
+    /// Accumulated ghost rotation in radians (reset to 0 on each fresh arm).
+    ghost_angle: f32,
+    /// True while Shift is held — turns scroll into rotate-the-selection.
+    shift_held: bool,
+    /// Bumped on every library mutation so JS re-persists + re-renders.
+    library_rev: u32,
     #[cfg(target_arch = "wasm32")]
     proxy: Option<EventLoopProxy<UserEvent>>,
 }
@@ -415,6 +609,11 @@ impl App {
             drag: crate::editor::DragState::None,
             mouse_down: false,
             pre_run_snapshot: None,
+            library: crate::library::Library::default(),
+            armed_device: None,
+            ghost_angle: 0.0,
+            shift_held: false,
+            library_rev: 0,
             #[cfg(target_arch = "wasm32")]
             proxy: None,
         }
@@ -792,6 +991,20 @@ impl ApplicationHandler<UserEvent> for App {
             install_window_get_center_x();
             install_window_get_center_y();
             install_window_grid_alpha();
+            install_window_load_library();
+            install_window_get_library_json();
+            install_window_get_library_rev();
+            install_window_armed_id();
+            install_window_get_suite_names();
+            install_window_get_dock();
+            install_window_save_to_dock();
+            install_window_rename_device();
+            install_window_remove_device();
+            install_window_arm_device();
+            install_window_disarm();
+            install_window_save_suite();
+            install_window_load_suite();
+            install_window_import_suite();
 
             self.camera = crate::camera::Camera::fit(world_size);
             let camera = self.camera;
@@ -919,6 +1132,66 @@ impl ApplicationHandler<UserEvent> for App {
                     if revert {
                         self.revert_to_snapshot();
                     }
+                    let (load_library, save_to_dock, rename_device, remove_device,
+                         arm_device, disarm, save_suite, load_suite, import_suite) =
+                        web_bridge::COMMANDS.with(|c| {
+                            let mut cmds = c.borrow_mut();
+                            let dis = std::mem::replace(&mut cmds.disarm, false);
+                            (cmds.load_library.take(), cmds.save_to_dock.take(),
+                             cmds.rename_device.take(), cmds.remove_device.take(),
+                             cmds.arm_device.take(), dis, cmds.save_suite.take(),
+                             cmds.load_suite.take(), cmds.import_suite.take())
+                        });
+                    let mut lib_changed = false;
+                    if let Some(json) = load_library {
+                        self.library = crate::library::Library::load_or_default(&json);
+                        lib_changed = true;
+                    }
+                    if let Some(name) = save_to_dock {
+                        if let Some(scene) = self.scene.as_ref() {
+                            if let Some(dev) = scene.extract_device(name) {
+                                self.library.add_to_dock(dev);
+                                lib_changed = true;
+                            }
+                        }
+                    }
+                    if let Some((id, name)) = rename_device {
+                        self.library.rename_device(id, name);
+                        lib_changed = true;
+                    }
+                    if let Some(id) = remove_device {
+                        self.library.remove_device(id);
+                        lib_changed = true;
+                    }
+                    if let Some(name) = save_suite {
+                        let chem = self.scene.as_ref().map(|s| s.chemistry_name.clone()).unwrap_or_default();
+                        self.library.save_suite(name, &chem);
+                        lib_changed = true;
+                    }
+                    if let Some(name) = load_suite {
+                        self.library.load_suite(&name);
+                        lib_changed = true;
+                    }
+                    if let Some(json) = import_suite {
+                        match serde_json::from_str::<crate::library::Suite>(&json) {
+                            Ok(suite) => { self.library.import_suite(suite); lib_changed = true; }
+                            Err(e) => log::warn!("importSuite: parse error: {e}"),
+                        }
+                    }
+                    if let Some(id) = arm_device {
+                        let dev = self.scene.as_ref().and_then(|scene| {
+                            self.library.dock.iter()
+                                .find(|d| d.id == id)
+                                .filter(|d| d.is_compatible_with(&scene.chemistry))
+                                .cloned()
+                        });
+                        if let Some(dev) = dev {
+                            self.armed_device = Some(dev);
+                            self.ghost_angle = 0.0;
+                        }
+                    }
+                    if disarm { self.armed_device = None; }
+                    if lib_changed { self.library_rev = self.library_rev.wrapping_add(1); }
                 }
                 let overlay = self.overlay_segments();
                 let Some(renderer) = &mut self.renderer else { return };
@@ -980,6 +1253,34 @@ impl ApplicationHandler<UserEvent> for App {
                     let selection_count = self.scene.as_ref().map(|s| s.selection.len() as u32).unwrap_or(0);
                     let chemistry_name = self.scene.as_ref().map(|s| s.chemistry_name.clone()).unwrap_or_default();
                     let can_revert = self.pre_run_snapshot.is_some();
+                    let library_json = self.library.to_json();
+                    let library_rev = self.library_rev;
+                    let armed_id = self.armed_device.as_ref().map(|d| d.id as i32).unwrap_or(-1);
+                    let dock: Vec<web_bridge::DockEntry> = match self.scene.as_ref() {
+                        Some(scene) => self.library.dock.iter().map(|d| {
+                            let beads = d.beads.iter().map(|b| {
+                                let color = scene.chemistry.state_index(&b.state)
+                                    .map(|si| scene.chemistry.colors[si])
+                                    .unwrap_or([0.5, 0.5, 0.5]);
+                                (b.pos, color)
+                            }).collect();
+                            web_bridge::DockEntry {
+                                id: d.id,
+                                name: d.name.clone(),
+                                chemistry: d.chemistry.clone(),
+                                beads,
+                                compatible: d.is_compatible_with(&scene.chemistry),
+                            }
+                        }).collect(),
+                        None => Vec::new(),
+                    };
+                    let suite_names: Vec<String> = match self.scene.as_ref() {
+                        Some(scene) => self.library.suites.iter()
+                            .filter(|s| s.chemistry == scene.chemistry_name)
+                            .map(|s| s.name.clone())
+                            .collect(),
+                        None => Vec::new(),
+                    };
                     web_bridge::SNAPSHOT.with(|s| {
                         *s.borrow_mut() = web_bridge::Snapshot {
                             mode: mode_str,
@@ -993,6 +1294,11 @@ impl ApplicationHandler<UserEvent> for App {
                             center_x: self.camera.center.x,
                             center_y: self.camera.center.y,
                             grid_alpha: self.grid_alpha,
+                            library_json,
+                            library_rev,
+                            armed_id,
+                            dock,
+                            suite_names,
                         };
                     });
                 }
