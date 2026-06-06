@@ -3,6 +3,8 @@
 //! bridge / localStorage / UI live elsewhere. See
 //! docs/superpowers/specs/2026-06-06-editor-device-library-design.md.
 
+use std::hash::{Hash, Hasher};
+
 use serde::{Deserialize, Serialize};
 
 /// Current persisted-schema version for `Library`. Bump + add a migration on a
@@ -70,6 +72,45 @@ impl Library {
     }
 }
 
+/// Advisory, build-stable hash of a chemistry's identity (state names + action
+/// table + colors). Used only to *flag* drift in the UI — it never decides
+/// compatibility (that is `missing_states`). `DefaultHasher` is not stable
+/// across Rust versions, so a value saved by one build may mismatch after a
+/// redeploy; that is harmless because a hash-only mismatch is treated as
+/// compatible.
+pub fn chemistry_hash(chem: &crate::chemistry::Chemistry) -> u64 {
+    let mut h = std::collections::hash_map::DefaultHasher::new();
+    chem.states.hash(&mut h);
+    chem.action_table_flat().hash(&mut h);
+    for color in &chem.colors {
+        for component in color {
+            component.to_bits().hash(&mut h);
+        }
+    }
+    h.finish()
+}
+
+impl Device {
+    /// State names this device references that are absent from `chem`
+    /// (sorted, deduped). Empty → every state still exists.
+    pub fn missing_states(&self, chem: &crate::chemistry::Chemistry) -> Vec<String> {
+        let mut missing: Vec<String> = self
+            .beads
+            .iter()
+            .map(|b| b.state.clone())
+            .filter(|s| chem.state_index(s).is_none())
+            .collect();
+        missing.sort_unstable();
+        missing.dedup();
+        missing
+    }
+
+    /// True iff every bead state exists in `chem`, so the device can be stamped.
+    pub fn is_compatible_with(&self, chem: &crate::chemistry::Chemistry) -> bool {
+        self.missing_states(chem).is_empty()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -112,5 +153,32 @@ mod tests {
         assert_eq!(lib.next_id, 0);
         assert!(lib.dock.is_empty());
         assert!(lib.suites.is_empty());
+    }
+
+    #[test]
+    fn chemistry_hash_is_stable_within_build() {
+        let chem = crate::editor::load_chemistry_by_name("wire").unwrap();
+        assert_eq!(chemistry_hash(&chem), chemistry_hash(&chem));
+    }
+
+    #[test]
+    fn device_compatibility_detects_missing_state() {
+        let chem = crate::editor::load_chemistry_by_name("wire").unwrap();
+        let good = Device {
+            id: 0, name: "g".into(), chemistry: "wire".into(),
+            chemistry_hash: chemistry_hash(&chem),
+            beads: vec![DeviceBead { state: chem.states[0].clone(), pos: [0.0, 0.0] }],
+            bonds: vec![], ports: vec![],
+        };
+        assert!(good.is_compatible_with(&chem));
+        assert!(good.missing_states(&chem).is_empty());
+
+        let bad = Device {
+            id: 0, name: "b".into(), chemistry: "wire".into(), chemistry_hash: 0,
+            beads: vec![DeviceBead { state: "no_such_state".into(), pos: [0.0, 0.0] }],
+            bonds: vec![], ports: vec![],
+        };
+        assert!(!bad.is_compatible_with(&chem));
+        assert_eq!(bad.missing_states(&chem), vec!["no_such_state".to_string()]);
     }
 }
