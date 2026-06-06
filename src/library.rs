@@ -70,6 +70,71 @@ impl Library {
     pub fn load_or_default(s: &str) -> Library {
         serde_json::from_str(s).unwrap_or_default()
     }
+
+    /// Add a device to the dock, assigning it the next library id. Returns the
+    /// assigned id (overwrites any incoming `device.id`).
+    pub fn add_to_dock(&mut self, mut device: Device) -> u32 {
+        let id = self.next_id;
+        self.next_id += 1;
+        device.id = id;
+        self.dock.push(device);
+        id
+    }
+
+    /// Rename the dock device with the given id. No-op if the id is absent.
+    pub fn rename_device(&mut self, id: u32, name: String) {
+        if let Some(d) = self.dock.iter_mut().find(|d| d.id == id) {
+            d.name = name;
+        }
+    }
+
+    /// Remove the dock device with the given id. No-op if the id is absent.
+    pub fn remove_device(&mut self, id: u32) {
+        self.dock.retain(|d| d.id != id);
+    }
+
+    /// Snapshot the dock's devices for `chemistry` into a named suite,
+    /// overwriting any existing suite of the same name. Device ids are cloned
+    /// as-is (suite ids are not authoritative; `load_suite` reassigns).
+    pub fn save_suite(&mut self, name: String, chemistry: &str) {
+        let devices: Vec<Device> = self
+            .dock
+            .iter()
+            .filter(|d| d.chemistry == chemistry)
+            .cloned()
+            .collect();
+        let suite = Suite { name: name.clone(), chemistry: chemistry.to_string(), devices };
+        match self.suites.iter_mut().find(|s| s.name == name) {
+            Some(existing) => *existing = suite,
+            None => self.suites.push(suite),
+        }
+    }
+
+    /// Replace the dock's slice for the suite's chemistry with the suite's
+    /// devices (each given a fresh id). Devices of *other* chemistries are left
+    /// untouched. Returns false if no suite by that name exists.
+    pub fn load_suite(&mut self, name: &str) -> bool {
+        let Some(suite) = self.suites.iter().find(|s| s.name == name).cloned() else {
+            return false;
+        };
+        self.dock.retain(|d| d.chemistry != suite.chemistry);
+        for mut d in suite.devices {
+            let id = self.next_id;
+            self.next_id += 1;
+            d.id = id;
+            self.dock.push(d);
+        }
+        true
+    }
+
+    /// Add an imported suite, overwriting any existing suite of the same name.
+    /// Does not touch the dock.
+    pub fn import_suite(&mut self, suite: Suite) {
+        match self.suites.iter_mut().find(|s| s.name == suite.name) {
+            Some(existing) => *existing = suite,
+            None => self.suites.push(suite),
+        }
+    }
 }
 
 /// Advisory, build-stable hash of a chemistry's identity (state names + action
@@ -180,5 +245,79 @@ mod tests {
         };
         assert!(!bad.is_compatible_with(&chem));
         assert_eq!(bad.missing_states(&chem), vec!["no_such_state".to_string()]);
+    }
+
+    fn bare_device(chem: &str) -> Device {
+        Device { id: 0, name: "d".into(), chemistry: chem.into(), chemistry_hash: 0,
+                 beads: vec![], bonds: vec![], ports: vec![] }
+    }
+
+    #[test]
+    fn add_to_dock_assigns_incrementing_ids() {
+        let mut lib = Library::default();
+        assert_eq!(lib.add_to_dock(bare_device("wire")), 0);
+        assert_eq!(lib.add_to_dock(bare_device("wire")), 1);
+        assert_eq!(lib.dock[0].id, 0);
+        assert_eq!(lib.dock[1].id, 1);
+    }
+
+    #[test]
+    fn rename_and_remove_device() {
+        let mut lib = Library::default();
+        let id = lib.add_to_dock(bare_device("wire"));
+        lib.rename_device(id, "renamed".into());
+        assert_eq!(lib.dock[0].name, "renamed");
+        lib.remove_device(id);
+        assert!(lib.dock.is_empty());
+    }
+
+    #[test]
+    fn save_then_load_suite_replaces_only_current_chemistry_slice() {
+        let mut lib = Library::default();
+        lib.add_to_dock(bare_device("wire")); // id 0
+        lib.add_to_dock(bare_device("grey")); // id 1
+        lib.save_suite("s1".into(), "wire");
+        // Simulate the user clearing the wire devices from the dock.
+        lib.dock.retain(|d| d.chemistry == "grey");
+        let grey_id_before = lib.dock.iter().find(|d| d.chemistry == "grey").unwrap().id;
+
+        assert!(lib.load_suite("s1"));
+
+        assert_eq!(lib.dock.iter().filter(|d| d.chemistry == "wire").count(), 1);
+        assert_eq!(lib.dock.iter().filter(|d| d.chemistry == "grey").count(), 1);
+        // The untouched grey device keeps its id.
+        let grey_id_after = lib.dock.iter().find(|d| d.chemistry == "grey").unwrap().id;
+        assert_eq!(grey_id_before, grey_id_after);
+        // The reloaded wire device gets a fresh id, not its original 0.
+        let wire_id_after = lib.dock.iter().find(|d| d.chemistry == "wire").unwrap().id;
+        assert!(wire_id_after > 1, "reloaded device should get a fresh id, got {wire_id_after}");
+    }
+
+    #[test]
+    fn save_suite_overwrites_same_name() {
+        let mut lib = Library::default();
+        lib.add_to_dock(bare_device("wire"));
+        lib.save_suite("s".into(), "wire");
+        lib.add_to_dock(bare_device("wire"));
+        lib.save_suite("s".into(), "wire");
+        assert_eq!(lib.suites.len(), 1);
+        assert_eq!(lib.suites[0].devices.len(), 2);
+    }
+
+    #[test]
+    fn load_unknown_suite_returns_false() {
+        let mut lib = Library::default();
+        assert!(!lib.load_suite("nope"));
+    }
+
+    #[test]
+    fn import_suite_appends_and_overwrites_by_name() {
+        let mut lib = Library::default();
+        lib.import_suite(Suite { name: "s".into(), chemistry: "wire".into(), devices: vec![] });
+        assert_eq!(lib.suites.len(), 1);
+        lib.import_suite(Suite { name: "s".into(), chemistry: "wire".into(),
+                                 devices: vec![bare_device("wire")] });
+        assert_eq!(lib.suites.len(), 1);
+        assert_eq!(lib.suites[0].devices.len(), 1);
     }
 }
