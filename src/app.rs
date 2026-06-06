@@ -712,6 +712,16 @@ impl App {
     fn on_mouse_down(&mut self) {
         self.mouse_down = true;
         let Some(world_pos) = self.cursor_world() else { return };
+        // Armed device takes priority: stamp a copy and stay armed (Edit only).
+        if self.mode == crate::editor::Mode::Edit {
+            if let Some(dev) = self.armed_device.clone() {
+                if let Some(scene) = self.scene.as_mut() {
+                    scene.instantiate_device(&dev, world_pos, self.ghost_angle);
+                }
+                self.drag = crate::editor::DragState::None;
+                return;
+            }
+        }
         let Some(scene) = self.scene.as_mut() else { return };
         if Self::hit_selected(scene, world_pos) {
             self.drag = crate::editor::DragState::Move { last_cursor: world_pos };
@@ -843,6 +853,20 @@ impl App {
             }
             _ => {}
         }
+        // Armed-device ghost: a small cross per device bead at the cursor,
+        // turned by the accumulated ghost angle. Beads-only (matches thumbnails).
+        if let (Some(dev), Some(cursor)) = (self.armed_device.as_ref(), self.cursor_world()) {
+            let (s, c) = self.ghost_angle.sin_cos();
+            let r = 0.15; // half-length of each cross arm, world units
+            for b in &dev.beads {
+                let gx = b.pos[0] * c - b.pos[1] * s + cursor.x;
+                let gy = b.pos[0] * s + b.pos[1] * c + cursor.y;
+                out.push(OverlayVertex { pos: [gx - r, gy], shade: 0.8 });
+                out.push(OverlayVertex { pos: [gx + r, gy], shade: 0.8 });
+                out.push(OverlayVertex { pos: [gx, gy - r], shade: 0.8 });
+                out.push(OverlayVertex { pos: [gx, gy + r], shade: 0.8 });
+            }
+        }
         out
     }
 
@@ -863,6 +887,7 @@ impl App {
                 }
                 self.drag = crate::editor::DragState::None;
                 self.mouse_down = false;
+                self.armed_device = None;
                 if let Some(scene) = self.scene.as_ref() {
                     self.pre_run_snapshot = Some(scene.capture_payload());
                 }
@@ -1103,6 +1128,7 @@ impl ApplicationHandler<UserEvent> for App {
                             self.mode = crate::editor::Mode::Edit;
                             self.drag = crate::editor::DragState::None;
                             self.mouse_down = false;
+                            self.armed_device = None;
                             if let Some(scene) = self.scene.as_ref() {
                                 self.camera = crate::camera::Camera::fit(scene.world_size);
                             }
@@ -1128,6 +1154,7 @@ impl ApplicationHandler<UserEvent> for App {
                         self.mode = crate::editor::Mode::Edit;
                         self.drag = crate::editor::DragState::None;
                         self.mouse_down = false;
+                        self.armed_device = None;
                     }
                     if revert {
                         self.revert_to_snapshot();
@@ -1398,6 +1425,9 @@ impl ApplicationHandler<UserEvent> for App {
                     if matches!(&key_event.logical_key, Key::Character(c) if c.as_str() == "0") {
                         self.camera.reset(self.world_size());
                         self.refresh_camera();
+                    }
+                    if matches!(key_event.logical_key, Key::Named(NamedKey::Escape)) {
+                        self.armed_device = None;
                     }
                 }
             }

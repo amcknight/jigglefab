@@ -629,9 +629,14 @@
                     const next = window.prompt("Rename device", d.name);
                     if (next && next !== d.name) window.__jigglefabRenameDevice(d.id, next);
                 });
-                // Click body to arm/disarm (wired in Task 3; placeholder no-op now).
                 item.dataset.id = d.id;
-                item.dataset.compatible = d.compatible;
+                if (d.compatible) {
+                    item.addEventListener("click", () => {
+                        const armed = (window.__jigglefabArmedId && window.__jigglefabArmedId()) ?? -1;
+                        if (armed === d.id) window.__jigglefabDisarm();
+                        else window.__jigglefabArmDevice(d.id);
+                    });
+                }
                 dockList.appendChild(item);
             }
         }
