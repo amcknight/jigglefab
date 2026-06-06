@@ -562,6 +562,36 @@
         const dockSaveSel = document.getElementById("dock-save-sel");
         let lastDockRev = -1;
 
+        const LIBRARY_KEY = "jigglefab.library.v1";
+        let libraryLoaded = false;
+        let lastPersistRev = -1;
+        function maybeLoadLibrary() {
+            if (libraryLoaded || typeof window.__jigglefabLoadLibrary !== "function") return;
+            const saved = localStorage.getItem(LIBRARY_KEY);
+            if (saved) {
+                window.__jigglefabLoadLibrary(saved);
+                // The load command is drained by Rust NEXT frame, so the rev/json
+                // in the snapshot are still the default-empty values this tick.
+                // Pin lastPersistRev to the current rev so maybePersistLibrary
+                // does NOT write the empty default back over the saved library
+                // before the load is applied. Once Rust drains the load it bumps
+                // the rev, and the next persist writes the correct library.
+                if (typeof window.__jigglefabGetLibraryRev === "function") {
+                    lastPersistRev = window.__jigglefabGetLibraryRev();
+                }
+            }
+            libraryLoaded = true;
+        }
+        function maybePersistLibrary() {
+            if (typeof window.__jigglefabGetLibraryRev !== "function") return;
+            const rev = window.__jigglefabGetLibraryRev();
+            if (rev === lastPersistRev) return;
+            lastPersistRev = rev;
+            if (typeof window.__jigglefabGetLibraryJson === "function") {
+                localStorage.setItem(LIBRARY_KEY, window.__jigglefabGetLibraryJson());
+            }
+        }
+
         function drawThumb(canvas, beads) {
             const ctx = canvas.getContext("2d");
             const W = canvas.width, H = canvas.height;
@@ -648,6 +678,58 @@
             if (name) window.__jigglefabSaveToDock(name);
         });
 
+        document.getElementById("dock-save-suite").addEventListener("click", () => {
+            const name = window.prompt("Suite name");
+            if (name) window.__jigglefabSaveSuite(name);
+        });
+
+        document.getElementById("dock-load-suite").addEventListener("click", () => {
+            const names = (window.__jigglefabGetSuiteNames && window.__jigglefabGetSuiteNames()) || [];
+            if (!names.length) { window.alert("No saved suites for this chemistry."); return; }
+            const name = window.prompt("Load which suite?\n" + names.join("\n"), names[0]);
+            if (!name || !names.includes(name)) return;
+            const chem = (window.__jigglefabGetChemistryName && window.__jigglefabGetChemistryName()) || "";
+            const dockCount = (window.__jigglefabGetDock && window.__jigglefabGetDock().filter(d => d.chemistry === chem).length) || 0;
+            if (dockCount > 0 && !window.confirm(
+                `Load suite "${name}"? This replaces the ${dockCount} device${dockCount === 1 ? "" : "s"} in the dock for this chemistry.`
+            )) return;
+            window.__jigglefabLoadSuite(name);
+        });
+
+        const importFile = document.getElementById("dock-import-file");
+        document.getElementById("dock-import").addEventListener("click", () => importFile.click());
+        importFile.addEventListener("change", () => {
+            const file = importFile.files && importFile.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onerror = () => window.alert("Failed to read file.");
+            reader.onload = () => {
+                window.__jigglefabImportSuite(String(reader.result));
+                importFile.value = ""; // allow re-importing the same file
+            };
+            reader.readAsText(file);
+        });
+
+        document.getElementById("dock-export").addEventListener("click", () => {
+            const names = (window.__jigglefabGetSuiteNames && window.__jigglefabGetSuiteNames()) || [];
+            if (!names.length) { window.alert("No saved suites for this chemistry to export."); return; }
+            const name = window.prompt("Export which suite?\n" + names.join("\n"), names[0]);
+            if (!name) return;
+            if (typeof window.__jigglefabGetLibraryJson !== "function") return;
+            const lib = JSON.parse(window.__jigglefabGetLibraryJson());
+            const suite = (lib.suites || []).find(s => s.name === name);
+            if (!suite) { window.alert("Suite not found."); return; }
+            const blob = new Blob([JSON.stringify(suite, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "jigglefab-suite-" + name + ".json";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        });
+
         // Poll the wasm side once a tick to reflect mode, repaint state pills
         // when the palette changes (i.e. after chemistry switch), and keep the
         // HUD bead count in sync with edits. Cheap.
@@ -684,6 +766,8 @@
             if (typeof window.__jigglefabSelectionCount === "function" && selEl) {
                 selEl.textContent = window.__jigglefabSelectionCount();
             }
+            maybeLoadLibrary();
+            maybePersistLibrary();
             if (typeof window.__jigglefabGetLibraryRev === "function") {
                 const rev = window.__jigglefabGetLibraryRev();
                 const chemName = (window.__jigglefabGetChemistryName && window.__jigglefabGetChemistryName()) || "";
