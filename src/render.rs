@@ -198,7 +198,7 @@ impl Renderer {
             cache: None,
         });
 
-        let overlay_capacity: usize = 512;
+        let overlay_capacity: usize = 1024;
         let overlay_buf = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("overlay verts"),
             size: (overlay_capacity * std::mem::size_of::<OverlayVertex>()) as u64,

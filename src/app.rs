@@ -998,7 +998,7 @@ impl ApplicationHandler<UserEvent> for App {
                         let ws = self.world_size();
                         self.camera.pan_by((dx, dy), viewport, ws);
                         self.refresh_camera();
-                        self.note_camera_activity(); // pan trigger — delete this line for zoom-only
+                        self.note_camera_activity(); // pan also fades the grid in; drop this line to make it zoom-only
                     }
                 } else {
                     self.on_mouse_move();
