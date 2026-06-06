@@ -661,6 +661,16 @@ impl App {
         self.idle_since = 0.0;
     }
 
+    /// Rotate the current rotation target by `delta` radians: the armed ghost
+    /// if one is armed, otherwise the current selection in the scene.
+    fn apply_rotation(&mut self, delta: f32) {
+        if self.armed_device.is_some() {
+            self.ghost_angle += delta;
+        } else if let Some(scene) = self.scene.as_mut() {
+            scene.rotate_selection(delta);
+        }
+    }
+
     /// Re-upload the current camera to the renderer. Locals are pulled out first
     /// so the `&mut self.renderer` borrow doesn't overlap the `&self` reads
     /// (`palette_for_camera`/`world_size` borrow self whole; `Camera` is `Copy`).
@@ -808,6 +818,9 @@ impl App {
     /// Peak shade of the fully-faded-in scale grid (boundary lines); interior
     /// subdivision lines get half. The overlay fragment also multiplies by 0.7.
     const GRID_SHADE: f32 = 0.35;
+
+    /// One rotation notch: 15°, in radians.
+    const ROTATE_SNAP_RAD: f32 = std::f32::consts::PI / 12.0;
 
     fn overlay_segments(&self) -> Vec<crate::render::OverlayVertex> {
         use crate::render::OverlayVertex;
@@ -1085,6 +1098,7 @@ impl ApplicationHandler<UserEvent> for App {
                 // Focus loss swallows key/button releases, so clear held-modifier
                 // and in-progress pan state to avoid a stuck pan mode.
                 self.space_held = false;
+                self.shift_held = false;
                 self.pan_button = None;
             }
             WindowEvent::Resized(size) => {
@@ -1394,7 +1408,11 @@ impl ApplicationHandler<UserEvent> for App {
                     MouseScrollDelta::PixelDelta(p) => (p.y as f32) / 50.0,
                 };
                 if scroll != 0.0 {
-                    if let Some(viewport) = self.viewport() {
+                    if self.shift_held {
+                        // Rotate the ghost/selection; plain scroll stays zoom so
+                        // you can zoom for precise placement while a ghost is up.
+                        self.apply_rotation(scroll.signum() * Self::ROTATE_SNAP_RAD);
+                    } else if let Some(viewport) = self.viewport() {
                         let ws = self.world_size();
                         let factor = crate::camera::ZOOM_STEP.powf(scroll);
                         self.camera.zoom_at((self.cursor.x, self.cursor.y), factor, viewport, ws);
@@ -1409,6 +1427,9 @@ impl ApplicationHandler<UserEvent> for App {
                 let pressed = key_event.state == ElementState::Pressed;
                 if matches!(key_event.logical_key, Key::Named(NamedKey::Space)) {
                     self.space_held = pressed;
+                }
+                if matches!(key_event.logical_key, Key::Named(NamedKey::Shift)) {
+                    self.shift_held = pressed;
                 }
                 if pressed {
                     let is_delete = matches!(
@@ -1428,6 +1449,13 @@ impl ApplicationHandler<UserEvent> for App {
                     }
                     if matches!(key_event.logical_key, Key::Named(NamedKey::Escape)) {
                         self.armed_device = None;
+                    }
+                    if let Key::Character(ch) = &key_event.logical_key {
+                        match ch.as_str() {
+                            "[" => self.apply_rotation(-Self::ROTATE_SNAP_RAD),
+                            "]" => self.apply_rotation(Self::ROTATE_SNAP_RAD),
+                            _ => {}
+                        }
                     }
                 }
             }
