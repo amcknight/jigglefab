@@ -91,6 +91,12 @@ impl Camera {
         self.center = Vec2::new(cx.rem_euclid(world_size), cy.rem_euclid(world_size));
     }
 
+    /// World units per physical pixel along x (drives adaptive grid spacing).
+    pub fn world_per_px(&self, viewport: (u32, u32), world_size: f32) -> f32 {
+        let vis = self.visible_extent(viewport, world_size);
+        vis.x / viewport.0.max(1) as f32
+    }
+
     /// Reset to the default fit-world view (zoom 1, centered).
     pub fn reset(&mut self, world_size: f32) {
         *self = Camera::fit(world_size);
@@ -112,6 +118,42 @@ impl Camera {
         let vis = self.visible_extent(viewport, world_size);
         (self.center - vis * 0.5, self.center + vis * 0.5)
     }
+}
+
+/// Adaptive scale-grid lines for the visible rect `[min, max]`, as LineList
+/// vertex pairs each tagged with a weight: 1.0 on world-tile boundaries
+/// (multiples of `world_size`), 0.5 on interior subdivision lines. Spacing snaps
+/// to `world_size / 2^level` so cells stay near `TARGET_PX` on screen and always
+/// align to the domain. Pure — `world_per_px` is the only zoom input.
+pub fn grid_segments(min: Vec2, max: Vec2, world_size: f32, world_per_px: f32) -> Vec<([f32; 2], f32)> {
+    const TARGET_PX: f32 = 80.0;
+    const MAX_LEVEL: i32 = 6;
+    let wpp = world_per_px.max(1e-9);
+    let ideal = world_size / (TARGET_PX * wpp);
+    let level = (ideal.max(1e-9).log2().round() as i32).clamp(0, MAX_LEVEL);
+    let spacing = world_size / 2f32.powi(level);
+    let weight = |c: f32| -> f32 {
+        let r = (c / world_size).round();
+        if (c - r * world_size).abs() < spacing * 1e-3 { 1.0 } else { 0.5 }
+    };
+    let mut segs = Vec::new();
+    let fx = (min.x / spacing).ceil() as i32;
+    let lx = (max.x / spacing).floor() as i32;
+    for k in fx..=lx {
+        let x = k as f32 * spacing;
+        let w = weight(x);
+        segs.push(([x, min.y], w));
+        segs.push(([x, max.y], w));
+    }
+    let fy = (min.y / spacing).ceil() as i32;
+    let ly = (max.y / spacing).floor() as i32;
+    for k in fy..=ly {
+        let y = k as f32 * spacing;
+        let w = weight(y);
+        segs.push(([min.x, y], w));
+        segs.push(([max.x, y], w));
+    }
+    segs
 }
 
 /// World-boundary grid lines (at integer multiples of `world_size`) that
@@ -298,5 +340,43 @@ mod tests {
     fn seam_segments_fit_view_shows_outer_box() {
         let segs = seam_segments(Vec2::new(0.0, 0.0), Vec2::new(WS, WS), WS);
         assert_eq!(segs.len(), 8);
+    }
+
+    #[test]
+    fn grid_segments_level0_only_boundary_lines() {
+        // Large world_per_px ⇒ ideal≈1 ⇒ level 0 ⇒ spacing = world_size ⇒ only
+        // the domain-boundary lines (x=0, x=128 / y=0, y=128), all weight 1.0.
+        // ideal = WS / (80 * wpp); wpp = 1.6 ⇒ ideal = 1.0 ⇒ level 0.
+        let segs = grid_segments(Vec2::new(-10.0, -10.0), Vec2::new(138.0, 138.0), WS, 1.6);
+        assert_eq!(segs.len(), 8, "got {:?}", segs); // 2 vertical + 2 horizontal × 2 verts
+        assert!(segs.iter().all(|(_, w)| (*w - 1.0).abs() < 1e-6), "all boundary weight 1.0");
+        assert!(segs.iter().any(|(p, _)| p[0] == 0.0));
+        assert!(segs.iter().any(|(p, _)| p[0] == 128.0));
+    }
+
+    #[test]
+    fn grid_segments_subdivides_when_zoomed_in() {
+        // Small world_per_px ⇒ ideal = WS/(80*0.2) = 8 ⇒ level 3 ⇒ spacing = 16.
+        let segs = grid_segments(Vec2::new(0.0, 0.0), Vec2::new(128.0, 128.0), WS, 0.2);
+        assert!(segs.iter().any(|(p, w)| p[0] == 0.0 && (*w - 1.0).abs() < 1e-6), "boundary 1.0");
+        assert!(segs.iter().any(|(p, w)| p[0] == 16.0 && (*w - 0.5).abs() < 1e-6), "interior 0.5");
+        assert!(segs.iter().all(|(p, _)| (p[0] % 16.0).abs() < 1e-3 || (16.0 - (p[0] % 16.0)).abs() < 1e-3));
+    }
+
+    #[test]
+    fn grid_segments_level_clamps_for_extreme_zoom() {
+        // Without the MAX_LEVEL=6 clamp this tiny world_per_px would push the level
+        // to ~14 (spacing ≈ 0.008) and emit hundreds of lines over the 2-unit view.
+        // Clamped to level 6 (spacing = world_size/64 = 2) it stays a handful.
+        let segs = grid_segments(Vec2::new(0.0, 0.0), Vec2::new(2.0, 2.0), WS, 0.0001);
+        assert!(segs.len() <= 12, "level not clamped, too many lines: {}", segs.len());
+    }
+
+    #[test]
+    fn world_per_px_matches_extent_over_width() {
+        let cam = Camera { zoom: 2.0, center: Vec2::new(64.0, 64.0) };
+        let wpp = cam.world_per_px((800, 800), WS);
+        // square viewport, zoom 2 ⇒ visible.x = WS/2 = 64 ⇒ wpp = 64/800.
+        assert!((wpp - 64.0 / 800.0).abs() < 1e-6, "wpp {wpp}");
     }
 }
