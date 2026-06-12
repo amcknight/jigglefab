@@ -1523,6 +1523,30 @@ impl ApplicationHandler<UserEvent> for App {
                         match ch.as_str() {
                             "[" => self.apply_rotation(-Self::ROTATE_SNAP_RAD),
                             "]" => self.apply_rotation(Self::ROTATE_SNAP_RAD),
+                            s if s.eq_ignore_ascii_case("r") => {
+                                let forward = !self.shift_held;
+                                let new_mode = self.render_mode.cycle(forward);
+                                self.render_mode = new_mode;
+                                if let Some(renderer) = self.renderer.as_mut() {
+                                    renderer.set_mode(new_mode);
+                                }
+
+                                #[cfg(target_arch = "wasm32")]
+                                {
+                                    use wasm_bindgen::JsValue;
+                                    if let Some(w) = web_sys::window() {
+                                        let detail = JsValue::from_str(new_mode.label_kebab());
+                                        let init = web_sys::CustomEventInit::new();
+                                        init.set_detail(&detail);
+                                        if let Ok(ev) = web_sys::CustomEvent::new_with_event_init_dict(
+                                            "jigglefab:render-mode-changed",
+                                            &init,
+                                        ) {
+                                            let _ = w.dispatch_event(&ev);
+                                        }
+                                    }
+                                }
+                            }
                             _ => {}
                         }
                     }
