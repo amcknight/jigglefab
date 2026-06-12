@@ -9,6 +9,7 @@ pub mod grid;
 pub mod library;
 pub mod sim;
 pub mod render;
+pub mod render_mode;
 pub mod app;
 pub mod editor;
 // bench pulls in load_chemistry (fs-backed, non-wasm) via chains.rs and ships
