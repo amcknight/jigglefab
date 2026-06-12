@@ -8,36 +8,13 @@
 //! files via `include_str!`.
 
 use anyhow::{Context, Result};
-use bytemuck::{Pod, Zeroable};
 use glam::{Mat4, Vec2};
 use wgpu::util::DeviceExt;
 
+use crate::render::{BeadGpu, CameraUbo};
 use crate::render_mode::RenderMode;
 
 const MAX_STATES: usize = 8;
-
-#[repr(C)]
-#[derive(Copy, Clone, Pod, Zeroable)]
-struct BeadGpu {
-    pos: [f32; 2],
-    vel: [f32; 2],
-    state: u32,
-    selected: u32,
-    component_id: u32,
-    _pad: u32,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone, Pod, Zeroable)]
-struct CameraUbo {
-    view_proj: [[f32; 4]; 4],
-    inv_view_proj: [[f32; 4]; 4],
-    radius: f32,
-    world_size: f32,
-    bead_count: u32,
-    mode: u32,
-    state_colors: [[f32; 4]; MAX_STATES],
-}
 
 pub fn render_scene(
     w: u32,
@@ -349,4 +326,26 @@ async fn render_scene_async(
         out.extend_from_slice(&raw[start..end]);
     }
     Ok(out)
+}
+
+/// Canonical 5-bead scene used by the golden tests and render_golden binary.
+/// Returns `(positions, velocities, states, selected, component_ids)`.
+pub fn canonical_scene() -> (Vec<Vec2>, Vec<Vec2>, Vec<u32>, Vec<u32>, Vec<u32>) {
+    use crate::bond::BondPair;
+    use crate::component::compute_component_ids;
+    let positions = vec![
+        Vec2::new(-0.45,  0.0),
+        Vec2::new(-0.12,  0.15),
+        Vec2::new( 0.20,  0.05),
+        Vec2::new( 0.55,  0.30),
+        Vec2::new(-0.05, -0.45),
+    ];
+    let velocities = vec![Vec2::ZERO; positions.len()];
+    let states = vec![0u32, 0, 1, 1, 0];
+    let selected = vec![0u32; positions.len()];
+    let bonds = vec![
+        BondPair::new(0, 1), BondPair::new(1, 2), BondPair::new(3, 4),
+    ];
+    let component_ids = compute_component_ids(positions.len(), &bonds);
+    (positions, velocities, states, selected, component_ids)
 }

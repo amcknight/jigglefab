@@ -5,15 +5,16 @@ use bytemuck::{Pod, Zeroable};
 use glam::Vec2;
 use wgpu::util::DeviceExt;
 
+// Visibility extended to pub(crate) so render_offscreen can construct these — both modules render through the same WGSL.
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
-struct BeadGpu {
-    pos: [f32; 2],
-    vel: [f32; 2],
-    state: u32,
-    selected: u32,
-    component_id: u32,
-    _pad: u32,
+pub(crate) struct BeadGpu {
+    pub(crate) pos: [f32; 2],
+    pub(crate) vel: [f32; 2],
+    pub(crate) state: u32,
+    pub(crate) selected: u32,
+    pub(crate) component_id: u32,
+    pub(crate) _pad: u32,
 }
 
 #[repr(C)]
@@ -28,16 +29,17 @@ pub struct OverlayVertex {
 // here so the UBO has a stable layout the shader can index.
 const MAX_STATES: usize = 8;
 
+// Visibility extended to pub(crate) so render_offscreen can construct these — both modules render through the same WGSL.
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
-struct CameraUbo {
-    view_proj: [[f32; 4]; 4],
-    inv_view_proj: [[f32; 4]; 4],
-    radius: f32,
-    world_size: f32,
-    bead_count: u32,
-    mode: u32,
-    state_colors: [[f32; 4]; MAX_STATES],
+pub(crate) struct CameraUbo {
+    pub(crate) view_proj: [[f32; 4]; 4],
+    pub(crate) inv_view_proj: [[f32; 4]; 4],
+    pub(crate) radius: f32,
+    pub(crate) world_size: f32,
+    pub(crate) bead_count: u32,
+    pub(crate) mode: u32,
+    pub(crate) state_colors: [[f32; 4]; MAX_STATES],
 }
 
 #[cfg(test)]
