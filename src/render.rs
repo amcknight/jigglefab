@@ -27,7 +27,7 @@ pub struct OverlayVertex {
 // Maximum number of chemistry states the renderer can colour. Today's
 // chemistries (grey: 1, wire: 2) use a tiny fraction; the upper bound is fixed
 // here so the UBO has a stable layout the shader can index.
-const MAX_STATES: usize = 8;
+pub(crate) const MAX_STATES: usize = 8;
 
 // Visibility extended to pub(crate) so render_offscreen can construct these — both modules render through the same WGSL.
 #[repr(C)]
@@ -171,7 +171,7 @@ impl Renderer {
                 },
                 wgpu::BindGroupLayoutEntry {
                     binding: 1,
-                    visibility: wgpu::ShaderStages::VERTEX,
+                    visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
                     ty: wgpu::BindingType::Buffer {
                         ty: wgpu::BufferBindingType::Storage { read_only: true },
                         has_dynamic_offset: false,

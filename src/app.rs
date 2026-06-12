@@ -1132,12 +1132,19 @@ impl ApplicationHandler<UserEvent> for App {
                 self.pan_button = None;
             }
             WindowEvent::Resized(size) => {
-                let Some(renderer) = &mut self.renderer else { return };
-                let Some(sim) = &mut self.sim else { return };
-                renderer.resize(size);
-                let bead_count = sim.positions.len() as u32;
-                let render_mode = self.render_mode;
-                renderer.update_camera(&self.camera, sim.world_size(), &sim.palette(), bead_count, render_mode);
+                if let Some(renderer) = self.renderer.as_mut() {
+                    renderer.resize(size);
+                }
+                if let (Some(renderer), Some(sim)) = (self.renderer.as_mut(), self.sim.as_mut()) {
+                    let bead_count = sim.positions.len() as u32;
+                    let render_mode = self.render_mode;
+                    renderer.update_camera(&self.camera, sim.world_size(), &sim.palette(), bead_count, render_mode);
+                } else if let (Some(renderer), Some(scene)) = (self.renderer.as_mut(), self.scene.as_ref()) {
+                    let palette: Vec<[f32; 3]> = scene.chemistry.colors.clone();
+                    let bead_count = scene.beads.len() as u32;
+                    let render_mode = self.render_mode;
+                    renderer.update_camera(&self.camera, scene.world_size, &palette, bead_count, render_mode);
+                }
             }
             WindowEvent::RedrawRequested => {
                 // Clone the Arc so we can call request_redraw() at the end

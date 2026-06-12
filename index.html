@@ -757,11 +757,17 @@
                 a.dataset.mode = mode;
                 a.addEventListener('click', e => {
                     e.preventDefault();
+                    _userChangedMode = true;
                     applyRenderMode(a.dataset.mode);
                 });
                 renderPills.appendChild(a);
             }
         }
+
+        // Tracks whether the user has explicitly changed the render mode (via
+        // click or R keybind) before the wasm bridge became ready. If so, we
+        // skip the localStorage restore so their selection is not overwritten.
+        let _userChangedMode = false;
 
         function applyRenderMode(mode) {
             if (window.__jigglefabSetRenderMode) {
@@ -776,6 +782,7 @@
         // Subscribe to mode changes initiated from the Rust side (R/Shift+R
         // keybind dispatches this custom event so the picker mirrors state).
         window.addEventListener('jigglefab:render-mode-changed', e => {
+            _userChangedMode = true;
             applyRenderMode(e.detail);
         });
 
@@ -794,7 +801,9 @@
         let _renderModeRetries = 0;
         function tryRestoreRenderMode() {
             if (window.__jigglefabSetRenderMode) {
-                applyRenderMode(_storedRenderMode);
+                if (!_userChangedMode) {
+                    applyRenderMode(_storedRenderMode);
+                }
             } else if (_renderModeRetries++ < 50) {
                 setTimeout(tryRestoreRenderMode, 100);
             } else {

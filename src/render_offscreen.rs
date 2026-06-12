@@ -11,10 +11,8 @@ use anyhow::{Context, Result};
 use glam::{Mat4, Vec2};
 use wgpu::util::DeviceExt;
 
-use crate::render::{BeadGpu, CameraUbo};
+use crate::render::{BeadGpu, CameraUbo, MAX_STATES};
 use crate::render_mode::RenderMode;
-
-const MAX_STATES: usize = 8;
 
 pub fn render_scene(
     w: u32,
