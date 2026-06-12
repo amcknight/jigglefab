@@ -130,6 +130,16 @@ fn soft_voronoi_color(acc: FieldAccum) -> vec3<f32> {
     return mix(c1, c2, t);
 }
 
+fn worley_color(acc: FieldAccum) -> vec3<f32> {
+    if (acc.nearest_d > camera.radius * 1.5) {
+        return BG;
+    }
+    let intensity = clamp((acc.second_d - acc.nearest_d) * 4.0, 0.0, 1.0);
+    let s = beads[acc.nearest_idx].state;
+    let c = camera.state_colors[s].rgb;
+    return c * intensity + BG * (1.0 - intensity);
+}
+
 @vertex
 fn vs_main(@builtin(vertex_index) vi: u32) -> VsOut {
     var pos = array<vec2<f32>, 3>(
@@ -152,6 +162,7 @@ fn fs_main(in: VsOut) -> @location(0) vec4<f32> {
     switch (camera.mode) {
         case 0u: { color = voronoi_color(acc); }
         case 1u: { color = soft_voronoi_color(acc); }
+        case 2u: { color = worley_color(acc); }
         default: { color = BG; }
     }
     return vec4<f32>(color, 1.0);
