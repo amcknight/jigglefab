@@ -1,6 +1,7 @@
 pub mod camera;
 pub mod fab;
 pub mod bond;
+pub mod component;
 pub mod chemistry;
 pub mod rng;
 pub mod ccd;
