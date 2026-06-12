@@ -5,12 +5,16 @@ use bytemuck::{Pod, Zeroable};
 use glam::Vec2;
 use wgpu::util::DeviceExt;
 
+// Visibility extended to pub(crate) so render_offscreen can construct these — both modules render through the same WGSL.
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
-struct BeadGpu {
-    pos: [f32; 2],
-    state: u32,
-    selected: u32,
+pub(crate) struct BeadGpu {
+    pub(crate) pos: [f32; 2],
+    pub(crate) vel: [f32; 2],
+    pub(crate) state: u32,
+    pub(crate) selected: u32,
+    pub(crate) component_id: u32,
+    pub(crate) _pad: u32,
 }
 
 #[repr(C)]
@@ -23,17 +27,48 @@ pub struct OverlayVertex {
 // Maximum number of chemistry states the renderer can colour. Today's
 // chemistries (grey: 1, wire: 2) use a tiny fraction; the upper bound is fixed
 // here so the UBO has a stable layout the shader can index.
-const MAX_STATES: usize = 8;
+pub(crate) const MAX_STATES: usize = 8;
 
+// Visibility extended to pub(crate) so render_offscreen can construct these — both modules render through the same WGSL.
 #[repr(C)]
 #[derive(Copy, Clone, Pod, Zeroable)]
-struct CameraUbo {
-    view_proj: [[f32; 4]; 4],
-    radius: f32,
-    world_size: f32,
-    _pad: [f32; 2],
-    // vec4 per state for std140 alignment. .rgb is the colour; .a unused.
-    state_colors: [[f32; 4]; MAX_STATES],
+pub(crate) struct CameraUbo {
+    pub(crate) view_proj: [[f32; 4]; 4],
+    pub(crate) inv_view_proj: [[f32; 4]; 4],
+    pub(crate) radius: f32,
+    pub(crate) world_size: f32,
+    pub(crate) bead_count: u32,
+    pub(crate) mode: u32,
+    pub(crate) state_colors: [[f32; 4]; MAX_STATES],
+}
+
+#[cfg(test)]
+mod gpu_layout_tests {
+    use super::*;
+
+    #[test]
+    fn beadgpu_size_is_32() {
+        assert_eq!(std::mem::size_of::<BeadGpu>(), 32);
+    }
+
+    #[test]
+    fn beadgpu_roundtrips_through_bytemuck() {
+        let b = BeadGpu {
+            pos: [1.5, -2.5],
+            vel: [0.1, 0.2],
+            state: 3,
+            selected: 1,
+            component_id: 7,
+            _pad: 0,
+        };
+        let bytes = bytemuck::bytes_of(&b);
+        let back: BeadGpu = *bytemuck::from_bytes(bytes);
+        assert_eq!(back.pos, b.pos);
+        assert_eq!(back.vel, b.vel);
+        assert_eq!(back.state, b.state);
+        assert_eq!(back.selected, b.selected);
+        assert_eq!(back.component_id, b.component_id);
+    }
 }
 
 pub struct Renderer {
@@ -54,6 +89,9 @@ pub struct Renderer {
     overlay_capacity: usize,
     overlay_vertex_count: u32,
     overlay_bind_group: wgpu::BindGroup,
+    field_pipeline: wgpu::RenderPipeline,
+    ring_pipeline: wgpu::RenderPipeline,
+    mode: crate::render_mode::RenderMode,
 }
 
 impl Renderer {
@@ -133,7 +171,7 @@ impl Renderer {
                 },
                 wgpu::BindGroupLayoutEntry {
                     binding: 1,
-                    visibility: wgpu::ShaderStages::VERTEX,
+                    visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
                     ty: wgpu::BindingType::Buffer {
                         ty: wgpu::BufferBindingType::Storage { read_only: true },
                         has_dynamic_offset: false,
@@ -183,6 +221,79 @@ impl Renderer {
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
+                entry_point: Some("fs_main"),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format,
+                    blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+                compilation_options: Default::default(),
+            }),
+            primitive: wgpu::PrimitiveState::default(),
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState::default(),
+            multiview: None,
+            cache: None,
+        });
+
+        let field_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("field"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/field.wgsl").into()),
+        });
+        let field_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("field layout"),
+            bind_group_layouts: &[&bind_layout],
+            push_constant_ranges: &[],
+        });
+        let field_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("field pipeline"),
+            layout: Some(&field_pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &field_shader,
+                entry_point: Some("vs_main"),
+                buffers: &[],
+                compilation_options: Default::default(),
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &field_shader,
+                entry_point: Some("fs_main"),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format,
+                    blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+                compilation_options: Default::default(),
+            }),
+            primitive: wgpu::PrimitiveState::default(),
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState::default(),
+            multiview: None,
+            cache: None,
+        });
+
+        let ring_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("selection ring"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/selection_ring.wgsl").into()),
+        });
+        let ring_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("selection ring pipeline"),
+            layout: Some(&pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &ring_shader,
+                entry_point: Some("vs_main"),
+                buffers: &[wgpu::VertexBufferLayout {
+                    array_stride: 8,
+                    step_mode: wgpu::VertexStepMode::Vertex,
+                    attributes: &[wgpu::VertexAttribute {
+                        offset: 0,
+                        shader_location: 0,
+                        format: wgpu::VertexFormat::Float32x2,
+                    }],
+                }],
+                compilation_options: Default::default(),
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &ring_shader,
                 entry_point: Some("fs_main"),
                 targets: &[Some(wgpu::ColorTargetState {
                     format,
@@ -281,6 +392,9 @@ impl Renderer {
             overlay_capacity,
             overlay_vertex_count: 0,
             overlay_bind_group,
+            field_pipeline,
+            ring_pipeline,
+            mode: crate::render_mode::RenderMode::Disc,
         })
     }
 
@@ -293,9 +407,18 @@ impl Renderer {
         }
     }
 
-    pub fn update_beads(&mut self, positions: &[Vec2], states: &[u32], selected: &[u32]) {
+    pub fn update_beads(
+        &mut self,
+        positions: &[Vec2],
+        velocities: &[Vec2],
+        states: &[u32],
+        selected: &[u32],
+        component_ids: &[u32],
+    ) {
+        debug_assert_eq!(positions.len(), velocities.len());
         debug_assert_eq!(positions.len(), states.len());
         debug_assert_eq!(positions.len(), selected.len());
+        debug_assert_eq!(positions.len(), component_ids.len());
         if positions.len() > self.bead_capacity {
             self.bead_capacity = positions.len().next_power_of_two();
             self.bead_buf = self.device.create_buffer(&wgpu::BufferDescriptor {
@@ -313,31 +436,54 @@ impl Renderer {
                 ],
             });
         }
-        let gpu_beads: Vec<BeadGpu> = positions.iter().zip(states.iter()).zip(selected.iter())
-            .map(|((p, &s), &sel)| BeadGpu { pos: [p.x, p.y], state: s, selected: sel })
+        let gpu_beads: Vec<BeadGpu> = (0..positions.len())
+            .map(|i| BeadGpu {
+                pos: [positions[i].x, positions[i].y],
+                vel: [velocities[i].x, velocities[i].y],
+                state: states[i],
+                selected: selected[i],
+                component_id: component_ids[i],
+                _pad: 0,
+            })
             .collect();
         self.queue.write_buffer(&self.bead_buf, 0, bytemuck::cast_slice(&gpu_beads));
     }
 
-    pub fn update_camera(&mut self, camera: &crate::camera::Camera, world_size: f32, palette: &[[f32; 3]]) {
+    pub fn update_camera(
+        &mut self,
+        camera: &crate::camera::Camera,
+        world_size: f32,
+        palette: &[[f32; 3]],
+        bead_count: u32,
+        mode: crate::render_mode::RenderMode,
+    ) {
         let vp = camera.view_proj((self.size.width, self.size.height), world_size);
         let mut state_colors = [[0.0f32, 0.0, 0.0, 1.0]; MAX_STATES];
         for (i, slot) in state_colors.iter_mut().enumerate() {
-            // Cycle through the palette if there are more states than entries,
-            // but in practice we expect `palette.len() <= MAX_STATES`.
             if !palette.is_empty() {
                 let c = palette[i % palette.len()];
                 *slot = [c[0], c[1], c[2], 1.0];
             }
         }
+        let inv = vp.inverse();
         let ubo = CameraUbo {
             view_proj: vp.to_cols_array_2d(),
+            inv_view_proj: inv.to_cols_array_2d(),
             radius: crate::ccd::RADIUS,
             world_size,
-            _pad: [0.0; 2],
+            bead_count,
+            mode: mode.shader_id(),
             state_colors,
         };
         self.queue.write_buffer(&self.camera_buf, 0, bytemuck::bytes_of(&ubo));
+    }
+
+    pub fn mode(&self) -> crate::render_mode::RenderMode {
+        self.mode
+    }
+
+    pub fn set_mode(&mut self, mode: crate::render_mode::RenderMode) {
+        self.mode = mode;
     }
 
     pub fn gpu_context(&self) -> (Arc<wgpu::Device>, Arc<wgpu::Queue>) {
@@ -379,14 +525,40 @@ impl Renderer {
                 timestamp_writes: None,
                 occlusion_query_set: None,
             });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &self.bind_group, &[]);
-            pass.set_vertex_buffer(0, self.quad_vbuf.slice(..));
-            // Each bead is drawn 9 times: once at its position and 8 wrap-ghost
-            // copies at ±world_size offsets. Off-screen ghosts get clipped by
-            // the rasterizer for free. This makes bonds across the torus seam
-            // visible — without it, a chain straddling x=0 looks broken.
-            pass.draw(0..6, 0..(bead_count * 9) as u32);
+            if self.mode.is_field() {
+                pass.set_pipeline(&self.field_pipeline);
+                pass.set_bind_group(0, &self.bind_group, &[]);
+                pass.draw(0..3, 0..1);  // 1 full-screen triangle
+            } else {
+                pass.set_pipeline(&self.pipeline);
+                pass.set_bind_group(0, &self.bind_group, &[]);
+                pass.set_vertex_buffer(0, self.quad_vbuf.slice(..));
+                // Each bead is drawn 9 times: once at its position and 8 wrap-ghost
+                // copies at ±world_size offsets. Off-screen ghosts get clipped by
+                // the rasterizer for free. This makes bonds across the torus seam
+                // visible — without it, a chain straddling x=0 looks broken.
+                pass.draw(0..6, 0..(bead_count * 9) as u32);
+            }
+        }
+        if self.mode.is_field() {
+            let mut ring_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("ring pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Load,
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+            });
+            ring_pass.set_pipeline(&self.ring_pipeline);
+            ring_pass.set_bind_group(0, &self.bind_group, &[]);
+            ring_pass.set_vertex_buffer(0, self.quad_vbuf.slice(..));
+            ring_pass.draw(0..6, 0..(bead_count * 9) as u32);
         }
         if self.overlay_vertex_count > 0 {
             let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {

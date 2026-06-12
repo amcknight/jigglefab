@@ -35,6 +35,7 @@ mod web_bridge {
         pub save_suite: Option<String>,
         pub load_suite: Option<String>,
         pub import_suite: Option<String>,
+        pub set_render_mode: Option<String>,
     }
 
     thread_local! {
@@ -75,6 +76,7 @@ mod web_bridge {
         pub armed_id: i32,
         pub dock: Vec<DockEntry>,
         pub suite_names: Vec<String>,
+        pub render_mode: &'static str,
     }
 }
 
@@ -545,6 +547,24 @@ fn install_window_import_suite() {
     expose_to_window!("__jigglefabImportSuite", cb);
 }
 
+#[cfg(target_arch = "wasm32")]
+fn install_window_get_render_mode() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|| -> String {
+        web_bridge::SNAPSHOT.with(|s| s.borrow().render_mode.to_string())
+    }) as Box<dyn Fn() -> String>);
+    expose_to_window!("__jigglefabGetRenderMode", cb);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_window_set_render_mode() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|name: String| {
+        web_bridge::COMMANDS.with(|c| c.borrow_mut().set_render_mode = Some(name));
+    }) as Box<dyn Fn(String)>);
+    expose_to_window!("__jigglefabSetRenderMode", cb);
+}
+
 pub enum UserEvent {
     RendererReady(Renderer),
 }
@@ -586,6 +606,8 @@ pub struct App {
     shift_held: bool,
     /// Bumped on every library mutation so JS re-persists + re-renders.
     library_rev: u32,
+    /// Current render mode (Disc, Voronoi, etc.). Uploaded to the shader each frame.
+    render_mode: crate::render_mode::RenderMode,
     #[cfg(target_arch = "wasm32")]
     proxy: Option<EventLoopProxy<UserEvent>>,
 }
@@ -614,6 +636,7 @@ impl App {
             ghost_angle: 0.0,
             shift_held: false,
             library_rev: 0,
+            render_mode: crate::render_mode::RenderMode::Disc,
             #[cfg(target_arch = "wasm32")]
             proxy: None,
         }
@@ -678,8 +701,12 @@ impl App {
         let ws = self.world_size();
         let palette = self.palette_for_camera();
         let camera = self.camera;
+        let bead_count = self.sim.as_ref().map(|s| s.positions.len() as u32)
+            .or_else(|| self.scene.as_ref().map(|s| s.beads.len() as u32))
+            .unwrap_or(0);
+        let render_mode = self.render_mode;
         if let Some(r) = &mut self.renderer {
-            r.update_camera(&camera, ws, &palette);
+            r.update_camera(&camera, ws, &palette, bead_count, render_mode);
         }
     }
 
@@ -979,7 +1006,7 @@ impl ApplicationHandler<UserEvent> for App {
             let mut renderer = pollster::block_on(Renderer::new(window.clone(), sim.positions.len()))
                 .expect("create renderer");
             self.camera = crate::camera::Camera::fit(world_size);
-            renderer.update_camera(&self.camera, world_size, &palette);
+            renderer.update_camera(&self.camera, world_size, &palette, sim.positions.len() as u32, self.render_mode);
 
             // Upgrade to GPU scheduler now that we have the wgpu device/queue
             // from the renderer. GpuEventLoop shares the same device as the
@@ -1043,16 +1070,19 @@ impl ApplicationHandler<UserEvent> for App {
             install_window_save_suite();
             install_window_load_suite();
             install_window_import_suite();
+            install_window_get_render_mode();
+            install_window_set_render_mode();
 
             self.camera = crate::camera::Camera::fit(world_size);
             let camera = self.camera;
             let proxy = self.proxy.clone().expect("proxy not set before resumed()");
             let window_clone = window.clone();
             let n = sim.positions.len();
+            let render_mode = self.render_mode;
             wasm_bindgen_futures::spawn_local(async move {
                 let mut renderer = Renderer::new(window_clone, n).await
                     .expect("create renderer");
-                renderer.update_camera(&camera, world_size, &palette);
+                renderer.update_camera(&camera, world_size, &palette, n as u32, render_mode);
                 let _ = proxy.send_event(UserEvent::RendererReady(renderer));
             });
         }
@@ -1073,7 +1103,7 @@ impl ApplicationHandler<UserEvent> for App {
                     let size = w.inner_size();
                     if size.width > 0 && size.height > 0 {
                         renderer.resize(size);
-                        renderer.update_camera(&self.camera, sim.world_size(), &sim.palette());
+                        renderer.update_camera(&self.camera, sim.world_size(), &sim.palette(), sim.positions.len() as u32, self.render_mode);
                     }
                     w.request_redraw();
                 }
@@ -1102,10 +1132,19 @@ impl ApplicationHandler<UserEvent> for App {
                 self.pan_button = None;
             }
             WindowEvent::Resized(size) => {
-                let Some(renderer) = &mut self.renderer else { return };
-                let Some(sim) = &mut self.sim else { return };
-                renderer.resize(size);
-                renderer.update_camera(&self.camera, sim.world_size(), &sim.palette());
+                if let Some(renderer) = self.renderer.as_mut() {
+                    renderer.resize(size);
+                }
+                if let (Some(renderer), Some(sim)) = (self.renderer.as_mut(), self.sim.as_mut()) {
+                    let bead_count = sim.positions.len() as u32;
+                    let render_mode = self.render_mode;
+                    renderer.update_camera(&self.camera, sim.world_size(), &sim.palette(), bead_count, render_mode);
+                } else if let (Some(renderer), Some(scene)) = (self.renderer.as_mut(), self.scene.as_ref()) {
+                    let palette: Vec<[f32; 3]> = scene.chemistry.colors.clone();
+                    let bead_count = scene.beads.len() as u32;
+                    let render_mode = self.render_mode;
+                    renderer.update_camera(&self.camera, scene.world_size, &palette, bead_count, render_mode);
+                }
             }
             WindowEvent::RedrawRequested => {
                 // Clone the Arc so we can call request_redraw() at the end
@@ -1148,7 +1187,9 @@ impl ApplicationHandler<UserEvent> for App {
                             }
                             if let (Some(renderer), Some(scene)) = (self.renderer.as_mut(), self.scene.as_ref()) {
                                 let palette: Vec<[f32; 3]> = scene.chemistry.colors.clone();
-                                renderer.update_camera(&self.camera, scene.world_size, &palette);
+                                let bead_count = scene.beads.len() as u32;
+                                let render_mode = self.render_mode;
+                                renderer.update_camera(&self.camera, scene.world_size, &palette, bead_count, render_mode);
                             }
                         } else {
                             log::warn!("set_chemistry: unknown chemistry {:?}", name);
@@ -1174,14 +1215,16 @@ impl ApplicationHandler<UserEvent> for App {
                         self.revert_to_snapshot();
                     }
                     let (load_library, save_to_dock, rename_device, remove_device,
-                         arm_device, disarm, save_suite, load_suite, import_suite) =
+                         arm_device, disarm, save_suite, load_suite, import_suite,
+                         set_render_mode) =
                         web_bridge::COMMANDS.with(|c| {
                             let mut cmds = c.borrow_mut();
                             let dis = std::mem::replace(&mut cmds.disarm, false);
                             (cmds.load_library.take(), cmds.save_to_dock.take(),
                              cmds.rename_device.take(), cmds.remove_device.take(),
                              cmds.arm_device.take(), dis, cmds.save_suite.take(),
-                             cmds.load_suite.take(), cmds.import_suite.take())
+                             cmds.load_suite.take(), cmds.import_suite.take(),
+                             cmds.set_render_mode.take())
                         });
                     let mut lib_changed = false;
                     if let Some(json) = load_library {
@@ -1232,6 +1275,18 @@ impl ApplicationHandler<UserEvent> for App {
                         }
                     }
                     if disarm { self.armed_device = None; }
+                    if let Some(name) = set_render_mode {
+                        if let Ok(mode) = serde_json::from_str::<crate::render_mode::RenderMode>(
+                            &format!("\"{}\"", name)
+                        ) {
+                            self.render_mode = mode;
+                            if let Some(renderer) = self.renderer.as_mut() {
+                                renderer.set_mode(mode);
+                            }
+                        } else {
+                            log::warn!("set_render_mode: unknown mode {:?}", name);
+                        }
+                    }
                     if lib_changed { self.library_rev = self.library_rev.wrapping_add(1); }
                 }
                 let overlay = self.overlay_segments();
@@ -1250,7 +1305,16 @@ impl ApplicationHandler<UserEvent> for App {
                             Some(s) => (0..sim.positions.len()).map(|i| if s.selection.contains(&(i as u32)) { 1 } else { 0 }).collect(),
                             None => vec![0; sim.positions.len()],
                         };
-                        renderer.update_beads(&sim.positions, &sim.states, &selected);
+                        let bonds_vec: Vec<crate::bond::BondPair> = sim.bonds().iter().cloned().collect();
+                        let comp_ids = crate::component::compute_component_ids(sim.positions.len(), &bonds_vec);
+                        renderer.update_beads(&sim.positions, &sim.velocities, &sim.states, &selected, &comp_ids);
+                        let world_size = sim.world_size();
+                        let palette = sim.palette();
+                        let bead_count = sim.positions.len() as u32;
+                        let camera = self.camera;
+                        let render_mode = self.render_mode;
+                        renderer.set_mode(render_mode);
+                        renderer.update_camera(&camera, world_size, &palette, bead_count, render_mode);
                         renderer.update_overlay(&overlay);
                         if let Err(e) = renderer.render(sim.positions.len()) {
                             log::warn!("render error: {e:?}");
@@ -1268,7 +1332,17 @@ impl ApplicationHandler<UserEvent> for App {
                         let selected: Vec<u32> = (0..positions.len())
                             .map(|i| if scene.selection.contains(&(i as u32)) { 1 } else { 0 })
                             .collect();
-                        renderer.update_beads(&positions, &states, &selected);
+                        let velocities: Vec<glam::Vec2> = vec![glam::Vec2::ZERO; positions.len()];
+                        let bonds_vec: Vec<crate::bond::BondPair> = scene.bonds.iter().cloned().collect();
+                        let comp_ids = crate::component::compute_component_ids(positions.len(), &bonds_vec);
+                        let world_size = scene.world_size;
+                        let palette: Vec<[f32; 3]> = scene.chemistry.colors.clone();
+                        let bead_count = positions.len() as u32;
+                        renderer.update_beads(&positions, &velocities, &states, &selected, &comp_ids);
+                        let camera = self.camera;
+                        let render_mode = self.render_mode;
+                        renderer.set_mode(render_mode);
+                        renderer.update_camera(&camera, world_size, &palette, bead_count, render_mode);
                         renderer.update_overlay(&overlay);
                         if let Err(e) = renderer.render(positions.len()) {
                             log::warn!("render error: {e:?}");
@@ -1322,6 +1396,7 @@ impl ApplicationHandler<UserEvent> for App {
                             .collect(),
                         None => Vec::new(),
                     };
+                    let render_mode_kebab = self.render_mode.label_kebab();
                     web_bridge::SNAPSHOT.with(|s| {
                         *s.borrow_mut() = web_bridge::Snapshot {
                             mode: mode_str,
@@ -1340,6 +1415,7 @@ impl ApplicationHandler<UserEvent> for App {
                             armed_id,
                             dock,
                             suite_names,
+                            render_mode: render_mode_kebab,
                         };
                     });
                 }
@@ -1454,6 +1530,30 @@ impl ApplicationHandler<UserEvent> for App {
                         match ch.as_str() {
                             "[" => self.apply_rotation(-Self::ROTATE_SNAP_RAD),
                             "]" => self.apply_rotation(Self::ROTATE_SNAP_RAD),
+                            s if s.eq_ignore_ascii_case("r") => {
+                                let forward = !self.shift_held;
+                                let new_mode = self.render_mode.cycle(forward);
+                                self.render_mode = new_mode;
+                                if let Some(renderer) = self.renderer.as_mut() {
+                                    renderer.set_mode(new_mode);
+                                }
+
+                                #[cfg(target_arch = "wasm32")]
+                                {
+                                    use wasm_bindgen::JsValue;
+                                    if let Some(w) = web_sys::window() {
+                                        let detail = JsValue::from_str(new_mode.label_kebab());
+                                        let init = web_sys::CustomEventInit::new();
+                                        init.set_detail(&detail);
+                                        if let Ok(ev) = web_sys::CustomEvent::new_with_event_init_dict(
+                                            "jigglefab:render-mode-changed",
+                                            &init,
+                                        ) {
+                                            let _ = w.dispatch_event(&ev);
+                                        }
+                                    }
+                                }
+                            }
                             _ => {}
                         }
                     }

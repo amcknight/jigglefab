@@ -29,6 +29,12 @@ path = "src/bin/gen_wire_chains.rs"
 test = false
 bench = false
 
+[[bin]]
+name = "render_golden"
+path = "src/bin/render_golden.rs"
+test = false
+bench = false
+
 [dependencies]
 wgpu = "23"
 winit = "0.30"
@@ -45,13 +51,15 @@ web-time = "1"
 pollster = "0.3"
 env_logger = "0.11"
 rayon = "1"
+futures-intrusive = "0.5"
+image = "0.25"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "=0.2.95"
 wasm-bindgen-futures = "0.4"
 console_error_panic_hook = "0.1"
 console_log = "1"
-web-sys = { version = "0.3", features = ["Document", "Element", "HtmlCanvasElement", "Window", "Location"] }
+web-sys = { version = "0.3", features = ["Document", "Element", "HtmlCanvasElement", "Window", "Location", "CustomEvent", "CustomEventInit", "EventTarget"] }
 js-sys = "0.3"
 
 

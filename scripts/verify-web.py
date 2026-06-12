@@ -10,7 +10,9 @@ rendering pixels other than the dark clear colour after a few seconds.
 """
 
 import asyncio
+import io
 import sys
+from PIL import Image
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
 
 URL = sys.argv[1] if len(sys.argv) > 1 else "https://amcknight.ca/jigglefab/"
@@ -356,6 +358,136 @@ async def main() -> int:
             await page.wait_for_function(
                 "window.__jigglefabGetDock().some(d => d.compatible === false)", timeout=2000)
             print("editor: device library OK")
+
+            # ---- Render-mode color-ends-locally smoke ----
+            print("editor: render modes")
+
+            # Helper: sample all pixel values within radius r of centre (px, py).
+            def _pixels_near(img: Image.Image, centres, r: float) -> list[tuple[int, int, int]]:
+                pixels = img.load()
+                w, h = img.size
+                result = []
+                for (px, py) in centres:
+                    for dy in range(-int(r), int(r) + 1):
+                        for dx in range(-int(r), int(r) + 1):
+                            if dx * dx + dy * dy > r * r:
+                                continue
+                            x, y = int(px) + dx, int(py) + dy
+                            if 0 <= x < w and 0 <= y < h:
+                                result.append(pixels[x, y][:3])
+                return result
+
+            # Helper: sample pixel values far (> far_r) from every centre.
+            # Samples on a coarse grid to keep it fast.
+            def _pixels_far(img: Image.Image, centres, far_r: float) -> list[tuple[int, int, int]]:
+                pixels = img.load()
+                w, h = img.size
+                result = []
+                step = 8  # coarse grid
+                for y in range(0, h, step):
+                    for x in range(0, w, step):
+                        if all((x - px) ** 2 + (y - py) ** 2 > far_r * far_r
+                               for (px, py) in centres):
+                            result.append(pixels[x, y][:3])
+                return result
+
+            # Reset to a known empty scene and set up a triangle of beads near
+            # canvas centre.  We use the JS bridge to place beads precisely so
+            # screen coords are predictable.
+            await page.evaluate("window.__jigglefabSetMode('edit')")
+            await page.wait_for_function("window.__jigglefabGetMode() === 'edit'", timeout=2000)
+            if await page.evaluate("window.__jigglefabBeadCount()") > 0:
+                page.once("dialog", lambda d: d.accept())
+                await page.evaluate("document.getElementById('btn-clear').click()")
+                await page.wait_for_function("window.__jigglefabBeadCount() === 0", timeout=2000)
+
+            # Re-read canvas bounds (thumbnail canvases may have shifted layout).
+            box = await page.evaluate(
+                "() => { const c = document.querySelector('canvas[alt]');"
+                " const r = c.getBoundingClientRect();"
+                " return {x: r.x, y: r.y, w: r.width, h: r.height}; }"
+            )
+            cx, cy = box["x"] + box["w"] / 2, box["y"] + box["h"] / 2
+
+            # Place three beads in a triangle spaced ~150px apart so there are
+            # clear "near" and "far" regions.  Each placement uses the same
+            # retry loop as place_bead() above.
+            await page.evaluate("window.__jigglefabSetTool('place')")
+            await page.wait_for_function("window.__jigglefabGetTool() === 'place'", timeout=2000)
+            rm_offsets = [(-75, 60), (75, 60), (0, -80)]
+            for (dx, dy) in rm_offsets:
+                start = await page.evaluate("window.__jigglefabBeadCount()")
+                for _ in range(4):
+                    await page.mouse.click(cx + dx, cy + dy)
+                    try:
+                        await page.wait_for_function(
+                            f"window.__jigglefabBeadCount() > {start}", timeout=1000)
+                        break
+                    except PlaywrightTimeoutError:
+                        continue
+
+            bead_count_rm = await page.evaluate("window.__jigglefabBeadCount()")
+            assert bead_count_rm >= 3, f"render-mode fixture: expected >=3 beads, got {bead_count_rm}"
+
+            # Screen positions of placed beads (approximate — matches the click coords).
+            bead_screen = [(cx + dx, cy + dy) for (dx, dy) in rm_offsets]
+
+            BG = (13, 13, 18)   # background colour in 0-255 (vec3 0.05,0.05,0.07 linear sRGB)
+            TOL = 16             # per-channel tolerance (slightly wider than 8 to accommodate gamma)
+            R_NEAR = 35          # "near bead" radius in screen pixels
+            R_FAR = 130          # "far from every bead" radius in screen pixels
+
+            def _is_bg(px):
+                return all(abs(int(px[c]) - BG[c]) <= TOL for c in range(3))
+
+            # Wait for the wasm render mode bridge to be ready.
+            await page.wait_for_function(
+                "typeof window.__jigglefabSetRenderMode === 'function'", timeout=10000)
+
+            RENDER_MODES = [
+                "disc", "voronoi", "soft-voronoi",
+                "worley", "metaball-blend", "metaball-argmax",
+            ]
+            print("  --- render modes color-ends-locally ---")
+            for mode in RENDER_MODES:
+                # Click the pill to switch mode.
+                await page.evaluate(
+                    f"document.querySelector('#render-pills a[data-mode=\"{mode}\"]').click()"
+                )
+                # Wait two animation frames via JS so the GPU has a chance to
+                # flush before screenshot.
+                await page.evaluate(
+                    "() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))"
+                )
+                await page.wait_for_timeout(250)
+
+                raw = await page.screenshot(full_page=False, timeout=60000)
+                img = Image.open(io.BytesIO(raw)).convert("RGB")
+
+                near_px = _pixels_near(img, bead_screen, R_NEAR)
+                far_px = _pixels_far(img, bead_screen, R_FAR)
+
+                # At least 25% of near pixels should be non-background.
+                drawn = sum(1 for px in near_px if not _is_bg(px))
+                assert drawn > len(near_px) // 4, (
+                    f"{mode}: only {drawn}/{len(near_px)} near pixels are non-background; "
+                    f"bead region appears undrawn"
+                )
+
+                # All far pixels should be background.
+                bad_far = [px for px in far_px if not _is_bg(px)]
+                assert len(bad_far) == 0, (
+                    f"{mode}: {len(bad_far)}/{len(far_px)} pixels far from beads are not background; "
+                    f"first offender: {bad_far[0]}"
+                )
+
+                print(f"    {mode}: ok  (near drawn {drawn}/{len(near_px)}, far bg {len(far_px)}/{len(far_px)})")
+
+            # Restore default disc mode.
+            await page.evaluate(
+                "document.querySelector('#render-pills a[data-mode=\"disc\"]').click()"
+            )
+            print("editor: render modes OK")
 
         # Inspect the canvas: did winit append one? What's its drawing-buffer
         # size and CSS size?

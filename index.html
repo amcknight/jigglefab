@@ -256,6 +256,10 @@
             <span class="group-label">state</span>
             <span id="state-pills"></span>
         </div>
+        <div class="row">
+            <span class="group-label">render</span>
+            <span id="render-pills"></span>
+        </div>
     </nav>
     <aside id="device-dock">
         <div class="dock-actions">
@@ -732,6 +736,81 @@
             a.remove();
             URL.revokeObjectURL(url);
         });
+
+        // ---- Render-mode chip group ----
+        const RENDER_MODE_KEY = 'jigglefab:render-mode';
+        const renderPills = document.getElementById('render-pills');
+
+        function buildRenderPills() {
+            const modes = [
+                { mode: 'disc',            label: 'Disc' },
+                { mode: 'voronoi',         label: 'Voronoi' },
+                { mode: 'soft-voronoi',    label: 'Soft Voronoi' },
+                { mode: 'worley',          label: 'Worley' },
+                { mode: 'metaball-blend',  label: 'Metaball Blend' },
+                { mode: 'metaball-argmax', label: 'Metaball Argmax' },
+            ];
+            renderPills.innerHTML = '';
+            for (const { mode, label } of modes) {
+                const a = document.createElement('a');
+                a.textContent = label;
+                a.dataset.mode = mode;
+                a.addEventListener('click', e => {
+                    e.preventDefault();
+                    _userChangedMode = true;
+                    applyRenderMode(a.dataset.mode);
+                });
+                renderPills.appendChild(a);
+            }
+        }
+
+        // Tracks whether the user has explicitly changed the render mode (via
+        // click or R keybind) before the wasm bridge became ready. If so, we
+        // skip the localStorage restore so their selection is not overwritten.
+        let _userChangedMode = false;
+
+        function applyRenderMode(mode) {
+            if (window.__jigglefabSetRenderMode) {
+                window.__jigglefabSetRenderMode(mode);
+            }
+            renderPills.querySelectorAll('a').forEach(a => {
+                a.classList.toggle('active', a.dataset.mode === mode);
+            });
+            try { localStorage.setItem(RENDER_MODE_KEY, mode); } catch(_) {}
+        }
+
+        // Subscribe to mode changes initiated from the Rust side (R/Shift+R
+        // keybind dispatches this custom event so the picker mirrors state).
+        window.addEventListener('jigglefab:render-mode-changed', e => {
+            _userChangedMode = true;
+            applyRenderMode(e.detail);
+        });
+
+        // Restore on load. Default to 'disc' if no stored value.
+        const _storedRenderMode = localStorage.getItem(RENDER_MODE_KEY) || 'disc';
+
+        // Apply class state immediately so the picker doesn't flicker on load,
+        // even before the wasm bridge is available.
+        buildRenderPills();
+        document.querySelectorAll('#render-pills a').forEach(a => {
+            a.classList.toggle('active', a.dataset.mode === _storedRenderMode);
+        });
+
+        // Push the stored mode through to the wasm bridge once it's ready.
+        // Bound retries to ~5s so we don't spin forever if the wasm load fails.
+        let _renderModeRetries = 0;
+        function tryRestoreRenderMode() {
+            if (window.__jigglefabSetRenderMode) {
+                if (!_userChangedMode) {
+                    applyRenderMode(_storedRenderMode);
+                }
+            } else if (_renderModeRetries++ < 50) {
+                setTimeout(tryRestoreRenderMode, 100);
+            } else {
+                console.warn('jigglefab: wasm bridge not available; render mode not restored to Rust side');
+            }
+        }
+        tryRestoreRenderMode();
 
         // Poll the wasm side once a tick to reflect mode, repaint state pills
         // when the palette changes (i.e. after chemistry switch), and keep the

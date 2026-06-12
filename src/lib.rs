@@ -1,6 +1,7 @@
 pub mod camera;
 pub mod fab;
 pub mod bond;
+pub mod component;
 pub mod chemistry;
 pub mod rng;
 pub mod ccd;
@@ -9,12 +10,17 @@ pub mod grid;
 pub mod library;
 pub mod sim;
 pub mod render;
+pub mod render_mode;
 pub mod app;
 pub mod editor;
 // bench pulls in load_chemistry (fs-backed, non-wasm) via chains.rs and ships
 // its own bin — neither builds for the web target.
 #[cfg(not(target_arch = "wasm32"))]
 pub mod bench;
+// Offscreen rendering adapter for golden tests; non-wasm only (uses pollster
+// blocking + GPU readback which has no wasm equivalent).
+#[cfg(not(target_arch = "wasm32"))]
+pub mod render_offscreen;
 pub mod scheduler;
 pub mod gpu;
 pub mod parallel;
