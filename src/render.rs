@@ -88,6 +88,7 @@ pub struct Renderer {
     overlay_vertex_count: u32,
     overlay_bind_group: wgpu::BindGroup,
     field_pipeline: wgpu::RenderPipeline,
+    ring_pipeline: wgpu::RenderPipeline,
     mode: crate::render_mode::RenderMode,
 }
 
@@ -268,6 +269,44 @@ impl Renderer {
             cache: None,
         });
 
+        let ring_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("selection ring"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/selection_ring.wgsl").into()),
+        });
+        let ring_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("selection ring pipeline"),
+            layout: Some(&pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &ring_shader,
+                entry_point: Some("vs_main"),
+                buffers: &[wgpu::VertexBufferLayout {
+                    array_stride: 8,
+                    step_mode: wgpu::VertexStepMode::Vertex,
+                    attributes: &[wgpu::VertexAttribute {
+                        offset: 0,
+                        shader_location: 0,
+                        format: wgpu::VertexFormat::Float32x2,
+                    }],
+                }],
+                compilation_options: Default::default(),
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &ring_shader,
+                entry_point: Some("fs_main"),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format,
+                    blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+                compilation_options: Default::default(),
+            }),
+            primitive: wgpu::PrimitiveState::default(),
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState::default(),
+            multiview: None,
+            cache: None,
+        });
+
         let overlay_capacity: usize = 1024;
         let overlay_buf = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("overlay verts"),
@@ -352,6 +391,7 @@ impl Renderer {
             overlay_vertex_count: 0,
             overlay_bind_group,
             field_pipeline,
+            ring_pipeline,
             mode: crate::render_mode::RenderMode::Disc,
         })
     }
@@ -497,6 +537,26 @@ impl Renderer {
                 // visible — without it, a chain straddling x=0 looks broken.
                 pass.draw(0..6, 0..(bead_count * 9) as u32);
             }
+        }
+        if self.mode.is_field() {
+            let mut ring_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("ring pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Load,
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+            });
+            ring_pass.set_pipeline(&self.ring_pipeline);
+            ring_pass.set_bind_group(0, &self.bind_group, &[]);
+            ring_pass.set_vertex_buffer(0, self.quad_vbuf.slice(..));
+            ring_pass.draw(0..6, 0..(bead_count * 9) as u32);
         }
         if self.overlay_vertex_count > 0 {
             let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
