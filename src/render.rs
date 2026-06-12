@@ -9,8 +9,11 @@ use wgpu::util::DeviceExt;
 #[derive(Copy, Clone, Pod, Zeroable)]
 struct BeadGpu {
     pos: [f32; 2],
+    vel: [f32; 2],
     state: u32,
     selected: u32,
+    component_id: u32,
+    _pad: u32,
 }
 
 #[repr(C)]
@@ -29,11 +32,41 @@ const MAX_STATES: usize = 8;
 #[derive(Copy, Clone, Pod, Zeroable)]
 struct CameraUbo {
     view_proj: [[f32; 4]; 4],
+    inv_view_proj: [[f32; 4]; 4],
     radius: f32,
     world_size: f32,
-    _pad: [f32; 2],
-    // vec4 per state for std140 alignment. .rgb is the colour; .a unused.
+    bead_count: u32,
+    mode: u32,
     state_colors: [[f32; 4]; MAX_STATES],
+}
+
+#[cfg(test)]
+mod gpu_layout_tests {
+    use super::*;
+
+    #[test]
+    fn beadgpu_size_is_32() {
+        assert_eq!(std::mem::size_of::<BeadGpu>(), 32);
+    }
+
+    #[test]
+    fn beadgpu_roundtrips_through_bytemuck() {
+        let b = BeadGpu {
+            pos: [1.5, -2.5],
+            vel: [0.1, 0.2],
+            state: 3,
+            selected: 1,
+            component_id: 7,
+            _pad: 0,
+        };
+        let bytes = bytemuck::bytes_of(&b);
+        let back: BeadGpu = *bytemuck::from_bytes(bytes);
+        assert_eq!(back.pos, b.pos);
+        assert_eq!(back.vel, b.vel);
+        assert_eq!(back.state, b.state);
+        assert_eq!(back.selected, b.selected);
+        assert_eq!(back.component_id, b.component_id);
+    }
 }
 
 pub struct Renderer {
@@ -314,7 +347,14 @@ impl Renderer {
             });
         }
         let gpu_beads: Vec<BeadGpu> = positions.iter().zip(states.iter()).zip(selected.iter())
-            .map(|((p, &s), &sel)| BeadGpu { pos: [p.x, p.y], state: s, selected: sel })
+            .map(|((p, &s), &sel)| BeadGpu {
+                pos: [p.x, p.y],
+                vel: [0.0, 0.0],
+                state: s,
+                selected: sel,
+                component_id: 0,
+                _pad: 0,
+            })
             .collect();
         self.queue.write_buffer(&self.bead_buf, 0, bytemuck::cast_slice(&gpu_beads));
     }
@@ -332,9 +372,11 @@ impl Renderer {
         }
         let ubo = CameraUbo {
             view_proj: vp.to_cols_array_2d(),
+            inv_view_proj: glam::Mat4::IDENTITY.to_cols_array_2d(),  // placeholder; Task 4 computes the real inverse
             radius: crate::ccd::RADIUS,
             world_size,
-            _pad: [0.0; 2],
+            bead_count: 0,  // placeholder; Task 4 wires the real count
+            mode: 0,        // placeholder; Task 4 wires the real RenderMode
             state_colors,
         };
         self.queue.write_buffer(&self.camera_buf, 0, bytemuck::bytes_of(&ubo));

@@ -1,15 +1,19 @@
 struct Bead {
     pos: vec2<f32>,
+    vel: vec2<f32>,
     state: u32,
     selected: u32,
+    component_id: u32,
+    _pad: u32,
 };
 
 struct Camera {
     view_proj: mat4x4<f32>,
+    inv_view_proj: mat4x4<f32>,
     radius: f32,
     world_size: f32,
-    _pad0: f32,
-    _pad1: f32,
+    bead_count: u32,
+    mode: u32,
     state_colors: array<vec4<f32>, 8>,
 };
 
