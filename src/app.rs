@@ -35,6 +35,7 @@ mod web_bridge {
         pub save_suite: Option<String>,
         pub load_suite: Option<String>,
         pub import_suite: Option<String>,
+        pub set_render_mode: Option<String>,
     }
 
     thread_local! {
@@ -75,6 +76,7 @@ mod web_bridge {
         pub armed_id: i32,
         pub dock: Vec<DockEntry>,
         pub suite_names: Vec<String>,
+        pub render_mode: &'static str,
     }
 }
 
@@ -543,6 +545,24 @@ fn install_window_import_suite() {
         web_bridge::COMMANDS.with(|c| c.borrow_mut().import_suite = Some(json));
     }) as Box<dyn Fn(String)>);
     expose_to_window!("__jigglefabImportSuite", cb);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_window_get_render_mode() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|| -> String {
+        web_bridge::SNAPSHOT.with(|s| s.borrow().render_mode.to_string())
+    }) as Box<dyn Fn() -> String>);
+    expose_to_window!("__jigglefabGetRenderMode", cb);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_window_set_render_mode() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|name: String| {
+        web_bridge::COMMANDS.with(|c| c.borrow_mut().set_render_mode = Some(name));
+    }) as Box<dyn Fn(String)>);
+    expose_to_window!("__jigglefabSetRenderMode", cb);
 }
 
 pub enum UserEvent {
@@ -1050,6 +1070,8 @@ impl ApplicationHandler<UserEvent> for App {
             install_window_save_suite();
             install_window_load_suite();
             install_window_import_suite();
+            install_window_get_render_mode();
+            install_window_set_render_mode();
 
             self.camera = crate::camera::Camera::fit(world_size);
             let camera = self.camera;
@@ -1186,14 +1208,16 @@ impl ApplicationHandler<UserEvent> for App {
                         self.revert_to_snapshot();
                     }
                     let (load_library, save_to_dock, rename_device, remove_device,
-                         arm_device, disarm, save_suite, load_suite, import_suite) =
+                         arm_device, disarm, save_suite, load_suite, import_suite,
+                         set_render_mode) =
                         web_bridge::COMMANDS.with(|c| {
                             let mut cmds = c.borrow_mut();
                             let dis = std::mem::replace(&mut cmds.disarm, false);
                             (cmds.load_library.take(), cmds.save_to_dock.take(),
                              cmds.rename_device.take(), cmds.remove_device.take(),
                              cmds.arm_device.take(), dis, cmds.save_suite.take(),
-                             cmds.load_suite.take(), cmds.import_suite.take())
+                             cmds.load_suite.take(), cmds.import_suite.take(),
+                             cmds.set_render_mode.take())
                         });
                     let mut lib_changed = false;
                     if let Some(json) = load_library {
@@ -1244,6 +1268,18 @@ impl ApplicationHandler<UserEvent> for App {
                         }
                     }
                     if disarm { self.armed_device = None; }
+                    if let Some(name) = set_render_mode {
+                        if let Ok(mode) = serde_json::from_str::<crate::render_mode::RenderMode>(
+                            &format!("\"{}\"", name)
+                        ) {
+                            self.render_mode = mode;
+                            if let Some(renderer) = self.renderer.as_mut() {
+                                renderer.set_mode(mode);
+                            }
+                        } else {
+                            log::warn!("set_render_mode: unknown mode {:?}", name);
+                        }
+                    }
                     if lib_changed { self.library_rev = self.library_rev.wrapping_add(1); }
                 }
                 let overlay = self.overlay_segments();
@@ -1353,6 +1389,7 @@ impl ApplicationHandler<UserEvent> for App {
                             .collect(),
                         None => Vec::new(),
                     };
+                    let render_mode_kebab = self.render_mode.label_kebab();
                     web_bridge::SNAPSHOT.with(|s| {
                         *s.borrow_mut() = web_bridge::Snapshot {
                             mode: mode_str,
@@ -1371,6 +1408,7 @@ impl ApplicationHandler<UserEvent> for App {
                             armed_id,
                             dock,
                             suite_names,
+                            render_mode: render_mode_kebab,
                         };
                     });
                 }
