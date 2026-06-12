@@ -781,14 +781,26 @@
 
         // Restore on load. Default to 'disc' if no stored value.
         const _storedRenderMode = localStorage.getItem(RENDER_MODE_KEY) || 'disc';
+
+        // Apply class state immediately so the picker doesn't flicker on load,
+        // even before the wasm bridge is available.
+        buildRenderPills();
+        document.querySelectorAll('#render-pills a').forEach(a => {
+            a.classList.toggle('active', a.dataset.mode === _storedRenderMode);
+        });
+
+        // Push the stored mode through to the wasm bridge once it's ready.
+        // Bound retries to ~5s so we don't spin forever if the wasm load fails.
+        let _renderModeRetries = 0;
         function tryRestoreRenderMode() {
             if (window.__jigglefabSetRenderMode) {
                 applyRenderMode(_storedRenderMode);
-            } else {
+            } else if (_renderModeRetries++ < 50) {
                 setTimeout(tryRestoreRenderMode, 100);
+            } else {
+                console.warn('jigglefab: wasm bridge not available; render mode not restored to Rust side');
             }
         }
-        buildRenderPills();
         tryRestoreRenderMode();
 
         // Poll the wasm side once a tick to reflect mode, repaint state pills
