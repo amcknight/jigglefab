@@ -140,6 +140,17 @@ fn worley_color(acc: FieldAccum) -> vec3<f32> {
     return c * intensity + BG * (1.0 - intensity);
 }
 
+fn metaball_argmax_color(acc: FieldAccum) -> vec3<f32> {
+    if (acc.total_f_in_comp < ISO) {
+        return BG;
+    }
+    let s = beads[acc.argmax_idx].state;
+    let c = camera.state_colors[s].rgb;
+    // Soft edge as total_f approaches ISO from above.
+    let edge = clamp((acc.total_f_in_comp - ISO) * 6.0, 0.0, 1.0);
+    return c * edge + BG * (1.0 - edge);
+}
+
 @vertex
 fn vs_main(@builtin(vertex_index) vi: u32) -> VsOut {
     var pos = array<vec2<f32>, 3>(
@@ -163,6 +174,7 @@ fn fs_main(in: VsOut) -> @location(0) vec4<f32> {
         case 0u: { color = voronoi_color(acc); }
         case 1u: { color = soft_voronoi_color(acc); }
         case 2u: { color = worley_color(acc); }
+        case 4u: { color = metaball_argmax_color(acc); }
         default: { color = BG; }
     }
     return vec4<f32>(color, 1.0);
