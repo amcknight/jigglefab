@@ -61,6 +61,22 @@
             float: right;
             margin-left: 8px;
         }
+        /* Frame-budget bar. Widths reflect fraction of the 16.67 ms (60 fps)
+           target. Orange = physics, teal = render-CPU, the gray remainder is
+           "idle or GPU-bound". When phys+rend overflow the budget the bar
+           tints red as an over-budget signal. */
+        #hud .frame-bar {
+            display: flex;
+            height: 6px;
+            width: 100%;
+            background: #2a2a2a;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 3px;
+        }
+        #hud .frame-bar.over { background: #5a2020; }
+        #hud .frame-bar .phys { background: #e08040; }
+        #hud .frame-bar .rend { background: #40b0a0; }
         #picker {
             position: absolute;
             bottom: 12px;
@@ -230,6 +246,8 @@
             <div><span class="lbl">sel </span><span class="v" id="hud-sel">0</span></div>
             <div><span class="lbl">fps </span><span class="v" id="hud-fps">—</span></div>
             <div><span class="lbl">frame </span><span class="v" id="hud-frame">—</span><span class="lbl"> ms</span></div>
+            <div><span class="lbl">phys </span><span class="v" id="hud-phys">—</span><span class="lbl"> / rend </span><span class="v" id="hud-rend">—</span><span class="lbl"> ms</span></div>
+            <div class="frame-bar" id="hud-frame-bar"><span class="phys" style="width:0%"></span><span class="rend" style="width:0%"></span></div>
             <div><span class="lbl">|v| </span><span class="v" id="hud-vmin">—</span><span class="lbl"> / </span><span class="v" id="hud-vmean">—</span><span class="lbl"> / </span><span class="v" id="hud-vmax">—</span><span class="lbl"> (min/mean/max)</span></div>
         </div>
     </div>
@@ -401,6 +419,15 @@
         const vminEl = document.getElementById("hud-vmin");
         const vmeanEl = document.getElementById("hud-vmean");
         const vmaxEl = document.getElementById("hud-vmax");
+        const physEl = document.getElementById("hud-phys");
+        const rendEl = document.getElementById("hud-rend");
+        const frameBar = document.getElementById("hud-frame-bar");
+        const frameBarPhys = frameBar.querySelector(".phys");
+        const frameBarRend = frameBar.querySelector(".rend");
+        // 60 fps budget in microseconds. Bar widths are fractions of this.
+        const FRAME_BUDGET_US = 16667;
+        // Light EMA to keep the bar readable when phys spikes one frame.
+        let physEma = 0, rendEma = 0;
         const samples = [];
         function tick(t) {
             const fc = window.__jigglefabFrameCount ? window.__jigglefabFrameCount() : 0;
@@ -410,6 +437,19 @@
                 vminEl.textContent = smin.toFixed(3);
                 vmeanEl.textContent = smean.toFixed(3);
                 vmaxEl.textContent = smax.toFixed(3);
+            }
+            if (window.__jigglefabGetPhysUs && window.__jigglefabGetRendUs) {
+                const phys = window.__jigglefabGetPhysUs();
+                const rend = window.__jigglefabGetRendUs();
+                physEma = physEma * 0.8 + phys * 0.2;
+                rendEma = rendEma * 0.8 + rend * 0.2;
+                physEl.textContent = (physEma / 1000).toFixed(1);
+                rendEl.textContent = (rendEma / 1000).toFixed(1);
+                const physPct = Math.min(100, (physEma / FRAME_BUDGET_US) * 100);
+                const rendPct = Math.min(100, (rendEma / FRAME_BUDGET_US) * 100);
+                frameBarPhys.style.width = physPct + "%";
+                frameBarRend.style.width = rendPct + "%";
+                frameBar.classList.toggle("over", physEma + rendEma > FRAME_BUDGET_US);
             }
             const cutoff = t - 1000;
             while (samples.length > 1 && samples[0].t < cutoff) samples.shift();

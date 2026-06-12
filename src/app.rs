@@ -77,6 +77,13 @@ mod web_bridge {
         pub dock: Vec<DockEntry>,
         pub suite_names: Vec<String>,
         pub render_mode: &'static str,
+        /// Wall-clock CPU time spent stepping the simulation last frame.
+        /// Zero in Edit mode. Read by the HUD's frame-budget bar.
+        pub phys_us: u32,
+        /// Wall-clock CPU time spent building bead/camera buffers and
+        /// submitting the render command buffer last frame. Does not include
+        /// GPU execution time — that requires `Features::TIMESTAMP_QUERY`.
+        pub rend_us: u32,
     }
 }
 
@@ -563,6 +570,24 @@ fn install_window_set_render_mode() {
         web_bridge::COMMANDS.with(|c| c.borrow_mut().set_render_mode = Some(name));
     }) as Box<dyn Fn(String)>);
     expose_to_window!("__jigglefabSetRenderMode", cb);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_window_get_phys_us() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|| -> u32 {
+        web_bridge::SNAPSHOT.with(|s| s.borrow().phys_us)
+    }) as Box<dyn Fn() -> u32>);
+    expose_to_window!("__jigglefabGetPhysUs", cb);
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_window_get_rend_us() {
+    use wasm_bindgen::closure::Closure;
+    let cb = Closure::wrap(Box::new(|| -> u32 {
+        web_bridge::SNAPSHOT.with(|s| s.borrow().rend_us)
+    }) as Box<dyn Fn() -> u32>);
+    expose_to_window!("__jigglefabGetRendUs", cb);
 }
 
 pub enum UserEvent {
@@ -1072,6 +1097,8 @@ impl ApplicationHandler<UserEvent> for App {
             install_window_import_suite();
             install_window_get_render_mode();
             install_window_set_render_mode();
+            install_window_get_phys_us();
+            install_window_get_rend_us();
 
             self.camera = crate::camera::Camera::fit(world_size);
             let camera = self.camera;
@@ -1291,14 +1318,25 @@ impl ApplicationHandler<UserEvent> for App {
                 }
                 let overlay = self.overlay_segments();
                 let Some(renderer) = &mut self.renderer else { return };
+                // Frame-budget timing: phys_us = sim cost (Run only),
+                // rend_us = CPU-side render path cost (upload + submit;
+                // does NOT cover GPU execution). The initial 0 is overwritten
+                // by both match arms — allow tells the compiler that's fine.
+                #[allow(unused_assignments)]
+                let mut phys_us: u32 = 0;
+                #[allow(unused_assignments)]
+                let mut rend_us: u32 = 0;
                 match self.mode {
                     crate::editor::Mode::Run => {
+                        let phys_t0 = Instant::now();
                         {
                             let sim = self.sim.as_mut().unwrap();
                             for _ in 0..crate::speed::current_substeps() {
                                 self.scheduler.step(sim, FRAME_DT);
                             }
                         }
+                        phys_us = phys_t0.elapsed().as_micros() as u32;
+                        let rend_t0 = Instant::now();
                         let sim = self.sim.as_mut().unwrap();
                         crate::telemetry::update_from_velocities(&sim.velocities);
                         let selected: Vec<u32> = match &self.scene {
@@ -1319,8 +1357,10 @@ impl ApplicationHandler<UserEvent> for App {
                         if let Err(e) = renderer.render(sim.positions.len()) {
                             log::warn!("render error: {e:?}");
                         }
+                        rend_us = rend_t0.elapsed().as_micros() as u32;
                     }
                     crate::editor::Mode::Edit => {
+                        let rend_t0 = Instant::now();
                         let scene = self.scene.as_ref().expect("scene missing in Edit mode");
                         // Convert scene beads to (positions, states) slices for the renderer.
                         let positions: Vec<glam::Vec2> = scene.beads.iter()
@@ -1347,8 +1387,13 @@ impl ApplicationHandler<UserEvent> for App {
                         if let Err(e) = renderer.render(positions.len()) {
                             log::warn!("render error: {e:?}");
                         }
+                        rend_us = rend_t0.elapsed().as_micros() as u32;
                     }
                 }
+                // phys_us / rend_us only consumed by the wasm Snapshot push
+                // below; silence "never read" on native builds.
+                #[cfg(not(target_arch = "wasm32"))]
+                let _ = (phys_us, rend_us);
                 #[cfg(target_arch = "wasm32")]
                 {
                     let mode_str = match self.mode {
@@ -1416,6 +1461,8 @@ impl ApplicationHandler<UserEvent> for App {
                             dock,
                             suite_names,
                             render_mode: render_mode_kebab,
+                            phys_us,
+                            rend_us,
                         };
                     });
                 }
