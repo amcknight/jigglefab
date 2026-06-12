@@ -105,6 +105,31 @@ fn voronoi_color(acc: FieldAccum) -> vec3<f32> {
     return camera.state_colors[s].rgb;
 }
 
+// Cosmetic seam-softening. Re-finds second-nearest by pos-only distance
+// (no ghost wrap) — exact toroidal correctness for second_idx isn't
+// visually important.
+fn soft_voronoi_color(acc: FieldAccum) -> vec3<f32> {
+    if (acc.nearest_d > camera.radius * 1.5) {
+        return BG;
+    }
+    let s1 = beads[acc.nearest_idx].state;
+    let c1 = camera.state_colors[s1].rgb;
+    let seam_width = camera.radius * 0.04;
+    let contest = 1.0 - clamp((acc.second_d - acc.nearest_d) / seam_width, 0.0, 1.0);
+    let t = contest * 0.5;  // never fully fade ownership
+    var second_idx: u32 = acc.nearest_idx;
+    var sd: f32 = 1e30;
+    let anchor = beads[acc.nearest_idx].pos;
+    for (var i: u32 = 0u; i < camera.bead_count; i = i + 1u) {
+        if (i == acc.nearest_idx) { continue; }
+        let d = distance(beads[i].pos, anchor);
+        if (d < sd) { sd = d; second_idx = i; }
+    }
+    let s2 = beads[second_idx].state;
+    let c2 = camera.state_colors[s2].rgb;
+    return mix(c1, c2, t);
+}
+
 @vertex
 fn vs_main(@builtin(vertex_index) vi: u32) -> VsOut {
     var pos = array<vec2<f32>, 3>(
@@ -126,6 +151,7 @@ fn fs_main(in: VsOut) -> @location(0) vec4<f32> {
     var color: vec3<f32> = BG;
     switch (camera.mode) {
         case 0u: { color = voronoi_color(acc); }
+        case 1u: { color = soft_voronoi_color(acc); }
         default: { color = BG; }
     }
     return vec4<f32>(color, 1.0);
