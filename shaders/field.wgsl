@@ -151,6 +151,34 @@ fn metaball_argmax_color(acc: FieldAccum) -> vec3<f32> {
     return c * edge + BG * (1.0 - edge);
 }
 
+fn metaball_blend_color(p: vec2<f32>, acc: FieldAccum) -> vec3<f32> {
+    if (acc.total_f_in_comp < ISO) {
+        return BG;
+    }
+    let target_comp = beads[acc.argmax_idx].component_id;
+    let R = camera.radius;
+    let WS = camera.world_size;
+    var weighted = vec3<f32>(0.0);
+    var total_w = 0.0;
+    for (var i: u32 = 0u; i < camera.bead_count; i = i + 1u) {
+        let b = beads[i];
+        if (b.component_id != target_comp) { continue; }
+        let s = b.state;
+        let col = camera.state_colors[s].rgb;
+        for (var gy: i32 = -1; gy <= 1; gy = gy + 1) {
+            for (var gx: i32 = -1; gx <= 1; gx = gx + 1) {
+                let center = b.pos + vec2<f32>(f32(gx), f32(gy)) * WS;
+                let f = falloff(distance(p, center), R);
+                weighted = weighted + col * f;
+                total_w = total_w + f;
+            }
+        }
+    }
+    let c = weighted / max(total_w, 1e-6);
+    let edge = clamp((acc.total_f_in_comp - ISO) * 6.0, 0.0, 1.0);
+    return c * edge + BG * (1.0 - edge);
+}
+
 @vertex
 fn vs_main(@builtin(vertex_index) vi: u32) -> VsOut {
     var pos = array<vec2<f32>, 3>(
@@ -174,6 +202,7 @@ fn fs_main(in: VsOut) -> @location(0) vec4<f32> {
         case 0u: { color = voronoi_color(acc); }
         case 1u: { color = soft_voronoi_color(acc); }
         case 2u: { color = worley_color(acc); }
+        case 3u: { color = metaball_blend_color(in.world, acc); }
         case 4u: { color = metaball_argmax_color(acc); }
         default: { color = BG; }
     }
