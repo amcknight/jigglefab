@@ -87,6 +87,8 @@ pub struct Renderer {
     overlay_capacity: usize,
     overlay_vertex_count: u32,
     overlay_bind_group: wgpu::BindGroup,
+    field_pipeline: wgpu::RenderPipeline,
+    mode: crate::render_mode::RenderMode,
 }
 
 impl Renderer {
@@ -231,6 +233,41 @@ impl Renderer {
             cache: None,
         });
 
+        let field_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("field"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/field.wgsl").into()),
+        });
+        let field_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("field layout"),
+            bind_group_layouts: &[&bind_layout],
+            push_constant_ranges: &[],
+        });
+        let field_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("field pipeline"),
+            layout: Some(&field_pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &field_shader,
+                entry_point: Some("vs_main"),
+                buffers: &[],
+                compilation_options: Default::default(),
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &field_shader,
+                entry_point: Some("fs_main"),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format,
+                    blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+                compilation_options: Default::default(),
+            }),
+            primitive: wgpu::PrimitiveState::default(),
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState::default(),
+            multiview: None,
+            cache: None,
+        });
+
         let overlay_capacity: usize = 1024;
         let overlay_buf = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("overlay verts"),
@@ -314,6 +351,8 @@ impl Renderer {
             overlay_capacity,
             overlay_vertex_count: 0,
             overlay_bind_group,
+            field_pipeline,
+            mode: crate::render_mode::RenderMode::Disc,
         })
     }
 
@@ -397,6 +436,14 @@ impl Renderer {
         self.queue.write_buffer(&self.camera_buf, 0, bytemuck::bytes_of(&ubo));
     }
 
+    pub fn mode(&self) -> crate::render_mode::RenderMode {
+        self.mode
+    }
+
+    pub fn set_mode(&mut self, mode: crate::render_mode::RenderMode) {
+        self.mode = mode;
+    }
+
     pub fn gpu_context(&self) -> (Arc<wgpu::Device>, Arc<wgpu::Queue>) {
         (self.device.clone(), self.queue.clone())
     }
@@ -436,14 +483,20 @@ impl Renderer {
                 timestamp_writes: None,
                 occlusion_query_set: None,
             });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &self.bind_group, &[]);
-            pass.set_vertex_buffer(0, self.quad_vbuf.slice(..));
-            // Each bead is drawn 9 times: once at its position and 8 wrap-ghost
-            // copies at ±world_size offsets. Off-screen ghosts get clipped by
-            // the rasterizer for free. This makes bonds across the torus seam
-            // visible — without it, a chain straddling x=0 looks broken.
-            pass.draw(0..6, 0..(bead_count * 9) as u32);
+            if self.mode.is_field() {
+                pass.set_pipeline(&self.field_pipeline);
+                pass.set_bind_group(0, &self.bind_group, &[]);
+                pass.draw(0..3, 0..1);  // 1 full-screen triangle
+            } else {
+                pass.set_pipeline(&self.pipeline);
+                pass.set_bind_group(0, &self.bind_group, &[]);
+                pass.set_vertex_buffer(0, self.quad_vbuf.slice(..));
+                // Each bead is drawn 9 times: once at its position and 8 wrap-ghost
+                // copies at ±world_size offsets. Off-screen ghosts get clipped by
+                // the rasterizer for free. This makes bonds across the torus seam
+                // visible — without it, a chain straddling x=0 looks broken.
+                pass.draw(0..6, 0..(bead_count * 9) as u32);
+            }
         }
         if self.overlay_vertex_count > 0 {
             let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {

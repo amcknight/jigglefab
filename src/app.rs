@@ -1270,6 +1270,7 @@ impl ApplicationHandler<UserEvent> for App {
                         let bead_count = sim.positions.len() as u32;
                         let camera = self.camera;
                         let render_mode = self.render_mode;
+                        renderer.set_mode(render_mode);
                         renderer.update_camera(&camera, world_size, &palette, bead_count, render_mode);
                         renderer.update_overlay(&overlay);
                         if let Err(e) = renderer.render(sim.positions.len()) {
@@ -1297,6 +1298,7 @@ impl ApplicationHandler<UserEvent> for App {
                         renderer.update_beads(&positions, &velocities, &states, &selected, &comp_ids);
                         let camera = self.camera;
                         let render_mode = self.render_mode;
+                        renderer.set_mode(render_mode);
                         renderer.update_camera(&camera, world_size, &palette, bead_count, render_mode);
                         renderer.update_overlay(&overlay);
                         if let Err(e) = renderer.render(positions.len()) {
