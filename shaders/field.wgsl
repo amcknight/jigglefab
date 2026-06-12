@@ -97,6 +97,14 @@ struct VsOut {
 // Full-screen triangle covering the whole screen. World coords are recovered
 // by multiplying clip-space by the camera's pre-computed inverse view_proj
 // (carried in the camera UBO).
+fn voronoi_color(acc: FieldAccum) -> vec3<f32> {
+    if (acc.nearest_d > camera.radius * 1.5) {
+        return BG;
+    }
+    let s = beads[acc.nearest_idx].state;
+    return camera.state_colors[s].rgb;
+}
+
 @vertex
 fn vs_main(@builtin(vertex_index) vi: u32) -> VsOut {
     var pos = array<vec2<f32>, 3>(
@@ -115,8 +123,10 @@ fn vs_main(@builtin(vertex_index) vi: u32) -> VsOut {
 @fragment
 fn fs_main(in: VsOut) -> @location(0) vec4<f32> {
     let acc = accumulate_field(in.world);
-    // Debug: show nearest-distance falloff so we can verify the accumulator
-    // is finding beads correctly. Later tasks replace this with mode dispatch.
-    let t = clamp(1.0 - acc.nearest_d / (camera.radius * 1.5), 0.0, 1.0);
-    return vec4<f32>(vec3<f32>(t), 1.0);
+    var color: vec3<f32> = BG;
+    switch (camera.mode) {
+        case 0u: { color = voronoi_color(acc); }
+        default: { color = BG; }
+    }
+    return vec4<f32>(color, 1.0);
 }
