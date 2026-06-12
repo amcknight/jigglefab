@@ -586,6 +586,8 @@ pub struct App {
     shift_held: bool,
     /// Bumped on every library mutation so JS re-persists + re-renders.
     library_rev: u32,
+    /// Current render mode (Disc, Voronoi, etc.). Uploaded to the shader each frame.
+    render_mode: crate::render_mode::RenderMode,
     #[cfg(target_arch = "wasm32")]
     proxy: Option<EventLoopProxy<UserEvent>>,
 }
@@ -614,6 +616,7 @@ impl App {
             ghost_angle: 0.0,
             shift_held: false,
             library_rev: 0,
+            render_mode: crate::render_mode::RenderMode::Disc,
             #[cfg(target_arch = "wasm32")]
             proxy: None,
         }
@@ -678,8 +681,12 @@ impl App {
         let ws = self.world_size();
         let palette = self.palette_for_camera();
         let camera = self.camera;
+        let bead_count = self.sim.as_ref().map(|s| s.positions.len() as u32)
+            .or_else(|| self.scene.as_ref().map(|s| s.beads.len() as u32))
+            .unwrap_or(0);
+        let render_mode = self.render_mode;
         if let Some(r) = &mut self.renderer {
-            r.update_camera(&camera, ws, &palette);
+            r.update_camera(&camera, ws, &palette, bead_count, render_mode);
         }
     }
 
@@ -979,7 +986,7 @@ impl ApplicationHandler<UserEvent> for App {
             let mut renderer = pollster::block_on(Renderer::new(window.clone(), sim.positions.len()))
                 .expect("create renderer");
             self.camera = crate::camera::Camera::fit(world_size);
-            renderer.update_camera(&self.camera, world_size, &palette);
+            renderer.update_camera(&self.camera, world_size, &palette, sim.positions.len() as u32, self.render_mode);
 
             // Upgrade to GPU scheduler now that we have the wgpu device/queue
             // from the renderer. GpuEventLoop shares the same device as the
@@ -1049,10 +1056,11 @@ impl ApplicationHandler<UserEvent> for App {
             let proxy = self.proxy.clone().expect("proxy not set before resumed()");
             let window_clone = window.clone();
             let n = sim.positions.len();
+            let render_mode = self.render_mode;
             wasm_bindgen_futures::spawn_local(async move {
                 let mut renderer = Renderer::new(window_clone, n).await
                     .expect("create renderer");
-                renderer.update_camera(&camera, world_size, &palette);
+                renderer.update_camera(&camera, world_size, &palette, n as u32, render_mode);
                 let _ = proxy.send_event(UserEvent::RendererReady(renderer));
             });
         }
@@ -1073,7 +1081,7 @@ impl ApplicationHandler<UserEvent> for App {
                     let size = w.inner_size();
                     if size.width > 0 && size.height > 0 {
                         renderer.resize(size);
-                        renderer.update_camera(&self.camera, sim.world_size(), &sim.palette());
+                        renderer.update_camera(&self.camera, sim.world_size(), &sim.palette(), sim.positions.len() as u32, self.render_mode);
                     }
                     w.request_redraw();
                 }
@@ -1105,7 +1113,9 @@ impl ApplicationHandler<UserEvent> for App {
                 let Some(renderer) = &mut self.renderer else { return };
                 let Some(sim) = &mut self.sim else { return };
                 renderer.resize(size);
-                renderer.update_camera(&self.camera, sim.world_size(), &sim.palette());
+                let bead_count = sim.positions.len() as u32;
+                let render_mode = self.render_mode;
+                renderer.update_camera(&self.camera, sim.world_size(), &sim.palette(), bead_count, render_mode);
             }
             WindowEvent::RedrawRequested => {
                 // Clone the Arc so we can call request_redraw() at the end
@@ -1148,7 +1158,9 @@ impl ApplicationHandler<UserEvent> for App {
                             }
                             if let (Some(renderer), Some(scene)) = (self.renderer.as_mut(), self.scene.as_ref()) {
                                 let palette: Vec<[f32; 3]> = scene.chemistry.colors.clone();
-                                renderer.update_camera(&self.camera, scene.world_size, &palette);
+                                let bead_count = scene.beads.len() as u32;
+                                let render_mode = self.render_mode;
+                                renderer.update_camera(&self.camera, scene.world_size, &palette, bead_count, render_mode);
                             }
                         } else {
                             log::warn!("set_chemistry: unknown chemistry {:?}", name);
@@ -1250,7 +1262,15 @@ impl ApplicationHandler<UserEvent> for App {
                             Some(s) => (0..sim.positions.len()).map(|i| if s.selection.contains(&(i as u32)) { 1 } else { 0 }).collect(),
                             None => vec![0; sim.positions.len()],
                         };
-                        renderer.update_beads(&sim.positions, &sim.states, &selected);
+                        let bonds_vec: Vec<crate::bond::BondPair> = sim.bonds().iter().cloned().collect();
+                        let comp_ids = crate::component::compute_component_ids(sim.positions.len(), &bonds_vec);
+                        renderer.update_beads(&sim.positions, &sim.velocities, &sim.states, &selected, &comp_ids);
+                        let world_size = sim.world_size();
+                        let palette = sim.palette();
+                        let bead_count = sim.positions.len() as u32;
+                        let camera = self.camera;
+                        let render_mode = self.render_mode;
+                        renderer.update_camera(&camera, world_size, &palette, bead_count, render_mode);
                         renderer.update_overlay(&overlay);
                         if let Err(e) = renderer.render(sim.positions.len()) {
                             log::warn!("render error: {e:?}");
@@ -1268,7 +1288,16 @@ impl ApplicationHandler<UserEvent> for App {
                         let selected: Vec<u32> = (0..positions.len())
                             .map(|i| if scene.selection.contains(&(i as u32)) { 1 } else { 0 })
                             .collect();
-                        renderer.update_beads(&positions, &states, &selected);
+                        let velocities: Vec<glam::Vec2> = vec![glam::Vec2::ZERO; positions.len()];
+                        let bonds_vec: Vec<crate::bond::BondPair> = scene.bonds.iter().cloned().collect();
+                        let comp_ids = crate::component::compute_component_ids(positions.len(), &bonds_vec);
+                        let world_size = scene.world_size;
+                        let palette: Vec<[f32; 3]> = scene.chemistry.colors.clone();
+                        let bead_count = positions.len() as u32;
+                        renderer.update_beads(&positions, &velocities, &states, &selected, &comp_ids);
+                        let camera = self.camera;
+                        let render_mode = self.render_mode;
+                        renderer.update_camera(&camera, world_size, &palette, bead_count, render_mode);
                         renderer.update_overlay(&overlay);
                         if let Err(e) = renderer.render(positions.len()) {
                             log::warn!("render error: {e:?}");

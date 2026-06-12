@@ -326,9 +326,18 @@ impl Renderer {
         }
     }
 
-    pub fn update_beads(&mut self, positions: &[Vec2], states: &[u32], selected: &[u32]) {
+    pub fn update_beads(
+        &mut self,
+        positions: &[Vec2],
+        velocities: &[Vec2],
+        states: &[u32],
+        selected: &[u32],
+        component_ids: &[u32],
+    ) {
+        debug_assert_eq!(positions.len(), velocities.len());
         debug_assert_eq!(positions.len(), states.len());
         debug_assert_eq!(positions.len(), selected.len());
+        debug_assert_eq!(positions.len(), component_ids.len());
         if positions.len() > self.bead_capacity {
             self.bead_capacity = positions.len().next_power_of_two();
             self.bead_buf = self.device.create_buffer(&wgpu::BufferDescriptor {
@@ -346,37 +355,43 @@ impl Renderer {
                 ],
             });
         }
-        let gpu_beads: Vec<BeadGpu> = positions.iter().zip(states.iter()).zip(selected.iter())
-            .map(|((p, &s), &sel)| BeadGpu {
-                pos: [p.x, p.y],
-                vel: [0.0, 0.0],
-                state: s,
-                selected: sel,
-                component_id: 0,
+        let gpu_beads: Vec<BeadGpu> = (0..positions.len())
+            .map(|i| BeadGpu {
+                pos: [positions[i].x, positions[i].y],
+                vel: [velocities[i].x, velocities[i].y],
+                state: states[i],
+                selected: selected[i],
+                component_id: component_ids[i],
                 _pad: 0,
             })
             .collect();
         self.queue.write_buffer(&self.bead_buf, 0, bytemuck::cast_slice(&gpu_beads));
     }
 
-    pub fn update_camera(&mut self, camera: &crate::camera::Camera, world_size: f32, palette: &[[f32; 3]]) {
+    pub fn update_camera(
+        &mut self,
+        camera: &crate::camera::Camera,
+        world_size: f32,
+        palette: &[[f32; 3]],
+        bead_count: u32,
+        mode: crate::render_mode::RenderMode,
+    ) {
         let vp = camera.view_proj((self.size.width, self.size.height), world_size);
         let mut state_colors = [[0.0f32, 0.0, 0.0, 1.0]; MAX_STATES];
         for (i, slot) in state_colors.iter_mut().enumerate() {
-            // Cycle through the palette if there are more states than entries,
-            // but in practice we expect `palette.len() <= MAX_STATES`.
             if !palette.is_empty() {
                 let c = palette[i % palette.len()];
                 *slot = [c[0], c[1], c[2], 1.0];
             }
         }
+        let inv = vp.inverse();
         let ubo = CameraUbo {
             view_proj: vp.to_cols_array_2d(),
-            inv_view_proj: glam::Mat4::IDENTITY.to_cols_array_2d(),  // placeholder; Task 4 computes the real inverse
+            inv_view_proj: inv.to_cols_array_2d(),
             radius: crate::ccd::RADIUS,
             world_size,
-            bead_count: 0,  // placeholder; Task 4 wires the real count
-            mode: 0,        // placeholder; Task 4 wires the real RenderMode
+            bead_count,
+            mode: mode.shader_id(),
             state_colors,
         };
         self.queue.write_buffer(&self.camera_buf, 0, bytemuck::bytes_of(&ubo));
