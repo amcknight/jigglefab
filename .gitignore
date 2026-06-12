@@ -17,3 +17,6 @@ scripts/verify-out/
 
 # /wrap green-cache (test-skip fingerprint, regenerated locally)
 .claude/
+
+# Visual brainstorming companion content (regenerated per session)
+.superpowers/
